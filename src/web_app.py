@@ -39,7 +39,7 @@ PREVIEW = OUTPUTS / "relatorios" / "pre-aprovacao"
 FAST_PREVIEW = OUTPUTS / "relatorios" / "preview-video"
 WEB = ROOT / "web"
 HOST = os.getenv("STUDIO_HOST", "0.0.0.0")
-PORT = 8787
+PORT = int(os.getenv("PORT", "8787"))
 PODCAST_RECENT_DAYS = 15
 PODCAST_RECENT_SECONDS = PODCAST_RECENT_DAYS * 24 * 60 * 60
 
