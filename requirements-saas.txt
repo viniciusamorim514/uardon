@@ -1,0 +1,2 @@
+# A API SaaS inicial roda sem dependencias externas.
+# Mantemos este arquivo para futuras dependencias de cloud.

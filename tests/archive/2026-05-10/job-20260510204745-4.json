@@ -1,0 +1,14 @@
+{
+  "id": "job-20260510204745-4",
+  "url": "https://example.com/archive4",
+  "status": "ready",
+  "created_at": "2026-05-10T20:47:45.609237",
+  "started_at": null,
+  "completed_at": "2026-05-10T20:47:46.923143",
+  "output_dir": null,
+  "error": null,
+  "clips_count": 3,
+  "quality": "alta",
+  "priority": "normal",
+  "tags": []
+}

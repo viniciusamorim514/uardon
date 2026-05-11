@@ -1,0 +1,35 @@
+# Work directories
+.work/
+.tiktok-profile/
+outputs/
+music/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+server.log
+
+# Environment
+.env
+.env.local
+
+# Database
+studio_db.json
+*.db

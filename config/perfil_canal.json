@@ -1,0 +1,61 @@
+{
+  "brand_name": "Poder em Jogo",
+  "handle": "@poderemjogo",
+  "positioning": "Cortes e analises sobre poder, dinheiro, IA, negocios, economia, geopolitica e decisoes que mudam o jogo.",
+  "editorial_priorities": [
+    "poder",
+    "dinheiro",
+    "ia",
+    "negocios",
+    "economia",
+    "tecnologia",
+    "geopolitica",
+    "guerra",
+    "mercado",
+    "brasil",
+    "decisoes que mudam o jogo"
+  ],
+  "avoid": [
+    "propaganda",
+    "conversa de bastidor",
+    "motivacional generico",
+    "historia pessoal longa",
+    "piada interna",
+    "inicio sem contexto",
+    "trecho sem consequencia clara"
+  ],
+  "default_hashtags": [
+    "#poderemjogo",
+    "#poder",
+    "#negocios",
+    "#ia",
+    "#economia"
+  ],
+  "angles": {
+    "negocios": {
+      "hashtags": ["#poderemjogo", "#ia", "#negocios", "#empreendedorismo", "#tecnologia"],
+      "question": "Voce acha que a maioria das empresas vai acordar tarde?",
+      "support": "Quem entende isso antes, joga com vantagem."
+    },
+    "economia": {
+      "hashtags": ["#poderemjogo", "#economia", "#mercado", "#dinheiro", "#poder"],
+      "question": "Quem ganha poder quando esse movimento acontece?",
+      "support": "Dinheiro, energia e poder raramente se movem por acaso."
+    },
+    "geopolitica": {
+      "hashtags": ["#poderemjogo", "#geopolitica", "#politica", "#historia", "#poder"],
+      "question": "Voce acha que isso foi estrategia ou erro?",
+      "support": "No jogo do poder, detalhe pequeno costuma mudar o tabuleiro."
+    },
+    "carreira": {
+      "hashtags": ["#poderemjogo", "#empreendedorismo", "#negocios", "#mentalidade", "#cortes"],
+      "question": "Voce concorda ou acha exagero?",
+      "support": "O ponto aqui nao e motivacao. E consequencia."
+    },
+    "geral": {
+      "hashtags": ["#poderemjogo", "#poder", "#negocios", "#economia", "#ia"],
+      "question": "Esse detalhe muda sua leitura do assunto?",
+      "support": "O detalhe parece pequeno, mas muda a leitura do jogo."
+    }
+  }
+}

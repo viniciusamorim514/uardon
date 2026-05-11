@@ -1,0 +1,22 @@
+[
+  {
+    "id": "UCSICdgxW9BIvsHqmSLNU8hQ",
+    "name": "Joel Jota",
+    "channel_id": "UCSICdgxW9BIvsHqmSLNU8hQ",
+    "url": "https://www.youtube.com/@JoelJota",
+    "content_type": "podcast",
+    "enabled": true,
+    "auto_cut": true,
+    "created_at": "2026-05-05T21:53:30"
+  },
+  {
+    "id": "UC4ncvgh5hFr5O83MH7-jRJg",
+    "name": "Flow Podcast",
+    "channel_id": "UC4ncvgh5hFr5O83MH7-jRJg",
+    "url": "https://www.youtube.com/@FlowPodcast",
+    "content_type": "podcast",
+    "enabled": true,
+    "auto_cut": true,
+    "created_at": "2026-05-03T21:40:01"
+  }
+]

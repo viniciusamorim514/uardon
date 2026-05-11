@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uardon - Gerar Clipes TikTok</title>
+    <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>Uardon</h1>
+                <p>Transforme vídeos em clipes virais</p>
+            </div>
+            <div class="header-status">
+                <span id="statusBadge" class="badge badge-ready">Pronto</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-box">
+                <h2>Cole seu vídeo</h2>
+                <p>YouTube, podcast ou qualquer vídeo público</p>
+
+                <div class="input-group">
+                    <input
+                        type="url"
+                        id="urlInput"
+                        placeholder="https://youtube.com/watch?v=..."
+                        class="url-input"
+                    >
+                    <button id="processBtn" class="btn-primary">Gerar clipes</button>
+                </div>
+
+                <div id="errorMsg" class="error-message" style="display: none;"></div>
+            </div>
+        </section>
+
+        <!-- Processing Section -->
+        <section class="processing-section" id="processingSection" style="display: none;">
+            <div class="progress-box">
+                <div class="spinner"></div>
+                <h3 id="progressTitle">Processando...</h3>
+                <p id="progressSubtitle">Analisando vídeo</p>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressPercent">0%</p>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <h2>Clipes gerados</h2>
+                <button id="newVideoBtn" class="btn-secondary">Novo vídeo</button>
+            </div>
+
+            <div class="clips-gallery" id="clipsGallery">
+                <!-- Clipes gerados aqui -->
+            </div>
+
+            <div id="actionButtons" class="action-buttons" style="display: none;">
+                <button id="downloadBtn" class="btn-secondary">Baixar todos</button>
+                <button id="shareBtn" class="btn-secondary">Compartilhar</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2026 Uardon. Desenvolvido com foco em qualidade.</p>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>

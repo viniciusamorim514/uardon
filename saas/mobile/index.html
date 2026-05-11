@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Poder em Jogo Mobile</title>
+  <link rel="stylesheet" href="/mobile/mobile.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand-mark">PJ</div>
+      <div>
+        <p>Poder em Jogo</p>
+        <strong>Mobile Studio</strong>
+      </div>
+    </header>
+
+    <section class="hero-card">
+      <span class="eyebrow">Criar corte</span>
+      <h1>Cole um podcast e acompanhe o processamento pelo celular.</h1>
+      <p>Esta tela ja usa a nova API SaaS. O processamento continua no backend.</p>
+    </section>
+
+    <section class="card form-card">
+      <label for="url">Link do YouTube</label>
+      <textarea id="url" rows="3" placeholder="https://www.youtube.com/watch?v=..."></textarea>
+
+      <div class="preset-grid">
+        <button class="preset active" data-preset="viral">Viral</button>
+        <button class="preset" data-preset="short">Curto</button>
+        <button class="preset" data-preset="strict">Rigoroso</button>
+      </div>
+
+      <div class="settings-grid">
+        <label>Cortes <input id="count" type="number" min="1" max="8" value="3"></label>
+        <label>Score <input id="minScore" type="number" min="0" max="100" value="75"></label>
+        <label>Min seg <input id="minDuration" type="number" min="15" max="180" value="45"></label>
+        <label>Max seg <input id="maxDuration" type="number" min="20" max="240" value="90"></label>
+      </div>
+
+      <button id="createCut" class="primary">Criar corte</button>
+    </section>
+
+    <section class="card active-process">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Status</span>
+          <h2 id="processTitle">Nenhum processamento ativo</h2>
+        </div>
+        <div class="section-actions">
+          <button id="refreshCuts" class="ghost">Atualizar</button>
+          <button id="cancelProcess" class="danger" disabled>Cancelar</button>
+        </div>
+      </div>
+      <div class="progress-line">
+        <strong id="progressText">0%</strong>
+        <span id="stageText">Aguardando link</span>
+      </div>
+      <div class="progress-track"><i id="progressFill"></i></div>
+      <div id="processReadyCuts" class="process-ready empty">Nenhum corte concluido neste processamento.</div>
+      <details class="technical-log">
+        <summary>Detalhes tecnicos</summary>
+        <pre id="processLog" class="process-log">Sem log.</pre>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Historico</span>
+          <h2>Cortes recentes</h2>
+        </div>
+      </div>
+      <div id="cutsList" class="cuts-list empty">Nenhum corte criado ainda.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Prontos</span>
+          <h2>Cortes para revisar</h2>
+        </div>
+        <button id="refreshReadyCuts" class="ghost">Atualizar</button>
+      </div>
+      <div id="readyCutsList" class="ready-cuts-list empty">Nenhum corte pronto encontrado.</div>
+    </section>
+
+    <section class="card review-card">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Revisao</span>
+          <h2 id="readyTitle">Selecione um corte</h2>
+        </div>
+      </div>
+      <video id="readyPlayer" controls playsinline preload="metadata"></video>
+      <label for="publicationText">Legenda e hashtags</label>
+      <textarea id="publicationText" rows="6" readonly placeholder="Selecione um corte para ver o texto de publicacao."></textarea>
+      <div class="review-actions">
+        <button id="copyPublication" class="ghost">Copiar legenda</button>
+        <button id="openTikTokStudio" class="primary">Postar</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script src="/mobile/mobile.js"></script>
+</body>
+</html>

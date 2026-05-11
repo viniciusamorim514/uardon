@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poder em Jogo Studio - Observabilidade</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .controls input, .controls select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .controls button:hover {
+            background: #5568d3;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .metric-unit {
+            font-size: 12px;
+            color: #999;
+            margin-left: 4px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-good {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .chart-container {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .bar-chart {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            height: 150px;
+        }
+
+        .bar-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar {
+            width: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            min-height: 20px;
+            transition: all 0.3s;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .bar-label {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            width: 100%;
+        }
+
+        .bar-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading::after {
+            content: "...";
+            animation: dots 1.5s steps(3, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .percentage {
+            color: #667eea;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Poder em Jogo Studio - Observabilidade</h1>
+            <p>Métricas em tempo real do sistema de processamento de vídeos</p>
+
+            <div class="controls">
+                <label>
+                    Período (dias):
+                    <input type="number" id="daysInput" value="7" min="1" max="365">
+                </label>
+                <label>
+                    Tipo de evento:
+                    <select id="eventTypeSelect">
+                        <option value="">Todos os eventos</option>
+                        <option value="job_completed">Job Completion</option>
+                        <option value="hook_generated">Hook Generation</option>
+                        <option value="user_hook_selected">User Selection</option>
+                        <option value="api_call">API Calls</option>
+                    </select>
+                </label>
+                <button onclick="refreshMetrics()">🔄 Atualizar</button>
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <!-- Queue Health -->
+        <div class="grid">
+            <div class="card">
+                <h2><span class="card-icon">📋</span> Saúde da Fila</h2>
+                <div id="queueMetrics">
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <!-- Hook Generation -->
+            <div class="card">
+                <h2><span class="card-icon">🎤</span> Geração de Hooks</h2>
+                <div id="hookMetrics">
+                    <div class="loading"></div>
+                </div>
+            </div>
+
+            <!-- API Performance -->
+            <div class="card">
+                <h2><span class="card-icon">⚡</span> Performance da API</h2>
+                <div id="apiMetrics">
+                    <div class="loading"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Preferences -->
+        <div class="card full-width">
+            <h2><span class="card-icon">👤</span> Preferências do Usuário - Seleção de Hooks</h2>
+            <div id="userMetrics">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <!-- Agent Alerts -->
+        <div class="card">
+            <h2><span class="card-icon">⚠️</span> Alertas do Agente Autônomo</h2>
+            <div id="agentAlerts">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <!-- A/B Testing Stats -->
+        <div class="card">
+            <h2><span class="card-icon">🧪</span> Teste A/B - Pesos Atuais</h2>
+            <div id="abTestingStats">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <!-- Agent Recommendations -->
+        <div class="card">
+            <h2><span class="card-icon">💡</span> Recomendações do Agente</h2>
+            <div id="agentRecommendations">
+                <div class="loading"></div>
+            </div>
+        </div>
+
+        <!-- Recent Events -->
+        <div class="card full-width">
+            <h2><span class="card-icon">📝</span> Últimos Eventos</h2>
+            <div id="recentEvents">
+                <div class="loading"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = '/api/analytics';
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+
+        // Initialize
+        let autoRefreshInterval;
+        window.addEventListener('load', () => {
+            refreshMetrics();
+            autoRefreshInterval = setInterval(refreshMetrics, REFRESH_INTERVAL);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        });
+
+        // API call to get metrics
+        async function getMetrics() {
+            try {
+                const days = document.getElementById('daysInput').value || 7;
+                const eventType = document.getElementById('eventTypeSelect').value;
+
+                let url = `${API_URL}?days=${days}`;
+                if (eventType) url += `&event_type=${eventType}`;
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                return await response.json();
+            } catch (error) {
+                showError(`Erro ao buscar métricas: ${error.message}`);
+                return null;
+            }
+        }
+
+        // Refresh all metrics
+        async function refreshMetrics() {
+            const metrics = await getMetrics();
+            if (!metrics) return;
+
+            renderQueueMetrics(metrics);
+            renderHookMetrics(metrics);
+            renderAPIMetrics(metrics);
+            renderUserMetrics(metrics);
+            renderAgentAlerts();
+            renderABTestingStats();
+            renderAgentRecommendations();
+            renderRecentEvents(metrics);
+        }
+
+        // Render agent alerts
+        async function renderAgentAlerts() {
+            const container = document.getElementById('agentAlerts');
+
+            try {
+                const response = await fetch('/api/agent/alerts');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                const alerts = data.alerts || [];
+
+                if (alerts.length === 0) {
+                    container.innerHTML = '<span class="status-badge status-good">✓ Nenhum alerta</span>';
+                    return;
+                }
+
+                let html = '';
+                alerts.forEach(alert => {
+                    let severityClass = 'status-error';
+                    if (alert.severity === 'low') severityClass = 'status-warning';
+                    if (alert.severity === 'medium') severityClass = 'status-warning';
+
+                    html += `
+                        <div class="metric">
+                            <div>
+                                <div style="font-weight: 600; color: #721c24;">${alert.metric}</div>
+                                <div style="font-size: 12px; color: #666;">Baseline: ${alert.baseline?.toFixed(2)}, Atual: ${alert.current?.toFixed(2)}</div>
+                                <span class="status-badge ${severityClass}">${alert.severity}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html || '<div class="no-data">Nenhum alerta disponível</div>';
+            } catch (error) {
+                container.innerHTML = `<div class="error-message">Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Render A/B testing stats
+        async function renderABTestingStats() {
+            const container = document.getElementById('abTestingStats');
+
+            try {
+                const response = await fetch('/api/ab-testing/stats');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                const stats = data.stats || {};
+
+                if (!stats.hook_weights) {
+                    container.innerHTML = '<div class="no-data">Nenhum dado de teste A/B</div>';
+                    return;
+                }
+
+                const weights = stats.hook_weights || {};
+                let html = '';
+
+                Object.entries(weights).forEach(([style, weight]) => {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">${style.charAt(0).toUpperCase() + style.slice(1)}</span>
+                            <span class="metric-value">${weight.toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html || '<div class="no-data">Nenhum peso disponível</div>';
+            } catch (error) {
+                container.innerHTML = `<div class="error-message">Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Render agent recommendations
+        async function renderAgentRecommendations() {
+            const container = document.getElementById('agentRecommendations');
+
+            try {
+                const response = await fetch('/api/agent/recommendations?limit=3');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                const recommendations = data.recommendations || [];
+
+                if (recommendations.length === 0) {
+                    container.innerHTML = '<div class="no-data">Nenhuma recomendação disponível</div>';
+                    return;
+                }
+
+                let html = '';
+                recommendations.forEach(rec => {
+                    const timestamp = new Date(rec.timestamp).toLocaleString('pt-BR');
+                    html += `
+                        <div style="padding: 12px; border-bottom: 1px solid #eee; font-size: 13px;">
+                            <div style="font-weight: 600; color: #667eea; margin-bottom: 4px;">${rec.parameter}</div>
+                            <div style="color: #666; margin-bottom: 6px;">Valor sugerido: ${rec.suggested_value?.toFixed(2)}</div>
+                            <div style="color: #999; font-size: 11px;">${timestamp}</div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html || '<div class="no-data">Nenhuma recomendação</div>';
+            } catch (error) {
+                container.innerHTML = `<div class="error-message">Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Render queue health
+        function renderQueueMetrics(metrics) {
+            const container = document.getElementById('queueMetrics');
+
+            if (!metrics.job_stats) {
+                container.innerHTML = '<div class="no-data">Nenhum dado disponível</div>';
+                return;
+            }
+
+            const stats = metrics.job_stats;
+            const successRate = (stats.success_rate * 100).toFixed(1);
+
+            let statusBadge = '';
+            if (stats.success_rate >= 0.95) {
+                statusBadge = '<span class="status-badge status-good">✓ Excelente</span>';
+            } else if (stats.success_rate >= 0.85) {
+                statusBadge = '<span class="status-badge status-warning">⚠ Atenção</span>';
+            } else {
+                statusBadge = '<span class="status-badge status-error">✗ Crítico</span>';
+            }
+
+            container.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Total de Jobs</span>
+                    <span class="metric-value">${stats.total}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Completados</span>
+                    <span class="metric-value">${stats.completed}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Falhados</span>
+                    <span class="metric-value">${stats.failed}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Taxa de Sucesso</span>
+                    <span class="metric-value"><span class="percentage">${successRate}%</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Tempo Médio</span>
+                    <span class="metric-value">${formatDuration(stats.avg_duration_s)}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span>${statusBadge}</span>
+                </div>
+            `;
+        }
+
+        // Render hook metrics
+        function renderHookMetrics(metrics) {
+            const container = document.getElementById('hookMetrics');
+
+            if (!metrics.hook_stats) {
+                container.innerHTML = '<div class="no-data">Nenhum dado disponível</div>';
+                return;
+            }
+
+            const stats = metrics.hook_stats;
+            const successRate = (stats.success_rate * 100).toFixed(1);
+            const fallbackRate = (stats.fallback_rate * 100).toFixed(1);
+
+            let statusBadge = '';
+            if (stats.fallback_rate < 0.05) {
+                statusBadge = '<span class="status-badge status-good">✓ Excelente</span>';
+            } else if (stats.fallback_rate < 0.15) {
+                statusBadge = '<span class="status-badge status-warning">⚠ Atenção</span>';
+            } else {
+                statusBadge = '<span class="status-badge status-error">✗ Alto Fallback</span>';
+            }
+
+            container.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Total Gerado</span>
+                    <span class="metric-value">${stats.total}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Bem-sucedido</span>
+                    <span class="metric-value">${stats.successful}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Fallback Heurístico</span>
+                    <span class="metric-value">${stats.fallback}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Taxa de Sucesso</span>
+                    <span class="metric-value"><span class="percentage">${successRate}%</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Taxa de Fallback</span>
+                    <span class="metric-value"><span class="percentage">${fallbackRate}%</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span>${statusBadge}</span>
+                </div>
+            `;
+        }
+
+        // Render API metrics
+        function renderAPIMetrics(metrics) {
+            const container = document.getElementById('apiMetrics');
+
+            if (!metrics.api_stats) {
+                container.innerHTML = '<div class="no-data">Nenhum dado disponível</div>';
+                return;
+            }
+
+            const stats = metrics.api_stats;
+            const errorRate = (stats.error_rate * 100).toFixed(1);
+
+            let statusBadge = '';
+            if (stats.error_rate === 0) {
+                statusBadge = '<span class="status-badge status-good">✓ Perfeito</span>';
+            } else if (stats.error_rate < 0.01) {
+                statusBadge = '<span class="status-badge status-warning">⚠ Mínimo</span>';
+            } else {
+                statusBadge = '<span class="status-badge status-error">✗ Erros</span>';
+            }
+
+            container.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Total de Chamadas</span>
+                    <span class="metric-value">${stats.total_calls}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Erros</span>
+                    <span class="metric-value">${stats.errors}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Taxa de Erro</span>
+                    <span class="metric-value"><span class="percentage">${errorRate}%</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Latência Média</span>
+                    <span class="metric-value">${Math.round(stats.avg_latency_ms)}<span class="metric-unit">ms</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">P50 Latência</span>
+                    <span class="metric-value">${Math.round(stats.p50_latency_ms)}<span class="metric-unit">ms</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">P95 Latência</span>
+                    <span class="metric-value">${Math.round(stats.p95_latency_ms)}<span class="metric-unit">ms</span></span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span>${statusBadge}</span>
+                </div>
+            `;
+        }
+
+        // Render user metrics
+        function renderUserMetrics(metrics) {
+            const container = document.getElementById('userMetrics');
+
+            if (!metrics.hook_selection) {
+                container.innerHTML = '<div class="no-data">Nenhum dado de seleção disponível</div>';
+                return;
+            }
+
+            const selection = metrics.hook_selection;
+            const byStyle = selection.by_style || {};
+
+            // Create bar chart
+            const maxCount = Math.max(...Object.values(byStyle).map(s => s.count), 1);
+
+            let html = `<div class="metric">
+                <span class="metric-label">Total de Seleções</span>
+                <span class="metric-value">${selection.total}</span>
+            </div>`;
+
+            if (Object.keys(byStyle).length > 0) {
+                html += '<div class="chart-container"><div class="bar-chart">';
+
+                Object.entries(byStyle).forEach(([style, data]) => {
+                    const percentage = (data.percentage * 100).toFixed(0);
+                    const height = (data.count / maxCount) * 150;
+
+                    html += `
+                        <div class="bar-item">
+                            <div class="bar" style="height: ${height}px;"></div>
+                            <div class="bar-label">${style}</div>
+                            <div class="bar-value">${percentage}% (${data.count})</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Render recent events
+        async function renderRecentEvents(metrics) {
+            const container = document.getElementById('recentEvents');
+
+            try {
+                const days = document.getElementById('daysInput').value || 7;
+                const response = await fetch(`${API_URL}/events?days=${days}&limit=10`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const events = await response.json();
+
+                if (!events || events.length === 0) {
+                    container.innerHTML = '<div class="no-data">Nenhum evento registrado</div>';
+                    return;
+                }
+
+                let html = '<div style="max-height: 400px; overflow-y: auto;">';
+
+                events.forEach(event => {
+                    const timestamp = new Date(event.timestamp).toLocaleString('pt-BR');
+                    const eventType = event.event || 'unknown';
+                    const dataStr = JSON.stringify(event.data || {}, null, 2).substring(0, 100) + '...';
+
+                    html += `
+                        <div class="metric" style="border-bottom: 2px solid #eee;">
+                            <div>
+                                <div style="font-weight: 600; color: #667eea;">${eventType}</div>
+                                <div style="font-size: 12px; color: #999;">${timestamp}</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px; font-family: monospace;">${dataStr}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                container.innerHTML = `<div class="error-message">Erro ao carregar eventos: ${error.message}</div>`;
+            }
+        }
+
+        // Utilities
+        function formatDuration(seconds) {
+            if (!seconds) return '0s';
+            if (seconds < 60) return `${Math.round(seconds)}s`;
+            if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`;
+            return `${(seconds / 3600).toFixed(1)}h`;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('errorContainer');
+            container.innerHTML = `<div class="error-message">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

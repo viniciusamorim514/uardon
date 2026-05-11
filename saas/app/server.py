@@ -1,0 +1,355 @@
+from __future__ import annotations
+
+import json
+import re
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, quote, unquote, urlparse
+from uuid import uuid4
+
+from .db import create_job, get_job, init_db, list_jobs
+from .settings import DEFAULT_USER_ID, MOBILE_WEB, OUTPUTS
+from .worker import cancel_job, enqueue_job
+
+
+HOST = "0.0.0.0"
+PORT = 8790
+
+CONTENT_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".mp4": "video/mp4",
+    ".txt": "text/plain; charset=utf-8",
+}
+
+SKIP_OUTPUT_PARTS = {".work", "_validacao", "rejeitados", "saas"}
+
+
+def valid_youtube_url(url: str) -> bool:
+    return bool(re.match(r"^https?://", url)) and ("youtube.com/" in url or "youtu.be/" in url)
+
+
+def normalize_request(data: dict) -> dict:
+    url = str(data.get("url") or "").strip()
+    if not valid_youtube_url(url):
+        raise ValueError("URL do YouTube invalida")
+    return {
+        "url": url,
+        "count": max(1, min(8, int(data.get("count") or 3))),
+        "min_score": max(0, min(100, int(data.get("min_score") or 75))),
+        "min_duration": max(15, min(180, int(data.get("min_duration") or 45))),
+        "max_duration": max(20, min(240, int(data.get("max_duration") or 90))),
+        "quality": str(data.get("quality") or "alta") if str(data.get("quality") or "alta") in {"tiktok", "alta", "4k"} else "alta",
+        "ai_mode": str(data.get("ai_mode") or "auto") if str(data.get("ai_mode") or "auto") in {"auto", "off", "required"} else "auto",
+        "preview_only": bool(data.get("preview_only") or False),
+    }
+
+
+def inside(child: Path, parent: Path) -> bool:
+    child = child.resolve()
+    parent = parent.resolve()
+    return child == parent or parent in child.parents
+
+
+def read_text_file(path: Path, default: str = "") -> str:
+    try:
+        return path.read_text(encoding="utf-8-sig", errors="ignore").strip()
+    except OSError:
+        return default
+
+
+def read_score(folder: Path) -> str:
+    text = read_text_file(folder / "score-viral.txt")
+    if not text:
+        return ""
+    for line in text.splitlines():
+        if line.lower().startswith("score="):
+            return line.split("=", 1)[1].strip()
+    return ""
+
+
+def read_quality(folder: Path) -> dict:
+    text = read_text_file(folder / "qualidade.json")
+    if not text:
+        return {}
+    try:
+        data = json.loads(text)
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def read_publication(folder: Path) -> str:
+    return read_text_file(folder / "publicacao.txt")
+
+
+def safe_output_path(path_text: str) -> Path | None:
+    if not path_text:
+        return None
+    try:
+        path = Path(unquote(path_text)).resolve()
+    except OSError:
+        return None
+    if not inside(path, OUTPUTS):
+        return None
+    if not path.exists() or not path.is_file():
+        return None
+    return path
+
+
+def ready_cut_item(video: Path) -> dict:
+    folder = video.parent
+    quality = read_quality(folder)
+    publication = read_publication(folder)
+    score = read_score(folder)
+    if not score and quality.get("score") != "":
+        score = f"{quality.get('score')}/100"
+    stat = video.stat()
+    title = folder.name
+    if publication:
+        title = publication.splitlines()[0].strip() or title
+    return {
+        "id": quote(str(video), safe=""),
+        "title": title.replace("-", " "),
+        "file": video.name,
+        "folder": str(folder),
+        "video": str(video),
+        "video_url": f"/v1/arquivo?path={quote(str(video), safe='')}",
+        "publication": publication,
+        "score": score,
+        "quality_status": quality.get("status") or "",
+        "quality_score": quality.get("score") or "",
+        "duration": quality.get("duration") or "",
+        "width": quality.get("width") or "",
+        "height": quality.get("height") or "",
+        "size_mb": round(stat.st_size / 1024 / 1024, 1),
+        "modified_at": stat.st_mtime,
+    }
+
+
+def read_ready_cuts(limit: int = 24, base: Path | None = None) -> list[dict]:
+    root = base or OUTPUTS
+    if not root.exists() or not inside(root, OUTPUTS):
+        return []
+    videos: list[Path] = []
+    for video in root.glob("**/*.mp4"):
+        parts = set(video.parts)
+        if parts.intersection(SKIP_OUTPUT_PARTS):
+            continue
+        if video.name.lower().startswith("source"):
+            continue
+        videos.append(video)
+    videos.sort(
+        key=lambda item: (
+            "_postar_agora" in item.parts,
+            item.stat().st_mtime,
+        ),
+        reverse=True,
+    )
+    seen: set[str] = set()
+    items: list[dict] = []
+    for video in videos:
+        key = str(video.resolve()).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(ready_cut_item(video))
+        if len(items) >= limit:
+            break
+    return items
+
+
+def enrich_process(process: dict) -> dict:
+    result = process.get("result") or {}
+    pack = safe_output_path(result.get("posting_pack", ""))
+    pack_folder = pack if pack and pack.is_dir() else None
+    if not pack_folder:
+        raw_pack = str(result.get("posting_pack") or "").strip()
+        try:
+            candidate_folder = Path(raw_pack).resolve() if raw_pack else None
+        except OSError:
+            candidate_folder = None
+        if candidate_folder and candidate_folder.exists() and candidate_folder.is_dir() and inside(candidate_folder, OUTPUTS):
+            pack_folder = candidate_folder
+    if pack_folder:
+        process["ready_cuts"] = read_ready_cuts(20, pack_folder)
+    else:
+        process["ready_cuts"] = []
+    return process
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "PoderEmJogoSaaS/0.1"
+
+    def log_message(self, format: str, *args) -> None:
+        return
+
+    def send_json(self, data: dict | list, status: int = 200) -> None:
+        raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-User-Id")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def send_file(self, path: Path) -> None:
+        resolved = path.resolve()
+        root = MOBILE_WEB.resolve()
+        if root not in resolved.parents and resolved != root:
+            self.send_json({"error": "Arquivo invalido"}, 403)
+            return
+        if not resolved.exists() or not resolved.is_file():
+            self.send_json({"error": "Arquivo nao encontrado"}, 404)
+            return
+        raw = resolved.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", CONTENT_TYPES.get(resolved.suffix.lower(), "application/octet-stream"))
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def send_output_file(self, path: Path) -> None:
+        resolved = path.resolve()
+        if not inside(resolved, OUTPUTS):
+            self.send_json({"error": "Arquivo invalido"}, 403)
+            return
+        if resolved.suffix.lower() not in {".mp4", ".txt", ".json"}:
+            self.send_json({"error": "Tipo de arquivo bloqueado"}, 403)
+            return
+        if not resolved.exists() or not resolved.is_file():
+            self.send_json({"error": "Arquivo nao encontrado"}, 404)
+            return
+
+        file_size = resolved.stat().st_size
+        content_type = CONTENT_TYPES.get(resolved.suffix.lower(), "application/octet-stream")
+        range_header = self.headers.get("Range", "")
+        if resolved.suffix.lower() == ".mp4" and range_header.startswith("bytes="):
+            match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+            if match:
+                start = int(match.group(1))
+                end = int(match.group(2)) if match.group(2) else file_size - 1
+                end = min(end, file_size - 1)
+                if start <= end:
+                    chunk_size = end - start + 1
+                    self.send_response(206)
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                    self.send_header("Content-Length", str(chunk_size))
+                    self.end_headers()
+                    with resolved.open("rb") as handle:
+                        handle.seek(start)
+                        self.wfile.write(handle.read(chunk_size))
+                    return
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(file_size))
+        self.end_headers()
+        with resolved.open("rb") as handle:
+            while True:
+                chunk = handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+
+    def read_json(self) -> dict:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0:
+            return {}
+        raw = self.rfile.read(length).decode("utf-8")
+        return json.loads(raw or "{}")
+
+    def user_id(self) -> str:
+        return self.headers.get("X-User-Id") or DEFAULT_USER_ID
+
+    def do_OPTIONS(self) -> None:
+        self.send_json({"ok": True})
+
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path in {"/", "/app"}:
+            self.send_file(MOBILE_WEB / "index.html")
+            return
+        if parsed.path.startswith("/mobile/"):
+            relative = parsed.path.removeprefix("/mobile/").strip("/")
+            self.send_file(MOBILE_WEB / relative)
+            return
+        if parsed.path == "/health":
+            self.send_json({"ok": True, "service": "poder-em-jogo-api"})
+            return
+        if parsed.path == "/v1/cortes-prontos":
+            params = parse_qs(parsed.query)
+            limit = int(params.get("limit", ["24"])[0] or 24)
+            self.send_json({"items": read_ready_cuts(max(1, min(60, limit)))})
+            return
+        if parsed.path == "/v1/arquivo":
+            params = parse_qs(parsed.query)
+            path = safe_output_path(params.get("path", [""])[0])
+            if not path:
+                self.send_json({"error": "Arquivo invalido"}, 404)
+                return
+            self.send_output_file(path)
+            return
+        if parsed.path in {"/v1/jobs", "/v1/cortes"}:
+            params = parse_qs(parsed.query)
+            limit = int(params.get("limit", ["30"])[0] or 30)
+            self.send_json([enrich_process(item) for item in list_jobs(self.user_id(), max(1, min(100, limit)))])
+            return
+        match = re.match(r"^/v1/(?:jobs|cortes)/([^/]+)$", parsed.path)
+        if match:
+            job = get_job(match.group(1), self.user_id())
+            if not job:
+                self.send_json({"error": "Processamento nao encontrado"}, 404)
+                return
+            self.send_json(enrich_process(job))
+            return
+        self.send_json({"error": "Rota nao encontrada"}, 404)
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        cancel_match = re.match(r"^/v1/(?:jobs|cortes)/([^/]+)/cancelar$", parsed.path)
+        if cancel_match:
+            job = get_job(cancel_match.group(1), self.user_id())
+            if not job:
+                self.send_json({"error": "Processamento nao encontrado"}, 404)
+                return
+            cancelled = cancel_job(job["id"])
+            updated = get_job(job["id"], self.user_id()) or job
+            self.send_json({"cancelled": cancelled, "process": enrich_process(updated)})
+            return
+        if parsed.path not in {"/v1/jobs", "/v1/cortes"}:
+            self.send_json({"error": "Rota nao encontrada"}, 404)
+            return
+        try:
+            request = normalize_request(self.read_json())
+            job = create_job(str(uuid4()), self.user_id(), request["url"], request)
+            enqueue_job(job["id"])
+            self.send_json(job, 201)
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, 400)
+        except Exception as exc:
+            self.send_json({"error": str(exc)}, 500)
+
+
+def main() -> None:
+    init_db()
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    print(f"Poder em Jogo SaaS API: http://127.0.0.1:{PORT}")
+    print(f"Health: http://127.0.0.1:{PORT}/health")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
