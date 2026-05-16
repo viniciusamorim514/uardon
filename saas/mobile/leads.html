@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Uardon CRM | Leads</title>
+  <link rel="stylesheet" href="/mobile/mobile.css">
+  <style>
+    .leads-wrap{display:grid;gap:14px}
+    .lead-card{background:#fff;border:1px solid #e6e7ef;border-radius:16px;padding:14px}
+    .lead-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+    .lead-name{font-size:18px;font-weight:700;color:#1e2440}
+    .lead-date{font-size:12px;color:#6b738f}
+    .lead-meta{display:grid;gap:6px;font-size:14px;color:#2c355a}
+    .lead-meta strong{color:#1e2440}
+    .empty{padding:18px;border:1px dashed #c7cbe0;border-radius:12px;color:#6b738f;background:#fafbff}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .toolbar button{padding:10px 14px;border-radius:10px;border:1px solid #d6d9ea;background:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand-mark">U</div>
+      <div>
+        <p>Uardon</p>
+        <strong>CRM Leads</strong>
+      </div>
+    </header>
+
+    <section class="hero-card">
+      <span class="eyebrow">Orçamentos</span>
+      <h1>Leads recebidos da landing.</h1>
+      <p>Acompanhe nome, WhatsApp, cidade, tipo de projeto e mensagem em tempo real.</p>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <button id="refreshBtn">Atualizar</button>
+        <button id="copyCountBtn">Copiar total</button>
+      </div>
+      <p id="summary" style="margin-top:10px;color:#5b6382">Carregando...</p>
+      <div id="leads" class="leads-wrap"></div>
+    </section>
+  </main>
+
+  <script>
+    const USER_ID = "vitoria-uardon";
+
+    function fmtDate(iso){
+      if(!iso) return "-";
+      const d = new Date(iso);
+      return d.toLocaleString("pt-BR");
+    }
+
+    function safe(value){
+      return String(value || "").replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      })[s]);
+    }
+
+    async function loadLeads(){
+      const host = document.getElementById("leads");
+      const summary = document.getElementById("summary");
+      host.innerHTML = "";
+      try{
+        const r = await fetch("/v1/leads?limit=200", {
+          headers: { "X-User-Id": USER_ID }
+        });
+        const data = await r.json();
+        if(!r.ok) throw new Error(data.error || "Erro ao carregar leads");
+        summary.textContent = `Total de leads: ${data.length}`;
+        if(!data.length){
+          host.innerHTML = '<div class="empty">Nenhum lead encontrado no momento.</div>';
+          return;
+        }
+        host.innerHTML = data.map(item => `
+          <article class="lead-card">
+            <div class="lead-head">
+              <div class="lead-name">${safe(item.name)}</div>
+              <div class="lead-date">${fmtDate(item.created_at)}</div>
+            </div>
+            <div class="lead-meta">
+              <div><strong>WhatsApp:</strong> ${safe(item.phone)}</div>
+              <div><strong>Cidade:</strong> ${safe(item.city)}</div>
+              <div><strong>Tipo:</strong> ${safe(item.project_type)}</div>
+              <div><strong>Status:</strong> ${safe(item.status)}</div>
+              <div><strong>Mensagem:</strong> ${safe(item.message)}</div>
+            </div>
+          </article>
+        `).join("");
+      }catch(err){
+        summary.textContent = "Falha ao carregar leads.";
+        host.innerHTML = `<div class="empty">${safe(err.message)}</div>`;
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", loadLeads);
+    document.getElementById("copyCountBtn").addEventListener("click", () => {
+      const txt = document.getElementById("summary").textContent || "";
+      navigator.clipboard.writeText(txt);
+    });
+
+    loadLeads();
+    setInterval(loadLeads, 30000);
+  </script>
+</body>
+</html>
