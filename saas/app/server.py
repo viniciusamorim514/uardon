@@ -34,8 +34,8 @@ CONTENT_TYPES = {
 
 SKIP_OUTPUT_PARTS = {".work", "_validacao", "rejeitados", "saas"}
 LEAD_RATE_WINDOW_SECONDS = 10 * 60
-LEAD_RATE_MAX_PER_WINDOW = 3
-LEAD_MIN_INTERVAL_SECONDS = 12
+LEAD_RATE_MAX_PER_WINDOW = int(os.getenv("LEAD_RATE_MAX_PER_WINDOW", "6"))
+LEAD_MIN_INTERVAL_SECONDS = int(os.getenv("LEAD_MIN_INTERVAL_SECONDS", "8"))
 LEAD_RATE_STATE: dict[str, list[float]] = {}
 LEAD_LAST_SUBMISSION_BY_KEY: dict[str, float] = {}
 LEAD_BLOCK_EVENTS_BY_IP: dict[str, list[float]] = {}
