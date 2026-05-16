@@ -1,11 +1,11 @@
-# Poder em Jogo SaaS
+# Uardon CRM API
 
-Base inicial para transformar o robo local em produto web/app.
+Base do backend usado pela landing e pelos fluxos internos da Uardon.
 
 ## Rodar API local
 
 ```powershell
-cd "C:\Users\Vinicius\Documents\New project\xadrez_geopolitico_automation"
+cd "C:\Users\Vinicius\Documents\New project\Uardon"
 powershell -ExecutionPolicy Bypass -File .\abrir_saas_dev.ps1
 ```
 

@@ -11,7 +11,7 @@ from .settings import DEFAULT_USER_ID
 from .worker import enqueue_job
 
 
-app = FastAPI(title="Poder em Jogo API", version="0.1.0")
+app = FastAPI(title="Uardon CRM API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,7 +33,7 @@ def user_id_from_header(x_user_id: str | None) -> str:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "service": "poder-em-jogo-api"}
+    return {"ok": True, "service": "uardon-crm-api"}
 
 
 @app.post("/v1/jobs", response_model=JobResponse)

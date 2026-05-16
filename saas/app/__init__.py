@@ -1,1 +1,1 @@
-"""Poder em Jogo SaaS API."""
+"""Uardon CRM API."""

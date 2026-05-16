@@ -210,7 +210,7 @@ def enrich_process(process: dict) -> dict:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PoderEmJogoSaaS/0.1"
+    server_version = "UardonCRM/0.1"
 
     def log_message(self, format: str, *args) -> None:
         return
@@ -311,7 +311,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_file(MOBILE_WEB / relative)
             return
         if parsed.path == "/health":
-            self.send_json({"ok": True, "service": "poder-em-jogo-api"})
+            self.send_json({"ok": True, "service": "uardon-crm-api"})
             return
         if parsed.path == "/v1/cortes-prontos":
             params = parse_qs(parsed.query)
@@ -381,7 +381,7 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     init_db()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    print(f"Poder em Jogo SaaS API: http://127.0.0.1:{PORT}")
+    print(f"Uardon CRM API: http://127.0.0.1:{PORT}")
     print(f"Health: http://127.0.0.1:{PORT}/health")
     server.serve_forever()
 
