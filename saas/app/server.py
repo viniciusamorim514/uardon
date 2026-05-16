@@ -6,6 +6,7 @@ import re
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from uuid import uuid4
 
@@ -33,8 +34,23 @@ CONTENT_TYPES = {
 
 SKIP_OUTPUT_PARTS = {".work", "_validacao", "rejeitados", "saas"}
 LEAD_RATE_WINDOW_SECONDS = 10 * 60
-LEAD_RATE_MAX_PER_WINDOW = 5
+LEAD_RATE_MAX_PER_WINDOW = 3
+LEAD_MIN_INTERVAL_SECONDS = 12
 LEAD_RATE_STATE: dict[str, list[float]] = {}
+LEAD_LAST_SUBMISSION_BY_KEY: dict[str, float] = {}
+LEAD_BLOCK_EVENTS_BY_IP: dict[str, list[float]] = {}
+MAX_JSON_BODY_BYTES = 20_000
+SECURITY_ALERT_WINDOW_SECONDS = 5 * 60
+SECURITY_ALERT_BLOCK_THRESHOLD = 7
+ALLOWED_ORIGINS = {
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://uardon.com.br,https://www.uardon.com.br,https://uardon-arquitetura-interiores.netlify.app,http://127.0.0.1:8899,http://127.0.0.1:8790,http://localhost:8899,http://localhost:8790",
+    ).split(",")
+    if origin.strip()
+}
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY", "").strip()
 
 
 def valid_youtube_url(url: str) -> bool:
@@ -139,6 +155,51 @@ def enforce_lead_rate_limit(ip_address: str) -> None:
         raise ValueError("Muitas tentativas. Aguarde alguns minutos e tente novamente.")
     recent.append(now)
     LEAD_RATE_STATE[ip_address] = recent
+
+
+def enforce_lead_frequency(ip_address: str, phone: str) -> None:
+    now = time.time()
+    key = f"{ip_address}:{phone}"
+    last = LEAD_LAST_SUBMISSION_BY_KEY.get(key)
+    if last and (now - last) < LEAD_MIN_INTERVAL_SECONDS:
+        raise ValueError("Envio muito rápido. Aguarde alguns segundos e tente novamente.")
+    LEAD_LAST_SUBMISSION_BY_KEY[key] = now
+
+
+def register_security_block(ip_address: str, reason: str) -> None:
+    now = time.time()
+    recent = [ts for ts in LEAD_BLOCK_EVENTS_BY_IP.get(ip_address, []) if now - ts <= SECURITY_ALERT_WINDOW_SECONDS]
+    recent.append(now)
+    LEAD_BLOCK_EVENTS_BY_IP[ip_address] = recent
+    print(f"[SECURITY][BLOCK] ip={ip_address} reason={reason} blocks_window={len(recent)}")
+    if len(recent) >= SECURITY_ALERT_BLOCK_THRESHOLD:
+        print(
+            f"[SECURITY][ALERT] Alta taxa de bloqueios para ip={ip_address} "
+            f"em {SECURITY_ALERT_WINDOW_SECONDS//60}min: {len(recent)} tentativas bloqueadas."
+        )
+
+
+def verify_turnstile_token(token: str, ip_address: str) -> bool:
+    if not TURNSTILE_SECRET_KEY:
+        return True
+    token = (token or "").strip()
+    if not token:
+        return False
+    payload = (
+        f"secret={quote(TURNSTILE_SECRET_KEY)}&response={quote(token)}&remoteip={quote(ip_address)}"
+    ).encode("utf-8")
+    request = Request(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        data=payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=8) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return bool(data.get("success"))
+    except Exception:
+        return False
 
 
 def inside(child: Path, parent: Path) -> bool:
@@ -280,13 +341,39 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:
         return
 
+    def origin(self) -> str:
+        return (self.headers.get("Origin") or "").strip().rstrip("/")
+
+    def cors_origin(self) -> str:
+        origin = self.origin()
+        return origin if origin in ALLOWED_ORIGINS else ""
+
+    def add_common_security_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+        self.send_header("Cross-Origin-Resource-Policy", "same-site")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+    def add_cors_headers(self) -> bool:
+        allowed_origin = self.cors_origin()
+        if not allowed_origin:
+            return False
+        self.send_header("Access-Control-Allow-Origin", allowed_origin)
+        self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-User-Id")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        return True
+
     def send_json(self, data: dict | list, status: int = 200) -> None:
         raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-User-Id")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.add_common_security_headers()
+        self.add_cors_headers()
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -303,6 +390,15 @@ class Handler(BaseHTTPRequestHandler):
         raw = resolved.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", CONTENT_TYPES.get(resolved.suffix.lower(), "application/octet-stream"))
+        self.add_common_security_headers()
+        self.add_cors_headers()
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; "
+            "frame-src https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none';",
+        )
+        self.send_header("Cache-Control", "public, max-age=300")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -332,6 +428,8 @@ class Handler(BaseHTTPRequestHandler):
                     chunk_size = end - start + 1
                     self.send_response(206)
                     self.send_header("Content-Type", content_type)
+                    self.add_common_security_headers()
+                    self.add_cors_headers()
                     self.send_header("Accept-Ranges", "bytes")
                     self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
                     self.send_header("Content-Length", str(chunk_size))
@@ -343,6 +441,8 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.send_header("Content-Type", content_type)
+        self.add_common_security_headers()
+        self.add_cors_headers()
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(file_size))
         self.end_headers()
@@ -357,14 +457,28 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0:
             return {}
+        if length > MAX_JSON_BODY_BYTES:
+            raise ValueError("Requisição muito grande.")
         raw = self.rfile.read(length).decode("utf-8")
-        return json.loads(raw or "{}")
+        parsed = json.loads(raw or "{}")
+        if not isinstance(parsed, dict):
+            raise ValueError("JSON inválido.")
+        return parsed
 
     def user_id(self) -> str:
         return self.headers.get("X-User-Id") or DEFAULT_USER_ID
 
     def do_OPTIONS(self) -> None:
-        self.send_json({"ok": True})
+        if not self.add_cors_headers():
+            self.send_response(403)
+            self.add_common_security_headers()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.send_response(204)
+        self.add_common_security_headers()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -413,6 +527,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        client_ip = get_client_ip(self)
         cancel_match = re.match(r"^/v1/(?:jobs|cortes)/([^/]+)/cancelar$", parsed.path)
         if cancel_match:
             job = get_job(cancel_match.group(1), self.user_id())
@@ -430,8 +545,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             payload = self.read_json()
             if parsed.path == "/v1/leads":
-                enforce_lead_rate_limit(get_client_ip(self))
-                lead = create_lead(str(uuid4()), self.user_id(), **normalize_lead_request(payload))
+                enforce_lead_rate_limit(client_ip)
+                lead_data = normalize_lead_request(payload)
+                enforce_lead_frequency(client_ip, lead_data["phone"])
+                turnstile_token = str(payload.get("turnstile_token") or payload.get("cf_turnstile_token") or "").strip()
+                if not verify_turnstile_token(turnstile_token, client_ip):
+                    register_security_block(client_ip, "turnstile_failed")
+                    raise ValueError("Verificação de segurança não concluída. Atualize a página e tente novamente.")
+                lead = create_lead(str(uuid4()), self.user_id(), **lead_data)
                 self.send_json(lead, 201)
                 return
             request = normalize_request(payload)
@@ -439,6 +560,7 @@ class Handler(BaseHTTPRequestHandler):
             enqueue_job(job["id"])
             self.send_json(job, 201)
         except ValueError as exc:
+            register_security_block(client_ip, str(exc))
             self.send_json({"error": str(exc)}, 400)
         except Exception as exc:
             self.send_json({"error": str(exc)}, 500)
