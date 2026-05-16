@@ -29,3 +29,28 @@ class JobResponse(BaseModel):
     updated_at: str
     started_at: str | None = None
     finished_at: str | None = None
+
+
+class CreateLeadRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    phone: str = Field(min_length=8, max_length=40)
+    city: str = Field(default="", max_length=120)
+    project_type: str = Field(default="", max_length=120)
+    message: str = Field(default="", max_length=2000)
+    source: str = Field(default="landing-page", max_length=120)
+    metadata: dict = Field(default_factory=dict)
+
+
+class LeadResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    phone: str
+    city: str
+    project_type: str
+    message: str
+    source: str
+    status: str
+    metadata: dict
+    created_at: str
+    updated_at: str

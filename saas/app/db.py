@@ -48,6 +48,25 @@ def init_db() -> None:
             """
         )
         conn.execute("create index if not exists idx_jobs_user_created on jobs(user_id, created_at desc)")
+        conn.execute(
+            """
+            create table if not exists leads (
+                id text primary key,
+                user_id text not null,
+                name text not null,
+                phone text not null,
+                city text not null default '',
+                project_type text not null default '',
+                message text not null default '',
+                source text not null default 'landing-page',
+                status text not null default 'new',
+                metadata_json text not null default '{}',
+                created_at text not null,
+                updated_at text not null
+            )
+            """
+        )
+        conn.execute("create index if not exists idx_leads_user_created on leads(user_id, created_at desc)")
 
 
 def row_to_dict(row: sqlite3.Row | None) -> dict | None:
@@ -57,6 +76,14 @@ def row_to_dict(row: sqlite3.Row | None) -> dict | None:
     for key in ("request_json", "result_json"):
         data[key.replace("_json", "")] = json.loads(data.pop(key) or "{}")
     data["log"] = json.loads(data.get("log") or "[]")
+    return data
+
+
+def lead_row_to_dict(row: sqlite3.Row | None) -> dict | None:
+    if row is None:
+        return None
+    data = dict(row)
+    data["metadata"] = json.loads(data.pop("metadata_json") or "{}")
     return data
 
 
@@ -72,6 +99,43 @@ def create_job(job_id: str, user_id: str, url: str, request: dict) -> dict:
             (job_id, user_id, url, json.dumps(request, ensure_ascii=False), now, now),
         )
         return row_to_dict(conn.execute("select * from jobs where id = ?", (job_id,)).fetchone()) or {}
+
+
+def create_lead(
+    lead_id: str,
+    user_id: str,
+    name: str,
+    phone: str,
+    city: str,
+    project_type: str,
+    message: str,
+    source: str,
+    metadata: dict,
+) -> dict:
+    now = utc_now()
+    with connect() as conn:
+        conn.execute(
+            """
+            insert into leads
+            (id, user_id, name, phone, city, project_type, message, source, status, metadata_json, created_at, updated_at)
+            values (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)
+            """,
+            (
+                lead_id,
+                user_id,
+                name,
+                phone,
+                city,
+                project_type,
+                message,
+                source,
+                json.dumps(metadata, ensure_ascii=False),
+                now,
+                now,
+            ),
+        )
+        row = conn.execute("select * from leads where id = ?", (lead_id,)).fetchone()
+        return lead_row_to_dict(row) or {}
 
 
 def get_job(job_id: str, user_id: str | None = None) -> dict | None:
@@ -90,6 +154,15 @@ def list_jobs(user_id: str, limit: int = 30) -> list[dict]:
             (user_id, limit),
         ).fetchall()
         return [row_to_dict(row) or {} for row in rows]
+
+
+def list_leads(user_id: str, limit: int = 50) -> list[dict]:
+    with connect() as conn:
+        rows = conn.execute(
+            "select * from leads where user_id = ? order by created_at desc limit ?",
+            (user_id, limit),
+        ).fetchall()
+        return [lead_row_to_dict(row) or {} for row in rows]
 
 
 def update_job(job_id: str, **fields) -> None:

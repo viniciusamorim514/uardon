@@ -5,8 +5,8 @@ from uuid import uuid4
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import create_job, get_job, init_db, list_jobs
-from .schemas import CreateJobRequest, JobResponse
+from .db import create_job, create_lead, get_job, init_db, list_jobs, list_leads
+from .schemas import CreateJobRequest, CreateLeadRequest, JobResponse, LeadResponse
 from .settings import DEFAULT_USER_ID
 from .worker import enqueue_job
 
@@ -58,3 +58,25 @@ def get_cut_job(job_id: str, x_user_id: str | None = Header(default=None)) -> di
     if not job:
         raise HTTPException(status_code=404, detail="Job nao encontrado")
     return job
+
+
+@app.post("/v1/leads", response_model=LeadResponse, status_code=201)
+def create_crm_lead(payload: CreateLeadRequest, x_user_id: str | None = Header(default=None)) -> dict:
+    user_id = user_id_from_header(x_user_id)
+    return create_lead(
+        str(uuid4()),
+        user_id,
+        payload.name.strip(),
+        payload.phone.strip(),
+        payload.city.strip(),
+        payload.project_type.strip(),
+        payload.message.strip(),
+        payload.source.strip() or "landing-page",
+        payload.metadata,
+    )
+
+
+@app.get("/v1/leads", response_model=list[LeadResponse])
+def get_leads(x_user_id: str | None = Header(default=None), limit: int = 50) -> list[dict]:
+    user_id = user_id_from_header(x_user_id)
+    return list_leads(user_id, max(1, min(200, limit)))

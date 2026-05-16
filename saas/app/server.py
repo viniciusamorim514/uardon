@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from uuid import uuid4
 
-from .db import create_job, get_job, init_db, list_jobs
+from .db import create_job, create_lead, get_job, init_db, list_jobs, list_leads
 from .settings import DEFAULT_USER_ID, MOBILE_WEB, OUTPUTS
 from .worker import cancel_job, enqueue_job
 
 
 HOST = "0.0.0.0"
-PORT = 8790
+PORT = int(os.getenv("PORT", "8790"))
 
 CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -49,6 +50,29 @@ def normalize_request(data: dict) -> dict:
         "quality": str(data.get("quality") or "alta") if str(data.get("quality") or "alta") in {"tiktok", "alta", "4k"} else "alta",
         "ai_mode": str(data.get("ai_mode") or "auto") if str(data.get("ai_mode") or "auto") in {"auto", "off", "required"} else "auto",
         "preview_only": bool(data.get("preview_only") or False),
+    }
+
+
+def normalize_lead_request(data: dict) -> dict:
+    name = str(data.get("name") or data.get("nome") or "").strip()
+    phone = str(data.get("phone") or data.get("telefone") or "").strip()
+    city = str(data.get("city") or data.get("cidade") or "").strip()
+    project_type = str(data.get("project_type") or data.get("tipo") or "").strip()
+    message = str(data.get("message") or data.get("msg") or "").strip()
+    source = str(data.get("source") or "landing-page").strip() or "landing-page"
+    metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+    if len(name) < 2:
+        raise ValueError("Nome invalido")
+    if len(phone) < 8:
+        raise ValueError("WhatsApp invalido")
+    return {
+        "name": name[:120],
+        "phone": phone[:40],
+        "city": city[:120],
+        "project_type": project_type[:120],
+        "message": message[:2000],
+        "source": source[:120],
+        "metadata": metadata,
     }
 
 
@@ -307,6 +331,11 @@ class Handler(BaseHTTPRequestHandler):
             limit = int(params.get("limit", ["30"])[0] or 30)
             self.send_json([enrich_process(item) for item in list_jobs(self.user_id(), max(1, min(100, limit)))])
             return
+        if parsed.path == "/v1/leads":
+            params = parse_qs(parsed.query)
+            limit = int(params.get("limit", ["50"])[0] or 50)
+            self.send_json(list_leads(self.user_id(), max(1, min(200, limit))))
+            return
         match = re.match(r"^/v1/(?:jobs|cortes)/([^/]+)$", parsed.path)
         if match:
             job = get_job(match.group(1), self.user_id())
@@ -330,10 +359,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"cancelled": cancelled, "process": enrich_process(updated)})
             return
         if parsed.path not in {"/v1/jobs", "/v1/cortes"}:
-            self.send_json({"error": "Rota nao encontrada"}, 404)
-            return
+            if parsed.path != "/v1/leads":
+                self.send_json({"error": "Rota nao encontrada"}, 404)
+                return
         try:
-            request = normalize_request(self.read_json())
+            payload = self.read_json()
+            if parsed.path == "/v1/leads":
+                lead = create_lead(str(uuid4()), self.user_id(), **normalize_lead_request(payload))
+                self.send_json(lead, 201)
+                return
+            request = normalize_request(payload)
             job = create_job(str(uuid4()), self.user_id(), request["url"], request)
             enqueue_job(job["id"])
             self.send_json(job, 201)

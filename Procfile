@@ -1,1 +1,1 @@
-web: python src/web_app.py
+web: python -m saas.app.server
