@@ -469,7 +469,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.headers.get("X-User-Id") or DEFAULT_USER_ID
 
     def do_OPTIONS(self) -> None:
-        if not self.add_cors_headers():
+        if not self.cors_origin():
             self.send_response(403)
             self.add_common_security_headers()
             self.send_header("Content-Length", "0")
@@ -477,6 +477,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.send_response(204)
         self.add_common_security_headers()
+        self.add_cors_headers()
         self.send_header("Content-Length", "0")
         self.end_headers()
 
