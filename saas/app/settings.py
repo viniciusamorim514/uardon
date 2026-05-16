@@ -9,6 +9,7 @@ SRC = ROOT / "src"
 SAAS_DATA = ROOT / "outputs" / "saas"
 OUTPUTS = ROOT / "outputs"
 DB_PATH = SAAS_DATA / "studio.db"
+LEADS_BACKUP_PATH = SAAS_DATA / "leads-backup.jsonl"
 PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
 MOBILE_WEB = ROOT / "saas" / "mobile"
 

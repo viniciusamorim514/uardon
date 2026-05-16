@@ -13,6 +13,9 @@
 <meta property="og:image" content="https://uardon.com.br/assets/generated/hero-sala-jantar-cozinha.jpeg">
 <link rel="canonical" href="https://uardon.com.br">
 <meta name="theme-color" content="#1C1C1A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="assets/generated/hero-sala-jantar-cozinha.jpeg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%231C1C1A'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23CD7D5D' stroke-width='3'/%3E%3Cpath d='M32 13 38 26 51 32 38 38 32 51 26 38 13 32 26 26Z' fill='%23CD7D5D'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -249,6 +252,33 @@ nav a:hover{color:var(--orange)}
   text-transform:uppercase;
 }
 .trust-item:last-child{border-right:none}
+.commit-strip{
+  padding:18px 60px 8px;
+}
+.commit-grid{
+  max-width:1220px;
+  margin:0 auto;
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.commit-item{
+  border:1px solid rgba(205,125,93,0.18);
+  background:rgba(205,125,93,0.06);
+  border-radius:8px;
+  padding:12px 14px;
+  color:rgba(244,242,239,0.86);
+  font-size:13px;
+  line-height:1.6;
+}
+.commit-item strong{
+  display:block;
+  margin-bottom:3px;
+  color:var(--light);
+  font-size:11px;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+}
 .hero-proof{
   display:flex;
   gap:34px;
@@ -1134,6 +1164,8 @@ body.modal-open .mobile-bottom-cta{display:none}
   .trust-strip{grid-template-columns:1fr}
   .trust-item{border-right:none;border-bottom:1px solid rgba(233,223,204,0.12)}
   .trust-item:last-child{border-bottom:none}
+  .commit-strip{padding:14px 30px 6px}
+  .commit-grid{grid-template-columns:1fr}
   .portfolio-close{align-items:flex-start;flex-direction:column}
 }
 @media(max-width:768px){
@@ -1177,6 +1209,7 @@ body.modal-open .mobile-bottom-cta{display:none}
   .form-submit{padding:12px 12px;margin-top:4px}
   .form-group:nth-of-type(5),.form-submit{grid-column:auto}
   .brand-divider{margin:0 30px}
+  .commit-strip{padding:12px 30px 2px}
   footer{padding:40px 30px;flex-direction:column;align-items:flex-start;gap:20px}
   .footer-cta{align-items:flex-start;flex-direction:column}
   .footer-links{flex-wrap:wrap;gap:20px}
@@ -1186,6 +1219,7 @@ body.modal-open .mobile-bottom-cta{display:none}
 @media(max-width:480px){
   header{padding:18px 22px}
   .hero,.portfolio,.about,.services,.audience,.process,.faq,.instagram,.quote-steps,.cta{padding:72px 22px}
+  .commit-strip{padding:10px 22px 0}
   .quote-steps{padding-top:54px}
   .hero{padding-top:132px}
   .logo-key{height:32px}
@@ -1248,7 +1282,7 @@ body.modal-open .mobile-bottom-cta{display:none}
     </div>
   </div>
   <div class="hero-visual" aria-label="Projeto residencial Uardon Arquitetura e Interiores">
-    <img src="assets/generated/hero-sala-jantar-cozinha.jpeg" alt="Sala de jantar integrada com cozinha, ilha gourmet, mesa em madeira e iluminação elegante">
+    <img src="assets/generated/hero-sala-jantar-cozinha.jpeg" alt="Sala de jantar integrada com cozinha, ilha gourmet, mesa em madeira e iluminação elegante" fetchpriority="high" loading="eager" decoding="async">
   </div>
   <img class="hero-symbol" src="assets/generated/asset-003-9d8ec7ed1e84.png?v=transparent1" alt="">
 </section>
@@ -1258,6 +1292,13 @@ body.modal-open .mobile-bottom-cta{display:none}
   <div class="trust-item">Projetos residenciais, interiores e reformas</div>
   <div class="trust-item">Arquitetura com escuta, cuidado e orientação técnica</div>
 </div>
+<section class="commit-strip" aria-label="Compromissos de atendimento">
+  <div class="commit-grid">
+    <article class="commit-item"><strong>Atendimento Próximo</strong>Contato direto para entender seu momento antes de qualquer proposta.</article>
+    <article class="commit-item"><strong>Clareza no Processo</strong>Você entende cada etapa para decidir com segurança e sem pressão.</article>
+    <article class="commit-item"><strong>Confiança no Orçamento</strong>Escopo e direcionamento alinhados à realidade do seu projeto.</article>
+  </div>
+</section>
 
 <!-- SERVIÇOS -->
 <section class="services reveal" id="servicos">
@@ -1536,6 +1577,7 @@ body.modal-open .mobile-bottom-cta{display:none}
         <label>Mensagem</label>
         <textarea name="msg" placeholder="Conte rapidamente sobre o espaço que você quer transformar..."></textarea>
       </div>
+      <p class="modal-note">Seus dados serão usados apenas para contato sobre seu orçamento e conversa inicial.</p>
       <div class="form-group" id="turnstileField" style="display:none;">
         <div id="turnstileWidget"></div>
       </div>
@@ -1593,6 +1635,7 @@ function trackEvent(name){
   if(window.console) console.info('track',name);
 }
 function openModal(){
+  trackEvent('modal_orcamento_aberto');
   toggleMenu(false);
   const form=document.querySelector('#modal form');
   const feedback=document.getElementById('modalFeedback');
@@ -1676,16 +1719,19 @@ async function submitForm(e){
   const rawPhone=String(d.get('telefone')||'').trim();
   const normalizedPhone=normalizePhoneDigits(rawPhone);
   if(String(d.get('company_site')||'').trim()){
+    trackEvent('form_bloqueado_honeypot');
     showFeedbackError(feedback,'Não foi possível enviar agora.','Revise os dados e tente novamente.');
     return;
   }
   if(!isValidWhatsapp(rawPhone)){
+    trackEvent('form_erro_whatsapp_invalido');
     showFeedbackError(feedback,'WhatsApp inválido.','Use um número válido no formato (DDD) 9XXXX-XXXX.');
     const phoneField=form.querySelector('input[name="telefone"]');
     if(phoneField) phoneField.focus();
     return;
   }
   if(TURNSTILE_SITE_KEY && !turnstileToken){
+    trackEvent('form_erro_turnstile_pendente');
     showFeedbackError(feedback,'Confirmação de segurança pendente.','Confirme que você não é um robô para enviar o orçamento.');
     return;
   }
@@ -1718,6 +1764,7 @@ async function submitForm(e){
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.error||'Não foi possível registrar o lead no CRM.');
+    trackEvent('envio_formulario_sucesso');
     form.reset();
     turnstileToken='';
     if(window.turnstile && turnstileRendered && turnstileWidgetId!==null){
@@ -1731,6 +1778,7 @@ async function submitForm(e){
       feedback.querySelector('p').textContent='Recebemos seu contato. Em breve, vamos falar com você para marcar sua conversa inicial.';
     }
   }catch(error){
+    trackEvent('envio_formulario_falha');
     showFeedbackError(feedback,'Não foi possível enviar agora.',error.message||'Não foi possível registrar o lead no CRM.');
   }finally{
     button.disabled=false;

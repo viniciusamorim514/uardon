@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Iterator
 
-from .settings import DB_PATH, ensure_dirs
+from .settings import DB_PATH, LEADS_BACKUP_PATH, ensure_dirs
 
 
 def utc_now() -> str:
@@ -135,7 +135,12 @@ def create_lead(
             ),
         )
         row = conn.execute("select * from leads where id = ?", (lead_id,)).fetchone()
-        return lead_row_to_dict(row) or {}
+        lead = lead_row_to_dict(row) or {}
+        if lead:
+            # Backup append-only para recuperação operacional de leads.
+            with LEADS_BACKUP_PATH.open("a", encoding="utf-8") as backup:
+                backup.write(json.dumps(lead, ensure_ascii=False) + "\n")
+        return lead
 
 
 def get_job(job_id: str, user_id: str | None = None) -> dict | None:
