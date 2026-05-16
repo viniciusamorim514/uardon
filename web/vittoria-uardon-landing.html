@@ -1034,7 +1034,7 @@ body.modal-open .mobile-bottom-cta{display:none}
   font-size:clamp(22px,2.5vw,28px);font-weight:800;
   text-transform:uppercase;
   letter-spacing:0.02em;
-  color:var(--light);margin-bottom:8px;
+  color:var(--light);margin-bottom:10px;
   line-height:1.08;
   padding-right:28px;
 }
@@ -1048,7 +1048,33 @@ body.modal-open .mobile-bottom-cta{display:none}
   color:rgba(244,242,239,0.62);
   font-size:11px;
   line-height:1.6;
-  margin:-4px 0 14px;
+  margin:0 0 14px;
+}
+.modal-feedback{
+  display:none;
+  margin-top:10px;
+  padding:14px 16px;
+  border:1px solid rgba(205,125,93,0.24);
+  background:rgba(205,125,93,0.09);
+}
+.modal-feedback.active{display:block}
+.modal-feedback h4{
+  margin:0 0 8px;
+  color:var(--light);
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+}
+.modal-feedback p{
+  margin:0;
+  color:rgba(244,242,239,0.82);
+  font-size:13px;
+  line-height:1.65;
+}
+.modal-feedback.error{
+  border-color:rgba(204,93,93,0.45);
+  background:rgba(204,93,93,0.12);
 }
 .modal form{
   display:grid;
@@ -1409,7 +1435,7 @@ body.modal-open .mobile-bottom-cta{display:none}
     </div>
     <div class="faq-item">
       <button class="faq-question" type="button" aria-expanded="false" onclick="toggleFaq(this)"><h3>Como solicito orçamento?</h3><span class="faq-toggle">+</span></button>
-      <div class="faq-answer"><p>Envie nome, WhatsApp, cidade, tipo de projeto e uma mensagem curta. A Uardon retorna com a orientação inicial para o próximo passo.</p></div>
+      <div class="faq-answer"><p>Envie nome, WhatsApp, cidade, tipo de projeto e uma mensagem curta. A Uardon retorna para marcar uma conversa inicial.</p></div>
     </div>
   </div>
 </section>
@@ -1426,8 +1452,8 @@ body.modal-open .mobile-bottom-cta{display:none}
     </div>
     <div class="quote-card">
       <strong>02</strong>
-      <h3>Receba uma orientação inicial</h3>
-      <p>A Uardon entende seu momento, tira dúvidas principais e indica o melhor caminho para começar.</p>
+      <h3>Marque a conversa inicial</h3>
+      <p>A Uardon entra em contato para entender seu momento e alinhar os próximos passos com você.</p>
     </div>
     <div class="quote-card">
       <strong>03</strong>
@@ -1442,7 +1468,7 @@ body.modal-open .mobile-bottom-cta{display:none}
   <div class="cta-bg"></div>
   <div class="cta-content">
     <h2>A Uardon é o seu reflexo.<br>Vamos encontrar a chave do seu lar?</h2>
-    <p>Envie algumas informações e receba uma orientação inicial para o seu projeto.</p>
+    <p>Envie algumas informações e vamos falar com você para marcar a conversa inicial do seu projeto.</p>
     <div class="cta-btns">
       <button class="btn-primary" data-track="orcamento_cta_final" onclick="openModal()">Quero meu orçamento</button>
     </div>
@@ -1479,9 +1505,6 @@ body.modal-open .mobile-bottom-cta{display:none}
 <div class="modal" id="modal">
   <div class="modal-box">
     <button class="modal-close" type="button" onclick="closeModal()" aria-label="Fechar formulário">&times;</button>
-    <h3>Receba uma orientação inicial</h3>
-    <p>Conte sobre seu projeto para a Uardon entender o momento e indicar os próximos passos.</p>
-    <span class="modal-note">Sem compromisso. Nossa equipe irá entrar em contato com você.</span>
     <form onsubmit="submitForm(event)">
       <div class="form-group">
         <label>Nome *</label>
@@ -1489,7 +1512,11 @@ body.modal-open .mobile-bottom-cta{display:none}
       </div>
       <div class="form-group">
         <label>WhatsApp *</label>
-        <input type="tel" name="telefone" inputmode="tel" autocomplete="tel" required>
+        <input type="tel" name="telefone" inputmode="tel" autocomplete="tel" maxlength="16" placeholder="(47) 9 9999-9999" required>
+      </div>
+      <div class="form-group" style="display:none" aria-hidden="true">
+        <label>Site</label>
+        <input type="text" name="company_site" autocomplete="off" tabindex="-1">
       </div>
       <div class="form-group">
         <label>Cidade do projeto</label>
@@ -1511,6 +1538,10 @@ body.modal-open .mobile-bottom-cta{display:none}
       </div>
       <button type="submit" class="form-submit">Enviar solicitação</button>
     </form>
+    <div class="modal-feedback" id="modalFeedback" role="status" aria-live="polite">
+      <h4>Obrigado pela confiança.</h4>
+      <p>Recebemos seu contato. Vamos falar com você para marcar uma conversa inicial.</p>
+    </div>
   </div>
 </div>
 
@@ -1540,6 +1571,14 @@ function trackEvent(name){
 }
 function openModal(){
   toggleMenu(false);
+  const form=document.querySelector('#modal form');
+  const feedback=document.getElementById('modalFeedback');
+  if(form) form.style.display='grid';
+  if(feedback){
+    feedback.classList.remove('active','error');
+    feedback.querySelector('h4').textContent='Obrigado pela confiança.';
+    feedback.querySelector('p').textContent='Recebemos seu contato. Vamos falar com você para marcar uma conversa inicial.';
+  }
   document.getElementById('modal').classList.add('active');
   document.body.classList.add('modal-open');
   document.body.style.overflow='hidden';
@@ -1548,6 +1587,51 @@ function closeModal(){
   document.getElementById('modal').classList.remove('active');
   document.body.classList.remove('modal-open');
   document.body.style.overflow='auto';
+}
+function normalizePhoneDigits(value){
+  let digits=String(value||'').replace(/\D/g,'');
+  if(digits.startsWith('55')&&digits.length===13) digits=digits.slice(2);
+  return digits;
+}
+function isSequentialAscending(value){
+  for(let i=1;i<value.length;i++){
+    if(Number(value[i])!==((Number(value[i-1])+1)%10)) return false;
+  }
+  return true;
+}
+function isSequentialDescending(value){
+  for(let i=1;i<value.length;i++){
+    if(Number(value[i])!==((Number(value[i-1])+9)%10)) return false;
+  }
+  return true;
+}
+function isLikelyFakePhone(digits){
+  if(/^(\d)\1+$/.test(digits)) return true;
+  const local=digits.slice(2);
+  if(/^(\d)\1+$/.test(local)) return true;
+  if(isSequentialAscending(local)||isSequentialDescending(local)) return true;
+  return false;
+}
+function isValidWhatsapp(value){
+  const digits=normalizePhoneDigits(value);
+  if(!/^\d{11}$/.test(digits)) return false;
+  const ddd=Number(digits.slice(0,2));
+  if(ddd<11||ddd>99) return false;
+  if(digits[2]!=='9') return false;
+  if(isLikelyFakePhone(digits)) return false;
+  return true;
+}
+function formatWhatsappInput(value){
+  const digits=normalizePhoneDigits(value).slice(0,11);
+  if(digits.length<=2) return digits;
+  if(digits.length<=7) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0,2)}) ${digits.slice(2,3)} ${digits.slice(3,7)}-${digits.slice(7)}`;
+}
+function showFeedbackError(feedback,title,message){
+  if(!feedback) return;
+  feedback.classList.add('active','error');
+  feedback.querySelector('h4').textContent=title;
+  feedback.querySelector('p').textContent=message;
 }
 const CRM_API_BASE=(()=>{
   const explicit=(document.body.dataset.crmApi||window.UARDON_CRM_API||'').trim();
@@ -1562,11 +1646,24 @@ async function submitForm(e){
   trackEvent('envio_formulario_orcamento');
   const form=e.target;
   const button=form.querySelector('.form-submit');
+  const feedback=document.getElementById('modalFeedback');
   const originalLabel=button.textContent;
   const d=new FormData(form);
+  const rawPhone=String(d.get('telefone')||'').trim();
+  const normalizedPhone=normalizePhoneDigits(rawPhone);
+  if(String(d.get('company_site')||'').trim()){
+    showFeedbackError(feedback,'Nao foi possivel enviar agora.','Revise os dados e tente novamente.');
+    return;
+  }
+  if(!isValidWhatsapp(rawPhone)){
+    showFeedbackError(feedback,'WhatsApp invalido.','Use um numero real no formato (DDD) 9XXXX-XXXX.');
+    const phoneField=form.querySelector('input[name="telefone"]');
+    if(phoneField) phoneField.focus();
+    return;
+  }
   const leadPayload={
     name:String(d.get('nome')||'').trim(),
-    phone:String(d.get('telefone')||'').trim(),
+    phone:normalizedPhone,
     city:String(d.get('cidade')||'').trim(),
     project_type:String(d.get('tipo')||'').trim(),
     message:String(d.get('msg')||'').trim(),
@@ -1574,7 +1671,12 @@ async function submitForm(e){
     metadata:{
       current_url:window.location.href,
       referrer:document.referrer||'',
-      user_agent:navigator.userAgent
+      user_agent:navigator.userAgent,
+      utm_source:new URLSearchParams(window.location.search).get('utm_source')||'',
+      utm_medium:new URLSearchParams(window.location.search).get('utm_medium')||'',
+      utm_campaign:new URLSearchParams(window.location.search).get('utm_campaign')||'',
+      utm_content:new URLSearchParams(window.location.search).get('utm_content')||'',
+      utm_term:new URLSearchParams(window.location.search).get('utm_term')||''
     }
   };
   button.disabled=true;
@@ -1587,11 +1689,16 @@ async function submitForm(e){
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.error||'Nao foi possivel registrar o lead no CRM.');
-    closeModal();
     form.reset();
-    window.alert('Recebemos sua solicitação. Nossa equipe irá entrar em contato com você.');
+    form.style.display='none';
+    if(feedback){
+      feedback.classList.remove('error');
+      feedback.classList.add('active');
+      feedback.querySelector('h4').textContent='Obrigado pela confiança.';
+      feedback.querySelector('p').textContent='Recebemos seu contato. Vamos falar com você para marcar uma conversa inicial.';
+    }
   }catch(error){
-    window.alert(error.message||'Nao foi possivel registrar o lead no CRM.');
+    showFeedbackError(feedback,'Nao foi possivel enviar agora.',error.message||'Nao foi possivel registrar o lead no CRM.');
   }finally{
     button.disabled=false;
     button.textContent=originalLabel;
@@ -1629,6 +1736,13 @@ document.querySelectorAll('.portfolio-item[data-post-url]').forEach(item=>{
   const postUrl=item.dataset.postUrl;
   if(postUrl) item.href=postUrl;
 });
+const phoneField=document.querySelector('#modal input[name="telefone"]');
+if(phoneField){
+  phoneField.addEventListener('input',event=>{
+    const input=event.target;
+    input.value=formatWhatsappInput(input.value);
+  });
+}
 const yearEl=document.getElementById('year');
 if(yearEl) yearEl.textContent='© '+new Date().getFullYear();
 </script>

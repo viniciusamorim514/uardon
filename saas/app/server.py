@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -31,6 +32,9 @@ CONTENT_TYPES = {
 }
 
 SKIP_OUTPUT_PARTS = {".work", "_validacao", "rejeitados", "saas"}
+LEAD_RATE_WINDOW_SECONDS = 10 * 60
+LEAD_RATE_MAX_PER_WINDOW = 5
+LEAD_RATE_STATE: dict[str, list[float]] = {}
 
 
 def valid_youtube_url(url: str) -> bool:
@@ -61,19 +65,80 @@ def normalize_lead_request(data: dict) -> dict:
     message = str(data.get("message") or data.get("msg") or "").strip()
     source = str(data.get("source") or "landing-page").strip() or "landing-page"
     metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+    honeypot = str(data.get("company_site") or data.get("website") or "").strip()
     if len(name) < 2:
         raise ValueError("Nome invalido")
-    if len(phone) < 8:
-        raise ValueError("WhatsApp invalido")
+    if honeypot:
+        raise ValueError("Envio invalido")
+    normalized_phone = normalize_whatsapp(phone)
+    if not normalized_phone:
+        raise ValueError("WhatsApp invalido. Use DDD + 9 numeros.")
     return {
         "name": name[:120],
-        "phone": phone[:40],
+        "phone": normalized_phone,
         "city": city[:120],
         "project_type": project_type[:120],
         "message": message[:2000],
         "source": source[:120],
         "metadata": metadata,
     }
+
+
+def normalize_whatsapp(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone or "")
+    if digits.startswith("55") and len(digits) == 13:
+        digits = digits[2:]
+    if not re.fullmatch(r"\d{11}", digits):
+        return ""
+    ddd = int(digits[:2])
+    if ddd < 11 or ddd > 99:
+        return ""
+    if digits[2] != "9":
+        return ""
+    if is_fake_phone(digits):
+        return ""
+    return digits
+
+
+def is_fake_phone(digits: str) -> bool:
+    if re.fullmatch(r"(\d)\1{10}", digits):
+        return True
+    local = digits[2:]
+    if re.fullmatch(r"(\d)\1{8}", local):
+        return True
+    return is_sequential_ascending(local) or is_sequential_descending(local)
+
+
+def is_sequential_ascending(text: str) -> bool:
+    for idx in range(1, len(text)):
+        if int(text[idx]) != (int(text[idx - 1]) + 1) % 10:
+            return False
+    return True
+
+
+def is_sequential_descending(text: str) -> bool:
+    for idx in range(1, len(text)):
+        if int(text[idx]) != (int(text[idx - 1]) + 9) % 10:
+            return False
+    return True
+
+
+def get_client_ip(handler: BaseHTTPRequestHandler) -> str:
+    forwarded = handler.headers.get("X-Forwarded-For", "").strip()
+    if forwarded:
+        return forwarded.split(",")[0].strip() or "unknown"
+    if handler.client_address and handler.client_address[0]:
+        return handler.client_address[0]
+    return "unknown"
+
+
+def enforce_lead_rate_limit(ip_address: str) -> None:
+    now = time.time()
+    recent = [ts for ts in LEAD_RATE_STATE.get(ip_address, []) if now - ts <= LEAD_RATE_WINDOW_SECONDS]
+    if len(recent) >= LEAD_RATE_MAX_PER_WINDOW:
+        raise ValueError("Muitas tentativas. Aguarde alguns minutos e tente novamente.")
+    recent.append(now)
+    LEAD_RATE_STATE[ip_address] = recent
 
 
 def inside(child: Path, parent: Path) -> bool:
@@ -365,6 +430,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             payload = self.read_json()
             if parsed.path == "/v1/leads":
+                enforce_lead_rate_limit(get_client_ip(self))
                 lead = create_lead(str(uuid4()), self.user_id(), **normalize_lead_request(payload))
                 self.send_json(lead, 201)
                 return
