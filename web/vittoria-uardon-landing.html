@@ -1652,11 +1652,11 @@ async function submitForm(e){
   const rawPhone=String(d.get('telefone')||'').trim();
   const normalizedPhone=normalizePhoneDigits(rawPhone);
   if(String(d.get('company_site')||'').trim()){
-    showFeedbackError(feedback,'Nao foi possivel enviar agora.','Revise os dados e tente novamente.');
+    showFeedbackError(feedback,'Não foi possível enviar agora.','Revise os dados e tente novamente.');
     return;
   }
   if(!isValidWhatsapp(rawPhone)){
-    showFeedbackError(feedback,'WhatsApp invalido.','Use um numero real no formato (DDD) 9XXXX-XXXX.');
+    showFeedbackError(feedback,'WhatsApp inválido.','Use um número real no formato (DDD) 9XXXX-XXXX.');
     const phoneField=form.querySelector('input[name="telefone"]');
     if(phoneField) phoneField.focus();
     return;
@@ -1688,7 +1688,7 @@ async function submitForm(e){
       body:JSON.stringify(leadPayload)
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(data.error||'Nao foi possivel registrar o lead no CRM.');
+    if(!response.ok) throw new Error(data.error||'Não foi possível registrar o lead no CRM.');
     form.reset();
     form.style.display='none';
     if(feedback){
@@ -1698,7 +1698,7 @@ async function submitForm(e){
       feedback.querySelector('p').textContent='Recebemos seu contato. Vamos falar com você para marcar uma conversa inicial.';
     }
   }catch(error){
-    showFeedbackError(feedback,'Nao foi possivel enviar agora.',error.message||'Nao foi possivel registrar o lead no CRM.');
+    showFeedbackError(feedback,'Não foi possível enviar agora.',error.message||'Não foi possível registrar o lead no CRM.');
   }finally{
     button.disabled=false;
     button.textContent=originalLabel;

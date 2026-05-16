@@ -44,7 +44,7 @@ def valid_youtube_url(url: str) -> bool:
 def normalize_request(data: dict) -> dict:
     url = str(data.get("url") or "").strip()
     if not valid_youtube_url(url):
-        raise ValueError("URL do YouTube invalida")
+        raise ValueError("URL do YouTube inválida")
     return {
         "url": url,
         "count": max(1, min(8, int(data.get("count") or 3))),
@@ -67,12 +67,12 @@ def normalize_lead_request(data: dict) -> dict:
     metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
     honeypot = str(data.get("company_site") or data.get("website") or "").strip()
     if len(name) < 2:
-        raise ValueError("Nome invalido")
+        raise ValueError("Nome inválido")
     if honeypot:
-        raise ValueError("Envio invalido")
+        raise ValueError("Envio inválido")
     normalized_phone = normalize_whatsapp(phone)
     if not normalized_phone:
-        raise ValueError("WhatsApp invalido. Use DDD + 9 numeros.")
+        raise ValueError("WhatsApp inválido. Use DDD + 9 números.")
     return {
         "name": name[:120],
         "phone": normalized_phone,
@@ -295,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
         resolved = path.resolve()
         root = MOBILE_WEB.resolve()
         if root not in resolved.parents and resolved != root:
-            self.send_json({"error": "Arquivo invalido"}, 403)
+            self.send_json({"error": "Arquivo inválido"}, 403)
             return
         if not resolved.exists() or not resolved.is_file():
             self.send_json({"error": "Arquivo nao encontrado"}, 404)
@@ -310,7 +310,7 @@ class Handler(BaseHTTPRequestHandler):
     def send_output_file(self, path: Path) -> None:
         resolved = path.resolve()
         if not inside(resolved, OUTPUTS):
-            self.send_json({"error": "Arquivo invalido"}, 403)
+            self.send_json({"error": "Arquivo inválido"}, 403)
             return
         if resolved.suffix.lower() not in {".mp4", ".txt", ".json"}:
             self.send_json({"error": "Tipo de arquivo bloqueado"}, 403)
@@ -387,7 +387,7 @@ class Handler(BaseHTTPRequestHandler):
             params = parse_qs(parsed.query)
             path = safe_output_path(params.get("path", [""])[0])
             if not path:
-                self.send_json({"error": "Arquivo invalido"}, 404)
+                self.send_json({"error": "Arquivo inválido"}, 404)
                 return
             self.send_output_file(path)
             return
