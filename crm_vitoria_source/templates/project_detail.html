@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block page_title %}{{ project.nome }}{% endblock %}
+{% block page_subtitle %}Projeto guiado, operação e entrega{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('projects') }}" class="btn btn-ghost">Voltar</a>
+{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="detail-hero card project-command-hero">
+    <div class="detail-hero-grid">
+      <div>
+        <div class="eyebrow">Projeto guiado</div>
+        <h1>{{ project.nome }}</h1>
+        <p>{{ project.cliente }} · {{ project.tipo or 'tipo não informado' }}</p>
+        <div class="chips-row hero-chips">
+          <span class="mini-status">{{ project.status or 'Planejamento' }}</span>
+          <span class="contact-pill {% if contract_data.label == 'Assinado' %}good{% elif contract_data.label in ['Enviado','Em assinatura'] %}watch{% else %}muted{% endif %}">Contrato: {{ contract_data.label }}</span>
+          {% if payment_data.overdue_count %}<span class="contact-pill alert">Recebível atrasado</span>{% elif payment_data.pending_count %}<span class="contact-pill watch">Recebíveis pendentes</span>{% else %}<span class="contact-pill good">Recebíveis em dia</span>{% endif %}
+        </div>
+      </div>
+      <div class="hero-stats hero-stats-compact">
+        <div><span>Etapa atual</span><strong>{{ stage_data.current.nome if stage_data.current else 'Concluído' }}</strong></div>
+        <div><span>Prazo</span><strong>{{ project.prazo or '—' }}</strong></div>
+        <div><span>Progresso</span><strong>{{ project.progresso }}%</strong></div>
+        <div><span>Valor</span><strong>R$ {{ '%.0f'|format(project.valor) }}</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card project-next-action tone-{{ next_action.tone }}">
+    <div class="project-next-main">
+      <span>Próxima ação do projeto</span>
+      <strong>{{ next_action.label }}</strong>
+      <p>{{ next_action.note }}</p>
+    </div>
+    <a class="mini-btn primary" href="{{ next_action.primary_url }}" {% if 'whatsapp' in next_action.primary_url %}target="_blank"{% endif %}>{{ next_action.primary_label }}</a>
+  </section>
+
+  <section class="project-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Operação do projeto</div><div class="section-note">estado atual para decisão rápida</div></div></div>
+      <div class="project-ops-grid">
+        <div class="project-op-item"><span>Etapas feitas</span><strong>{{ stage_data.completed }}/{{ stage_data.total }}</strong></div>
+        <div class="project-op-item"><span>Tarefas abertas</span><strong>{{ linked_tasks|selectattr('done', 'equalto', false)|list|length }}</strong></div>
+        <div class="project-op-item"><span>Recebíveis abertos</span><strong>{{ payment_data.pending_count }}</strong></div>
+        <div class="project-op-item"><span>Contrato</span><strong>{{ contract_data.label }}</strong></div>
+      </div>
+      <form method="post" action="{{ url_for('update_notes', project_id=project.id) }}" class="summary-form project-status-form">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Status</label><input class="form-input" name="status" value="{{ project.status }}"></div>
+          <div class="form-group"><label class="form-label">Prazo</label><input class="form-input" name="prazo" value="{{ project.prazo }}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="obs">{{ project.obs }}</textarea></div>
+        <div class="form-row">
+          {% if client %}<a class="btn btn-ghost full" href="{{ url_for('client_detail', client_id=client.id) }}">Abrir cliente</a>{% endif %}
+          <button class="btn btn-primary full" type="submit">Salvar resumo</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Histórico útil</div><div class="section-note">reuniões, decisões, tarefas, contrato e pagamentos</div></div></div>
+      <div class="list project-timeline-list">
+        {% for item in project_timeline %}
+        <div class="item compact-item timeline-entry tone-{{ item.tone }}">
+          <div class="item-time">{{ item.data or '—' }}</div>
+          <div class="item-main">
+            <div class="item-title">{{ item.tipo }} · {{ item.titulo }}</div>
+            <div class="item-sub">{{ item.descricao }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhum histórico registrado para este projeto ainda.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="etapas">
+    <div class="section-header"><div><div class="section-title">Etapas guiadas</div><div class="section-note">feito, em andamento e próximo passo</div></div></div>
+    <div class="project-stage-grid">
+      {% for etapa in stage_data['items'] %}
+      <form method="post" action="{{ url_for('toggle_stage', project_id=project.id, index=etapa.index) }}" class="stage-form">
+        <button class="project-stage-card stage-{{ etapa.state }}" type="submit">
+          <span class="stage-state">{{ etapa.state_label }}</span>
+          <strong>{{ etapa.nome }}</strong>
+          <em>
+            {% if 'Briefing' in etapa.nome %}Entender necessidade, medir e confirmar escopo.
+            {% elif 'layout' in etapa.nome %}Validar distribuição, fluxos e decisões.
+            {% elif '3D' in etapa.nome %}Apresentar atmosfera, materiais e ajustes.
+            {% elif 'marcenaria' in etapa.nome %}Detalhar medidas, ferragens e execução.
+            {% elif 'caderno' in etapa.nome %}Consolidar entrega final e pendências.
+            {% else %}Registrar avanço e próxima ação.{% endif %}
+          </em>
+          {% if etapa.data %}<small>{{ etapa.data }}</small>{% endif %}
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="project-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Recebíveis do projeto</div><div class="section-note">controle central fica em Recebíveis</div></div><a class="mini-link" href="{{ url_for('receivables_page') }}">Abrir recebíveis</a></div>
+      <div class="project-ops-grid project-ops-compact">
+        <div class="project-op-item"><span>Pendentes</span><strong>{{ payment_data.pending_count }}</strong></div>
+        <div class="project-op-item"><span>Atrasados</span><strong>{{ payment_data.overdue_count }}</strong></div>
+        <div class="project-op-item"><span>Próximo vencimento</span><strong>{% if payment_data.next_due %}{{ payment_data.next_due[0].strftime('%d/%m/%Y') }}{% else %}—{% endif %}</strong></div>
+      </div>
+      <div class="list">
+        {% for item in payment_data['items'] %}
+          {% if item.status_calculado != 'Pago' %}
+          <div class="item compact-item">
+            <div class="item-main"><div class="item-title">{{ item.descricao }}</div><div class="item-sub">{{ item.valor_fmt }} · vence {{ item.vencimento or 'sem data' }} · {{ item.status_calculado }}</div></div>
+            {% if item.status_calculado != 'Pago' %}<form method="post" action="{{ url_for('mark_payment_paid', project_id=project.id, payment_id=item.id) }}"><button class="mini-btn primary" type="submit">Pago</button></form>{% endif %}
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="empty-state">Nenhuma parcela cadastrada para este projeto.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Contrato do projeto</div><div class="section-note">formalização sem burocracia pesada</div></div></div>
+      <div class="contract-strip">
+        <div class="contract-mini"><span>Status</span><strong>{{ contract_data.label }}</strong></div>
+        <div class="contract-mini"><span>Modelo</span><strong>{{ project.contrato.modelo or 'Contrato padrão Vitória' }}</strong></div>
+        <div class="contract-mini"><span>Follow-up</span><strong>{{ project.contrato.ultimo_followup_em or '—' }}</strong></div>
+      </div>
+      <form method="post" action="{{ url_for('update_contract', project_id=project.id) }}" enctype="multipart/form-data" class="summary-form">
+        <div class="form-group"><label class="form-label">Status do contrato</label><select class="form-select" name="status">{% for status in contract_statuses %}<option value="{{ status }}" {% if project.contrato.status==status %}selected{% endif %}>{{ status }}</option>{% endfor %}</select></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Emitido em</label><input class="form-input" name="emitido_em" value="{{ project.contrato.emitido_em }}"></div><div class="form-group"><label class="form-label">Assinado em</label><input class="form-input" name="assinado_em" value="{{ project.contrato.assinado_em }}"></div></div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="observacoes">{{ project.contrato.observacoes }}</textarea></div>
+        <div class="form-row">
+          <a class="btn btn-ghost full" href="{{ contract_data.whatsapp_url }}" target="_blank">WhatsApp assinatura</a>
+          <button class="btn btn-primary full" type="submit">Salvar contrato</button>
+        </div>
+      </form>
+      <form method="post" action="{{ url_for('contract_followup', project_id=project.id) }}" class="summary-form project-followup-form">
+        <button class="btn btn-ghost full" type="submit">Registrar follow-up de contrato</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="project-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Pasta viva</div><div class="section-note">links essenciais sem upload pesado</div></div></div>
+      <div class="files-layout project-files-layout">
+        <form method="post" action="{{ url_for('upload_project_file', project_id=project.id) }}" enctype="multipart/form-data" class="upload-box">
+          <div class="form-group"><label class="form-label">Categoria</label><select class="form-select" name="categoria">{% for cat in file_categories %}<option>{{ cat }}</option>{% endfor %}</select></div>
+          <div class="form-group"><label class="form-label">Título</label><input class="form-input" name="titulo" placeholder="Ex.: Pasta do projeto no Drive"></div>
+          <div class="form-group"><label class="form-label">Link</label><input class="form-input" name="url" placeholder="https://drive.google.com/..."></div>
+          <button class="btn btn-primary full" type="submit">Salvar link</button>
+        </form>
+        <div class="files-groups">
+          {% for cat in file_categories %}
+          {% set items = project.arquivos | selectattr('categoria', 'equalto', cat) | list %}
+          {% if items %}
+          <div class="file-group">
+            <div class="file-group-head"><strong>{{ cat }}</strong><span>{{ items|length }}</span></div>
+            {% for item in items %}
+            <div class="file-row"><div><div class="file-title">{{ item.titulo }}</div><div class="file-meta">{{ item.original_name }} · {{ item.uploaded_at }}</div></div><div class="file-actions">{% if item.tipo == 'link' and item.url %}<a href="{{ item.url }}" class="mini-link" target="_blank">Abrir</a>{% elif item.filename %}<a href="{{ url_for('serve_project_file', project_id=project.id, filename=item.filename) }}" class="mini-link">Baixar</a>{% endif %}</div></div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

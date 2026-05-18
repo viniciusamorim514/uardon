@@ -1,0 +1,423 @@
+{% extends 'base.html' %}
+{% block page_title %}Leads{% endblock %}
+{% block page_subtitle %}Esteira comercial da captação ao cliente fechado{% endblock %}
+{% block topbar_actions %}
+<a class="btn btn-ghost" href="{{ url_for('import_csv_page', kind='leads') }}">Importar CSV</a>
+<button class="btn btn-primary" onclick="document.getElementById('novo-lead').classList.add('open')">+ Novo lead</button>
+{% endblock %}
+{% block content %}
+{% set lead_summary = namespace(open=0, new_budgets=0, stale=0, proposal=0, next_lead=None, next_label='Abrir lead', next_note='Escolha o lead com maior chance de virar conversa agora.') %}
+{% for column in pipeline.columns %}
+  {% if column['key'] != 'closed' %}
+    {% set lead_summary.open = lead_summary.open + column['items']|length %}
+  {% endif %}
+  {% if column['key'] == 'proposal' %}
+    {% set lead_summary.proposal = column['items']|length %}
+  {% endif %}
+  {% for item in column['items'] %}
+    {% if column['key'] != 'closed' %}
+      {% set item_stage_text = (item.etapa or '')|lower %}
+      {% set item_origin_text = (item.origem or '')|lower %}
+      {% if 'orc' in item_stage_text or item_origin_text == 'instagram' %}
+        {% set lead_summary.new_budgets = lead_summary.new_budgets + 1 %}
+        {% if lead_summary.next_lead is none %}
+          {% set lead_summary.next_lead = item %}
+          {% set lead_summary.next_label = 'Responder agora' %}
+          {% set lead_summary.next_note = 'Novo pedido merece resposta rapida para nao esfriar.' %}
+        {% endif %}
+      {% endif %}
+      {% if item.is_stale %}
+        {% set lead_summary.stale = lead_summary.stale + 1 %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+{% if lead_summary.next_lead is none %}
+  {% for column in pipeline.columns %}
+    {% if column['key'] != 'closed' %}
+      {% for item in column['items'] %}
+        {% if item.is_stale and lead_summary.next_lead is none %}
+          {% set lead_summary.next_lead = item %}
+          {% set lead_summary.next_label = 'Retomar conversa' %}
+          {% set lead_summary.next_note = 'Lead parado precisa de follow-up curto e objetivo.' %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% if lead_summary.next_lead is none %}
+  {% for column in pipeline.columns %}
+    {% if column['key'] == 'proposal' %}
+      {% for item in column['items'] %}
+        {% if lead_summary.next_lead is none %}
+          {% set lead_summary.next_lead = item %}
+          {% set lead_summary.next_label = 'Acompanhar proposta' %}
+          {% set lead_summary.next_note = 'Ajude a cliente a decidir sem pressionar.' %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+<div class="content stack-lg">
+  <section class="card lead-command-card">
+    <div class="lead-command-main">
+      <div>
+        <div class="lead-command-kicker">Comercial agora</div>
+        {% if lead_summary.next_lead %}
+        <div class="lead-command-title">{{ lead_summary.next_label }}: {{ lead_summary.next_lead.nome }}</div>
+        <div class="lead-command-note">{{ lead_summary.next_note }}</div>
+        {% else %}
+        <div class="lead-command-title">Esteira em dia</div>
+        <div class="lead-command-note">Sem lead urgente agora. Bom momento para revisar futuros e perdidos.</div>
+        {% endif %}
+      </div>
+      <div class="lead-command-actions">
+        {% if lead_summary.next_lead and lead_summary.next_lead.whatsapp_url and lead_summary.next_lead.whatsapp_url != '#' %}
+        <a class="mini-btn primary" href="{{ lead_summary.next_lead.whatsapp_url }}" target="_blank">WhatsApp</a>
+        {% endif %}
+        <a class="mini-btn" href="#pipeline">Ver esteira</a>
+      </div>
+    </div>
+    <div class="lead-command-metrics">
+      <a href="#pipeline"><span>Abertos</span><strong>{{ lead_summary.open }}</strong></a>
+      <a href="#pipeline"><span>Novos</span><strong>{{ lead_summary.new_budgets }}</strong></a>
+      <a href="#pipeline"><span>Sem avanco</span><strong>{{ lead_summary.stale }}</strong></a>
+      <a href="#pipeline"><span>Propostas</span><strong>{{ lead_summary.proposal }}</strong></a>
+      <a href="#future-leads"><span>Futuro</span><strong>{{ pipeline.future|length }}</strong></a>
+      <a href="#lost-leads"><span>Perdidos</span><strong>{{ pipeline.lost|length }}</strong></a>
+    </div>
+  </section>
+
+  <section class="card pipeline-card" id="pipeline">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Esteira de atendimento</div>
+        <div class="section-note">mova o lead pelo próximo passo real</div>
+      </div>
+    </div>
+    <div class="lead-pipeline">
+      {% for column in pipeline.columns %}
+      <div class="lead-column" data-stage="{{ column.stage }}" ondragover="allowLeadDrop(event)" ondragenter="markLeadDrop(event)" ondragleave="unmarkLeadDrop(event)" ondrop="dropLeadOnStage(event)">
+        <div class="lead-column-head">
+          <div>
+            <strong>{{ column.label }}</strong>
+            <span>{{ column.note }}</span>
+          </div>
+          <em>{{ column['items']|length }}</em>
+        </div>
+        <div class="lead-column-list">
+          {% for lead in column['items'] %}
+          <div class="lead-card {% if lead.is_stale %}lead-card-stale{% endif %}" draggable="true" data-lead-id="{{ lead.id }}"
+            data-lead-name="{{ lead.nome|e }}"
+            data-lead-phone="{{ lead.tel|default('', true)|e }}"
+            data-lead-email="{{ lead.email|default('', true)|e }}"
+            data-lead-origin="{{ lead.origem|default('', true)|e }}"
+            data-lead-ambient="{{ lead.ambiente|default('', true)|e }}"
+            data-lead-budget="{{ lead.orcamento|default('', true)|e }}"
+            data-lead-status="{{ lead.status|default('', true)|e }}"
+            data-lead-stage="{{ lead.etapa|default('', true)|e }}"
+            data-lead-date="{{ lead.ultima_interacao|default(lead.data, true)|default('', true)|e }}"
+            data-lead-notes="{{ lead.obs|default('', true)|e }}"
+            data-lead-stale="{{ '1' if lead.is_stale else '0' }}"
+            data-lead-stale-label="{{ lead.stale_label|default('', true)|e }}"
+            data-lead-whatsapp="{{ lead.whatsapp_url|default('#', true)|e }}"
+            data-lead-future-id="{{ lead.id }}"
+            data-lead-lost-id="{{ lead.id }}"
+            onclick="openLeadDetail(event)"
+            ondragstart="startLeadDrag(event)" ondragend="endLeadDrag(event)">
+            <div class="lead-card-top">
+              <div class="lead-card-title">{{ lead.nome }}</div>
+              <div class="lead-card-date">{{ lead.ultima_interacao or lead.data or '—' }}</div>
+            </div>
+            <div class="lead-card-sub">{{ lead.origem or 'Origem não informada' }} · {{ lead.ambiente or 'Ambiente não informado' }}</div>
+            <div class="lead-card-meta">
+              <span>{{ lead.orcamento or 'orçamento a conversar' }}</span>
+              {% if lead.is_stale %}<span class="lead-stale-pill">{{ lead.stale_label }}</span>{% endif %}
+            </div>
+            <div class="lead-card-actions">
+              <button class="mini-btn" type="button">Ver</button>
+              {% if lead.tel %}<a class="mini-btn primary" href="{{ lead.whatsapp_url }}" target="_blank" onclick="event.stopPropagation()">WhatsApp</a>{% endif %}
+              {% if column.key == 'closed' %}
+              <span class="mini-status">Convertido</span>
+              {% else %}
+              <div class="lead-menu-wrap">
+                <button class="mini-btn icon-btn" type="button" onclick="toggleLeadMenu(event)">Ações</button>
+                <div class="lead-action-menu">
+                  <button type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','future')">Mover para futuro</button>
+                  <button class="danger" type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','lost')">Marcar perdido</button>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class="empty-state compact-empty">Sem leads nesta etapa.</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="grid-2 lead-support-grid">
+    <div class="card clean-projects-card" id="future-leads">
+      <div class="section-header"><div><div class="section-title">Leads futuros</div><div class="section-note">nutrição e retomada</div></div></div>
+      <div class="projects-clean-list compact-list">
+        {% for lead in pipeline.future %}
+        <div class="project-clean-row compact-row">
+          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">Retomar em {{ lead.futuro_retorno or '—' }}</div></div>
+          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or '—' }}</strong></div>
+          <div class="project-clean-col status-align"><form method="post" action="{{ url_for('mark_lead_contacted', lead_id=lead.id) }}"><button class="btn btn-primary tiny-btn" type="submit">Retomar agora</button></form></div>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhum lead em futuro / nutrição.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card clean-projects-card" id="lost-leads">
+      <div class="section-header"><div><div class="section-title">Leads perdidos</div><div class="section-note">motivos para análise de conversão</div></div></div>
+      <div class="projects-clean-list compact-list">
+        {% for lead in pipeline.lost %}
+        <div class="project-clean-row compact-row">
+          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">{{ lead.ambiente }} · {{ lead.origem }}</div></div>
+          <div class="project-clean-col"><span class="project-clean-label">Motivo da perda</span><strong>{{ lead.perda_motivo or '—' }}</strong></div>
+          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or '—' }}</strong></div>
+          <div class="project-clean-col status-align" style="gap:8px">
+            <form method="post" action="{{ url_for('reactivate_lead', lead_id=lead.id) }}">
+              <button class="btn btn-primary tiny-btn" type="submit">Reativar</button>
+            </form>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhum lead perdido registrado.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="lead-detail-modal" onclick="if(event.target===this)closeLeadDetail()">
+  <div class="modal lead-detail-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="leadDetailName">Lead</div>
+        <div class="lead-detail-sub" id="leadDetailSub"></div>
+      </div>
+      <button class="modal-close" type="button" onclick="closeLeadDetail()">x</button>
+    </div>
+    <div class="modal-body">
+      <div class="lead-next-action">
+        <div>
+          <span>Próxima ação sugerida</span>
+          <strong id="leadDetailNextAction">Responder pelo WhatsApp</strong>
+        </div>
+        <p id="leadDetailNextNote">Use a conversa para confirmar escopo, prazo e expectativa de investimento.</p>
+      </div>
+      <div class="lead-detail-grid">
+        <div><span>Telefone</span><strong id="leadDetailPhone">—</strong></div>
+        <div><span>E-mail</span><strong id="leadDetailEmail">—</strong></div>
+        <div><span>Origem</span><strong id="leadDetailOrigin">—</strong></div>
+        <div><span>Ambiente</span><strong id="leadDetailAmbient">—</strong></div>
+        <div><span>Orçamento</span><strong id="leadDetailBudget">—</strong></div>
+        <div><span>Última interação</span><strong id="leadDetailDate">-</strong></div>
+        <div><span>Status</span><strong id="leadDetailStatus">—</strong></div>
+        <div><span>Etapa</span><strong id="leadDetailStage">—</strong></div>
+      </div>
+      <div class="lead-detail-notes">
+        <span>Observações</span>
+        <p id="leadDetailNotes">—</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a class="btn btn-ghost" id="leadDetailWhatsApp" href="#" target="_blank">WhatsApp</a>
+      <button class="btn btn-ghost" type="button" onclick="openLeadDetailFuture()">Mover para futuro</button>
+      <button class="btn btn-ghost danger-btn" type="button" onclick="openLeadDetailLost()">Marcar perdido</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let draggedLeadId = null;
+  let currentLeadDetailId = null;
+  let leadDragActive = false;
+
+  function startLeadDrag(event) {
+    const card = event.currentTarget;
+    leadDragActive = true;
+    draggedLeadId = card.dataset.leadId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', draggedLeadId);
+    card.classList.add('dragging');
+  }
+
+  function endLeadDrag(event) {
+    event.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.lead-column.drop-target').forEach(function(column) {
+      column.classList.remove('drop-target');
+    });
+    setTimeout(function() {
+      leadDragActive = false;
+    }, 0);
+  }
+
+  function allowLeadDrop(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }
+
+  function markLeadDrop(event) {
+    event.currentTarget.classList.add('drop-target');
+  }
+
+  function unmarkLeadDrop(event) {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      event.currentTarget.classList.remove('drop-target');
+    }
+  }
+
+  function dropLeadOnStage(event) {
+    event.preventDefault();
+    const column = event.currentTarget;
+    column.classList.remove('drop-target');
+    const leadId = event.dataTransfer.getData('text/plain') || draggedLeadId;
+    const stage = column.dataset.stage;
+    if (!leadId || !stage) return;
+    fetch(`/leads/${leadId}/etapa/${stage}`, { method: 'POST' }).then(function(response) {
+      if (response.ok) window.location.reload();
+    });
+  }
+
+  function toggleLeadMenu(event) {
+    event.stopPropagation();
+    const wrap = event.currentTarget.closest('.lead-menu-wrap');
+    document.querySelectorAll('.lead-menu-wrap.open').forEach(function(item) {
+      if (item !== wrap) item.classList.remove('open');
+    });
+    if (wrap) wrap.classList.toggle('open');
+  }
+
+  document.addEventListener('click', function(event) {
+    document.querySelectorAll('.lead-menu-wrap.open').forEach(function(item) {
+      if (!item.contains(event.target)) item.classList.remove('open');
+    });
+  });
+
+  function setLeadText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value || '—';
+  }
+
+  function openLeadDetail(event) {
+    if (leadDragActive) return;
+    event.stopPropagation();
+    const button = event.currentTarget.closest('.lead-card') || event.currentTarget;
+    const modal = document.getElementById('lead-detail-modal');
+    currentLeadDetailId = button.dataset.leadFutureId || button.dataset.leadLostId || null;
+    setLeadText('leadDetailName', button.dataset.leadName);
+    setLeadText('leadDetailSub', `${button.dataset.leadOrigin || 'Origem não informada'} · ${button.dataset.leadAmbient || 'Ambiente não informado'}`);
+    setLeadText('leadDetailPhone', button.dataset.leadPhone);
+    setLeadText('leadDetailEmail', button.dataset.leadEmail);
+    setLeadText('leadDetailOrigin', button.dataset.leadOrigin);
+    setLeadText('leadDetailAmbient', button.dataset.leadAmbient);
+    setLeadText('leadDetailBudget', button.dataset.leadBudget);
+    setLeadText('leadDetailDate', button.dataset.leadDate);
+    setLeadText('leadDetailStatus', button.dataset.leadStatus);
+    setLeadText('leadDetailStage', button.dataset.leadStage);
+    setLeadText('leadDetailNotes', button.dataset.leadNotes);
+    updateLeadNextAction(button.dataset.leadStage, button.dataset.leadStale, button.dataset.leadStaleLabel);
+    const whats = document.getElementById('leadDetailWhatsApp');
+    if (whats) whats.href = button.dataset.leadWhatsapp || '#';
+    if (modal) modal.classList.add('open');
+  }
+
+  function updateLeadNextAction(stage, isStale, staleLabel) {
+    const normalized = (stage || '').toLowerCase();
+    let title = 'Responder pelo WhatsApp';
+    let note = 'Use a conversa para confirmar escopo, prazo e expectativa de investimento.';
+    if (isStale === '1') {
+      title = 'Fazer follow-up';
+      note = `${staleLabel || 'Lead sem avanço'}: retome com uma mensagem curta e defina o próximo passo.`;
+    } else if (normalized.includes('contato')) {
+      title = 'Marcar briefing';
+      note = 'Depois do primeiro contato, o próximo passo é transformar interesse em reunião.';
+    } else if (normalized.includes('briefing')) {
+      title = 'Preparar proposta';
+      note = 'Com o briefing feito, organize escopo, investimento e próximos passos.';
+    } else if (normalized.includes('proposta')) {
+      title = 'Fazer follow-up da proposta';
+      note = 'Acompanhe a decisão sem pressionar, reforçando clareza e disponibilidade.';
+    } else if (normalized.includes('convertido')) {
+      title = 'Criar projeto';
+      note = 'Lead convertido deve entrar na operação como cliente/projeto.';
+    }
+    setLeadText('leadDetailNextAction', title);
+    setLeadText('leadDetailNextNote', note);
+  }
+
+  function openLeadDetailFuture() {
+    if (!currentLeadDetailId) return;
+    closeLeadDetail();
+    openLeadModal(currentLeadDetailId, 'future');
+  }
+
+  function openLeadDetailLost() {
+    if (!currentLeadDetailId) return;
+    closeLeadDetail();
+    openLeadModal(currentLeadDetailId, 'lost');
+  }
+
+  function closeLeadDetail() {
+    const modal = document.getElementById('lead-detail-modal');
+    if (modal) modal.classList.remove('open');
+  }
+</script>
+
+<div class="modal-overlay" id="novo-lead" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Novo lead</div><button class="modal-close" onclick="document.getElementById('novo-lead').classList.remove('open')">x</button></div>
+    <form method="post" action="{{ url_for('create_lead') }}">
+      <div class="modal-body">
+        <div class="form-row"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" name="nome" required></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" name="tel"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" name="email"></div><div class="form-group"><label class="form-label">Profissão</label><input class="form-input" name="profissao"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Origem</label><input class="form-input" name="origem"></div><div class="form-group"><label class="form-label">Ambiente</label><input class="form-input" name="ambiente"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Orçamento</label><input class="form-input" name="budget"></div><div class="form-group"><label class="form-label">Etapa</label><input class="form-input" name="etapa" value="Orçamento recebido"></div></div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="obs"></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('novo-lead').classList.remove('open')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar lead</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="lead-lost-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Marcar lead como perdido</div><button class="modal-close" onclick="closeLeadModal('lead-lost-modal')">x</button></div>
+    <form method="post" onsubmit="submitLeadStatus(this, 'perdido')">
+      <input type="hidden" name="lead_id" value="">
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Motivo da perda</label>
+          <select class="form-select" name="perda_motivo" required>
+            {% for reason in lead_loss_reasons %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Observação</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: cliente achou o escopo acima do orçamento previsto."></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeLeadModal('lead-lost-modal')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar perda</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="lead-future-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Mover lead para futuro</div><button class="modal-close" onclick="closeLeadModal('lead-future-modal')">x</button></div>
+    <form method="post" onsubmit="submitLeadStatus(this, 'futuro')">
+      <input type="hidden" name="lead_id" value="">
+      <div class="modal-body">
+        <div class="form-group"><label class="form-label">Data para retomar</label><input class="form-input" name="futuro_retorno" placeholder="15/08/2026" required></div>
+        <div class="form-group"><label class="form-label">Observação</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: obra ficou para o próximo semestre."></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeLeadModal('lead-future-modal')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar para futuro</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [],
+  "projetos": [],
+  "tarefas": [],
+  "eventos": [],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

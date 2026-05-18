@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block page_title %}Importar {{ label }}{% endblock %}
+{% block page_subtitle %}CSV com pré-visualização, deduplicação e ação por linha{% endblock %}
+{% block topbar_actions %}
+<a class="btn btn-ghost" href="{{ url_for('download_import_model', kind=kind) }}">Baixar modelo</a>
+{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Importar {{ label }} por CSV</div>
+        <div class="section-note">primeiro revise, depois confirme</div>
+      </div>
+    </div>
+    <div class="card-body import-panel">
+      <form method="post" enctype="multipart/form-data" class="stack-md">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Arquivo CSV</label>
+            <input class="form-input" type="file" name="csv_file" accept=".csv" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modelo</label>
+            <a class="btn btn-ghost full" href="{{ url_for('download_import_model', kind=kind) }}">Baixar CSV modelo</a>
+          </div>
+        </div>
+        <div class="ghost-note">
+          A leitura reconhece colunas equivalentes, como telefone/celular/WhatsApp e observações/obs.
+          Duplicados são detectados por telefone ou e-mail.
+        </div>
+        <button class="btn btn-primary" type="submit">Ler arquivo e pré-visualizar</button>
+      </form>
+    </div>
+  </section>
+
+  {% if preview %}
+  <section class="grid-2" id="preview">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Mapeamento detectado</div><div class="section-note">colunas reconhecidas</div></div></div>
+      <div class="card-body">
+        <div class="info-list">
+          {% for field in expected_fields %}
+          <div class="info-row">
+            <small>{{ field_labels[field] }}</small>
+            <div>
+              {% if preview.mapping.get(field) %}
+                {{ preview.mapping.get(field) }}
+              {% else %}
+                <span class="muted">Não encontrado</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Resumo antes de importar</div><div class="section-note">voce ainda pode ajustar</div></div></div>
+      <div class="card-body">
+        {% set novos = preview.rows|selectattr('action', 'equalto', 'novo')|list|length %}
+        {% set atualizados = preview.rows|selectattr('action', 'equalto', 'atualizar')|list|length %}
+        {% set ignorados = preview.rows|selectattr('action', 'equalto', 'ignorar')|list|length %}
+        <div class="rel-grid">
+          <div class="mini-box"><small>Novos</small><strong>{{ novos }}</strong></div>
+          <div class="mini-box"><small>Atualizados</small><strong>{{ atualizados }}</strong></div>
+          <div class="mini-box"><small>Ignorados</small><strong>{{ ignorados }}</strong></div>
+        </div>
+        <div class="ghost-note">A ação sugerida pode ser alterada linha a linha na pré-visualização.</div>
+      </div>
+    </div>
+  </section>
+
+  <form method="post" action="{{ url_for('confirm_import_csv', kind=kind) }}">
+    <section class="card clean-projects-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Pré-visualização</div>
+          <div class="section-note">até 50 linhas exibidas nesta revisão</div>
+        </div>
+        <button class="btn btn-primary" type="submit">Confirmar importação</button>
+      </div>
+      <div class="projects-clean-list compact-list import-preview-list">
+        {% for row in preview.rows[:50] %}
+        <div class="project-clean-row compact-row clients-row import-preview-row">
+          <div class="project-clean-main">
+            <div class="project-clean-title">{{ row.nome or 'Sem nome' }}</div>
+            <div class="project-clean-sub">{{ row.email or 'Sem e-mail' }} - {{ row.tel or 'Sem telefone' }}</div>
+            <div class="chips-row compact-chips">
+              {% if row.reason %}<span class="mini-status soft">{{ row.reason }}</span>{% endif %}
+              {% if row.matched_id %}<span class="mini-status soft">ID {{ row.matched_id }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="project-clean-col"><span class="project-clean-label">Origem</span><strong>{{ row.origem or '-' }}</strong></div>
+          <div class="project-clean-col"><span class="project-clean-label">Contato</span><strong>{{ row.ultima_interacao or row.aniversario or '-' }}</strong></div>
+          <div class="project-clean-col status-align">
+            <label class="project-clean-label" for="action-{{ loop.index0 }}">Ação</label>
+            <select class="form-select import-action-select" id="action-{{ loop.index0 }}" name="action_{{ loop.index0 }}">
+              <option value="novo" {% if row.action == 'novo' %}selected{% endif %}>Criar novo</option>
+              {% if row.matched_id %}<option value="atualizar" {% if row.action == 'atualizar' %}selected{% endif %}>Atualizar existente</option>{% endif %}
+              <option value="ignorar" {% if row.action == 'ignorar' %}selected{% endif %}>Ignorar</option>
+            </select>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </form>
+{% endif %}
+</div>
+{% if preview %}
+<script>
+  document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+</script>
+{% endif %}
+{% endblock %}

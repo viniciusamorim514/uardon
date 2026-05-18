@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block page_title %}{{ client.nome }}{% endblock %}
+{% block page_subtitle %}Cliente 360, operação e relacionamento{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('clients') }}" class="btn btn-ghost">Voltar</a>
+{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="detail-hero card client-hero client-command-hero">
+    <div class="detail-hero-grid">
+      <div>
+        <div class="eyebrow">Cliente 360</div>
+        <h1>{{ client.nome }}</h1>
+        <p>{{ client.profissao or 'Profissão não informada' }} · {{ client.local or 'Local não informado' }}</p>
+        <div class="chips-row hero-chips">
+          <span class="mini-status">{{ client.status|default('Ativo', true)|capitalize }}</span>
+          <span class="contact-pill {{ snapshot.relationship_badge.tone }}">{{ snapshot.relationship_badge.label }}</span>
+          {% if financeiro.overdue_count %}<span class="contact-pill alert">Pagamento atrasado</span>{% endif %}
+          {% if contracts.pending_total %}<span class="contact-pill warning">Contrato pendente</span>{% endif %}
+        </div>
+      </div>
+      <div class="hero-stats hero-stats-compact">
+        <div><span>Projetos ativos</span><strong>{{ snapshot.active_total }}</strong></div>
+        <div><span>Recebíveis abertos</span><strong>{{ financeiro.pending_count }}</strong></div>
+        <div><span>Contratos pendentes</span><strong>{{ contracts.pending_total }}</strong></div>
+        <div><span>Último contato</span><strong>{{ client.ultima_interacao or '—' }}</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card client-next-action tone-{{ next_action.tone }}">
+    <div class="client-next-main">
+      <span>Próxima melhor ação</span>
+      <strong>{{ next_action.label }}</strong>
+      <p>{{ next_action.note }}</p>
+    </div>
+    <div class="task-actions-row">
+      {% if next_action.primary_label == 'Registrar contato' %}
+      <form method="post" action="{{ next_action.primary_url }}"><button class="mini-btn primary" type="submit">{{ next_action.primary_label }}</button></form>
+      {% else %}
+      <a class="mini-btn primary" href="{{ next_action.primary_url }}" {% if 'whatsapp' in next_action.primary_url %}target="_blank"{% endif %}>{{ next_action.primary_label }}</a>
+      {% endif %}
+      {% if next_action.secondary_url %}
+        {% if next_action.secondary_label == 'Registrar contato' %}
+        <form method="post" action="{{ next_action.secondary_url }}"><button class="mini-btn" type="submit">{{ next_action.secondary_label }}</button></form>
+        {% else %}
+        <a class="mini-btn" href="{{ next_action.secondary_url }}" {% if 'whatsapp' in next_action.secondary_url %}target="_blank"{% endif %}>{{ next_action.secondary_label }}</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="client-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Resumo operacional</div><div class="section-note">situação do cliente em uma leitura</div></div></div>
+      <div class="client-summary-grid">
+        <div class="client-summary-item"><span>Total fechado</span><strong>R$ {{ '%.0f'|format(snapshot.total_value) }}</strong></div>
+        <div class="client-summary-item"><span>Projetos totais</span><strong>{{ snapshot.projects_total }}</strong></div>
+        <div class="client-summary-item"><span>Concluídos</span><strong>{{ snapshot.completed_total }}</strong></div>
+        <div class="client-summary-item"><span>Em aberto</span><strong>{{ financeiro.open_total_fmt }}</strong></div>
+        <div class="client-summary-item"><span>Aniversário</span><strong>{{ client.aniversario or '—' }}</strong></div>
+        <div class="client-summary-item"><span>Origem</span><strong>{{ client.origem or '—' }}</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Atalhos de relacionamento</div><div class="section-note">ações leves e recorrentes</div></div></div>
+      <div class="client-actions-panel">
+        <a class="btn btn-primary full" href="{{ followup_whatsapp }}" target="_blank">Abrir WhatsApp</a>
+        <form method="post" action="{{ url_for('quick_client_contact', client_id=client.id) }}"><button class="btn btn-ghost full" type="submit">Registrar contato feito</button></form>
+        <a class="btn btn-ghost full" href="{{ birthday_whatsapp }}" target="_blank">Mensagem de aniversário</a>
+        <a class="btn btn-ghost full" href="{{ thanks_whatsapp }}" target="_blank">Mensagem de agradecimento</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="client-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Linha do tempo</div><div class="section-note">histórico, projetos, recebíveis e contratos</div></div></div>
+      <div class="list client-timeline-list">
+        {% for item in timeline %}
+        <a class="item compact-item timeline-entry tone-{{ item.tone }} {% if item.url %}link-row{% endif %}" {% if item.url %}href="{{ item.url }}"{% endif %}>
+          <div class="item-time">{{ item.data or '—' }}</div>
+          <div class="item-main">
+            <div class="item-title">{{ item.tipo }} · {{ item.titulo }}</div>
+            <div class="item-sub">{{ item.descricao }}</div>
+          </div>
+        </a>
+        {% else %}
+        <div class="empty-state">Ainda não há histórico consolidado para este cliente.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Projetos vinculados</div><div class="section-note">clique para operar o projeto</div></div></div>
+      <div class="list">
+        {% if snapshot.next_deadline %}
+        <div class="empty-state client-deadline-note">Próximo prazo: <strong>{{ snapshot.next_deadline[1].nome }}</strong> em {{ snapshot.next_deadline[0].strftime('%d/%m/%Y') }}</div>
+        {% endif %}
+        {% for project in projects %}
+        <a class="project-row link-row" href="{{ url_for('project_detail', project_id=project.id) }}">
+          <div>
+            <div class="project-title">{{ project.nome }}</div>
+            <div class="project-sub">{{ project.tipo }} · prazo {{ project.prazo or '—' }}</div>
+            <div class="progress-wrap"><div class="progress-bar" style="width:{{ project.progresso }}%"></div></div>
+          </div>
+          <div class="project-meta">{{ project.progresso }}%<br>{{ project.status }}</div>
+        </a>
+        {% else %}
+        <div class="empty-state">Nenhum projeto criado para este cliente ainda.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="client-command-grid">
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Recebíveis</div><div class="section-note">parcelas abertas do cliente</div></div><a class="mini-link" href="{{ url_for('receivables_page') }}">Abrir recebíveis</a></div>
+      <div class="client-summary-grid client-finance-strip">
+        <div class="client-summary-item"><span>Parcelas abertas</span><strong>{{ financeiro.pending_count }}</strong></div>
+        <div class="client-summary-item"><span>Atrasadas</span><strong>{{ financeiro.overdue_count }}</strong></div>
+        <div class="client-summary-item"><span>Valor aberto</span><strong>{{ financeiro.open_total_fmt }}</strong></div>
+      </div>
+      <div class="list">
+        {% for item in financeiro['items'][:4] %}
+          {% if item.status_calculado != 'Pago' %}
+          <a class="item compact-item link-row" href="{{ url_for('project_detail', project_id=item.project_id) }}">
+            <div class="item-main"><div class="item-title">{{ item.descricao }} · {{ item.project_name }}</div><div class="item-sub">{{ item.valor_fmt }} · vence {{ item.vencimento or 'sem data' }} · {{ item.status_calculado }}</div></div>
+          </a>
+          {% endif %}
+        {% else %}
+        <div class="empty-state">Nenhuma parcela cadastrada.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header"><div><div class="section-title">Contratos</div><div class="section-note">formalização por projeto</div></div></div>
+      <div class="client-summary-grid client-finance-strip">
+        <div class="client-summary-item"><span>Total</span><strong>{{ contracts.total }}</strong></div>
+        <div class="client-summary-item"><span>Assinados</span><strong>{{ contracts.signed_total }}</strong></div>
+        <div class="client-summary-item"><span>Pendentes</span><strong>{{ contracts.pending_total }}</strong></div>
+      </div>
+      <div class="list">
+        {% for item in contracts.contract_items %}
+        <a class="item compact-item link-row" href="{{ url_for('project_detail', project_id=item.project_id) }}">
+          <div class="item-main"><div class="item-title">{{ item.project_name }}</div><div class="item-sub">{{ item.modelo }} · emissão {{ item.emitido_em }} · assinatura {{ item.assinado_em }}</div></div>
+          <span class="contact-pill {{ item.tone }}">{{ item.label }}</span>
+        </a>
+        {% else %}
+        <div class="empty-state">Nenhum contrato vinculado a este cliente.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="client-command-grid">
+    <details class="card client-collapsible">
+      <summary><span>Editar ficha do cliente</span><em>cadastro e preferências</em></summary>
+      <form method="post" action="{{ url_for('update_client', client_id=client.id) }}" class="summary-form">
+        <div class="form-row"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" name="nome" value="{{ client.nome }}"></div><div class="form-group"><label class="form-label">Profissão</label><input class="form-input" name="profissao" value="{{ client.profissao }}"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" name="tel" value="{{ client.tel }}"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" name="email" value="{{ client.email }}"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Cidade / local</label><input class="form-input" name="local" value="{{ client.local }}"></div><div class="form-group"><label class="form-label">Origem</label><input class="form-input" name="origem" value="{{ client.origem }}"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Aniversário</label><input class="form-input" name="aniversario" value="{{ client.aniversario }}"></div><div class="form-group"><label class="form-label">Última interação</label><input class="form-input" name="ultima_interacao" value="{{ client.ultima_interacao }}"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Status</label><input class="form-input" name="status" value="{{ client.status }}"></div><div class="form-group"><label class="form-label">Status de relacionamento</label><input class="form-input" name="relacionamento_status" value="{{ client.relacionamento_status }}"></div></div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="obs">{{ client.obs }}</textarea></div>
+        <button class="btn btn-primary full" type="submit">Salvar ficha</button>
+      </form>
+    </details>
+
+    <details class="card client-collapsible">
+      <summary><span>Registrar interação ou criar projeto</span><em>alimentar histórico e operação</em></summary>
+      <form method="post" action="{{ url_for('register_client_interaction', client_id=client.id) }}" class="summary-form">
+        <div class="form-group"><label class="form-label">Título</label><input class="form-input" name="titulo" placeholder="Ex.: Reunião realizada"></div>
+        <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" name="descricao"></textarea></div>
+        <button class="btn btn-primary full" type="submit">Adicionar ao histórico</button>
+      </form>
+      <form method="post" action="{{ url_for('create_project_for_client', client_id=client.id) }}" class="summary-form client-separated-form">
+        <div class="form-group"><label class="form-label">Nome do projeto</label><input class="form-input" name="nome" placeholder="Ex.: Projeto {{ client.nome.split(' ')[0] }} - Cozinha" required></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Prazo</label><input class="form-input" name="prazo" placeholder="30/05/2026"></div><div class="form-group"><label class="form-label">Valor</label><input class="form-input" name="valor" placeholder="15000"></div></div>
+        <button class="btn btn-primary full" type="submit">Criar projeto</button>
+      </form>
+    </details>
+  </section>
+</div>
+{% endblock %}

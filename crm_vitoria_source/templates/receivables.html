@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block page_title %}Recebíveis{% endblock %}
+{% block page_subtitle %}Financeiro leve, vencimentos e cobrança amigável{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-primary" type="button" onclick="document.getElementById('newPaymentPanel').classList.toggle('open')">Nova parcela</button>
+{% endblock %}
+{% block content %}
+{% set charge = namespace(item=None, label='Revisar recebiveis', note='Escolha uma parcela para tratar com calma e registre o pagamento quando entrar.') %}
+{% for item in receivables['items'] %}
+  {% if charge.item is none and item.status_calculado == 'Atrasado' %}
+    {% set charge.item = item %}
+    {% set charge.label = 'Cobrar com cuidado' %}
+    {% set charge.note = 'Parcela atrasada precisa de mensagem objetiva, sem pesar a relacao.' %}
+  {% endif %}
+{% endfor %}
+{% if charge.item is none %}
+  {% for item in receivables['items'] %}
+    {% if charge.item is none and item.status_calculado == 'Vence em breve' %}
+      {% set charge.item = item %}
+      {% set charge.label = 'Lembrar vencimento' %}
+      {% set charge.note = 'Envie um lembrete leve antes do vencimento.' %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% if charge.item is none %}
+  {% for item in receivables['items'] %}
+    {% if charge.item is none and item.status_calculado != 'Pago' %}
+      {% set charge.item = item %}
+      {% set charge.label = 'Acompanhar parcela' %}
+      {% set charge.note = 'Mantenha a previsao em dia sem transformar isso em ERP.' %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+<div class="content stack-lg">
+  <section class="card receivables-command-card">
+    <div class="receivables-command-main">
+      <div>
+        <div class="receivables-command-kicker">Cobranca agora</div>
+        {% if charge.item %}
+        <div class="receivables-command-title">{{ charge.label }}: {{ charge.item.client_name }}</div>
+        <div class="receivables-command-note">{{ charge.item.valor_fmt }} · {{ charge.item.project_name }} · vence {{ charge.item.vencimento_fmt or 'sem data' }}</div>
+        <div class="receivables-command-reason">{{ charge.note }}</div>
+        {% else %}
+        <div class="receivables-command-title">Recebiveis em ordem</div>
+        <div class="receivables-command-note">Nenhuma parcela aberta nesta visao.</div>
+        {% endif %}
+      </div>
+      <div class="receivables-command-actions">
+        {% if charge.item %}
+          {% if charge.item.whatsapp_url != '#' and charge.item.status_calculado != 'Pago' %}
+          <a class="mini-btn primary" href="{{ charge.item.whatsapp_url }}" target="_blank">WhatsApp</a>
+          {% endif %}
+          {% if charge.item.status_calculado != 'Pago' %}
+          <form method="post" action="{{ url_for('mark_payment_paid', project_id=charge.item.project_id, payment_id=charge.item.id) }}"><button class="mini-btn" type="submit">Pago</button></form>
+          {% endif %}
+          <a class="mini-btn" href="{{ url_for('project_detail', project_id=charge.item.project_id) }}">Abrir projeto</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="receivables-hero">
+    <a class="card receivable-metric metric-open" href="{{ url_for('receivables_page', status='todos') }}">
+      <span>Total em aberto</span>
+      <strong>{{ receivables.totals.open_value_fmt }}</strong>
+      <em>{{ receivables.totals.open_count }} parcela(s)</em>
+    </a>
+    <a class="card receivable-metric metric-week" href="{{ url_for('receivables_page', status='Vence em breve') }}">
+      <span>Vencendo em breve</span>
+      <strong>{{ receivables.totals.week_value_fmt }}</strong>
+      <em>{{ receivables.totals.week_count }} vencimento(s)</em>
+    </a>
+    <a class="card receivable-metric metric-overdue" href="{{ url_for('receivables_page', status='Atrasado') }}">
+      <span>Atrasado</span>
+      <strong>{{ receivables.totals.overdue_value_fmt }}</strong>
+      <em>{{ receivables.totals.overdue_count }} precisa(m) de ação</em>
+    </a>
+    <a class="card receivable-metric metric-paid" href="{{ url_for('receivables_page', status='Pago') }}">
+      <span>Recebido no mês</span>
+      <strong>{{ receivables.totals.paid_month_value_fmt }}</strong>
+      <em>{{ receivables.totals.paid_month_count }} parcela(s)</em>
+    </a>
+  </section>
+
+  <section class="card receivables-workbench">
+    <div class="section-header receivables-workbench-head">
+      <div>
+        <div class="section-title">Previsão e filtros</div>
+        <div class="section-note">mês selecionado altera a visão financeira</div>
+      </div>
+      <a class="mini-link" href="{{ url_for('receivables_page') }}">Limpar filtros</a>
+    </div>
+
+    <div class="receivables-tools refined">
+      <div class="forecast-panel">
+        <div class="tool-label">Previsão mensal</div>
+        <div class="forecast-inline">
+          {% if receivables.selected_forecast %}
+          <a class="forecast-item active {% if receivables.selected_forecast.is_current %}current-month{% endif %}" href="{{ url_for('receivables_page', mes=receivables.selected_forecast.key, status=receivables.filters.status, q=receivables.filters.q) }}">
+            <span>{{ receivables.selected_forecast.label }}</span>
+            <strong>{{ receivables.selected_forecast.value_fmt }}</strong>
+            <em>{{ receivables.selected_forecast.count }} parcela(s)</em>
+          </a>
+          {% else %}
+          {% for month in receivables.forecast %}
+          <a class="forecast-item {% if month.is_current %}current-month{% endif %}" href="{{ url_for('receivables_page', mes=month.key, status=receivables.filters.status, q=receivables.filters.q) }}">
+            <span>{% if month.is_current %}Mês atual · {% endif %}{{ month.label }}</span>
+            <strong>{{ month.value_fmt }}</strong>
+            <em>{{ month.count }} parcela(s)</em>
+          </a>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <form class="receivables-filter-inline" method="get" action="{{ url_for('receivables_page') }}">
+        <div class="tool-label">Encontrar rápido</div>
+        <div class="filter-inline-grid">
+          <select class="form-select" name="status" aria-label="Status">
+            {% for status in ['todos', 'Atrasado', 'Vence em breve', 'Pendente', 'Pago'] %}
+            <option value="{{ status }}" {% if receivables.filters.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+          <input class="form-input" type="month" name="mes" value="{{ receivables.filters.mes }}" aria-label="Mês">
+          <input class="form-input" name="q" value="{{ receivables.filters.q }}" placeholder="cliente, projeto ou parcela" aria-label="Buscar">
+          <button class="btn btn-primary" type="submit">Filtrar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="new-payment-panel" id="newPaymentPanel">
+      <form class="new-payment-form compact" method="post" action="{{ url_for('create_receivable_payment') }}">
+        <div class="form-group">
+          <label class="form-label">Projeto</label>
+          <select class="form-select" name="project_id" required>
+            <option value="">Selecione</option>
+            {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.cliente }} · {{ project.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Parcela</label><input class="form-input" name="descricao" placeholder="Ex.: 2/4" required></div>
+        <div class="form-group"><label class="form-label">Valor</label><input class="form-input" name="valor" placeholder="580" required></div>
+        <div class="form-group"><label class="form-label">Vencimento</label><input class="form-input" name="vencimento" placeholder="07/05/2026" required></div>
+        <button class="btn btn-primary" type="submit">Adicionar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Parcelas</div>
+        <div class="section-note">{{ receivables['items']|length }} na visão atual</div>
+      </div>
+    </div>
+    <div class="receivables-list refined-list">
+      {% for item in receivables['items'] %}
+      <div class="receivable-row status-{{ item.status_calculado|lower|replace(' ', '-') }}">
+        <a class="receivable-main receivable-open-link" href="{{ url_for('project_detail', project_id=item.project_id) }}">
+          <div class="receivable-title">{{ item.client_name }}</div>
+          <div class="receivable-sub">{{ item.project_name }} · {{ item.descricao or 'Parcela' }}</div>
+          <div class="compact-chips">
+            <span class="contact-pill {% if item.status_calculado == 'Pago' %}good{% elif item.status_calculado == 'Atrasado' %}alert{% elif item.status_calculado == 'Vence em breve' %}watch{% else %}muted{% endif %}">{{ item.status_calculado }}</span>
+            <span class="contact-pill muted">vence {{ item.vencimento_fmt or 'sem data' }}</span>
+          </div>
+        </a>
+        <div class="receivable-value">{{ item.valor_fmt }}</div>
+        <div class="receivable-actions">
+          {% if item.whatsapp_url != '#' and item.status_calculado != 'Pago' %}<a class="mini-btn primary" href="{{ item.whatsapp_url }}" target="_blank">WhatsApp</a>{% endif %}
+          {% if item.status_calculado != 'Pago' %}
+          <form method="post" action="{{ url_for('mark_payment_paid', project_id=item.project_id, payment_id=item.id) }}"><button class="mini-btn primary" type="submit">Pago</button></form>
+          {% else %}
+          <form method="post" action="{{ url_for('mark_payment_pending', project_id=item.project_id, payment_id=item.id) }}"><button class="mini-btn" type="submit">Reabrir</button></form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state">Nenhuma parcela encontrada nesta visão.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

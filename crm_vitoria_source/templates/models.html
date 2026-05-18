@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block page_title %}Biblioteca de Modelos{% endblock %}
+{% block page_subtitle %}Mensagens, checklists e rituais prontos para usar{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <div class="intro">
+    <h1>Modelos do escritório</h1>
+    <p>Textos e checklists para reduzir improviso, manter o atendimento elegante e padronizar a rotina sem engessar a Vitória.</p>
+  </div>
+
+  <section class="quick-grid">
+    <div class="card stat-card stat-proposals"><div class="stat-label">Mensagens</div><div class="stat-value">{{ message_models|length }}</div><div class="stat-sub">copiar e usar no WhatsApp</div></div>
+    <div class="card stat-card stat-projects"><div class="stat-label">Checklists</div><div class="stat-value">{{ checklist_models|length }}</div><div class="stat-sub">etapas reais do projeto</div></div>
+    <div class="card stat-card stat-tasks"><div class="stat-label">Uso diário</div><div class="stat-value">1</div><div class="stat-sub">biblioteca central</div></div>
+    <div class="card stat-card stat-meetings"><div class="stat-label">Método</div><div class="stat-value">VU</div><div class="stat-sub">rotina com identidade própria</div></div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div><div class="section-title">Mensagens prontas</div><div class="section-note">com tom profissional e humano</div></div>
+    </div>
+    <div class="model-grid">
+      {% for model in message_models %}
+      <article class="model-card">
+        <div class="model-card-head">
+          <div>
+            <div class="model-category">{{ model.category }}</div>
+            <h3>{{ model.title }}</h3>
+          </div>
+          <button class="mini-btn primary" type="button" onclick="copyModelText('model-text-{{ loop.index }}')">Copiar</button>
+        </div>
+        <textarea class="form-textarea model-textarea" id="model-text-{{ loop.index }}" readonly>{{ model.text }}</textarea>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div><div class="section-title">Checklists por etapa</div><div class="section-note">projeto guiado sem depender da memória</div></div>
+    </div>
+    <div class="model-grid checklist-grid">
+      {% for model in checklist_models %}
+      <article class="model-card">
+        <div class="model-card-head">
+          <div>
+            <div class="model-category">Projeto guiado</div>
+            <h3>{{ model.title }}</h3>
+          </div>
+          <button class="mini-btn" type="button" onclick="copyChecklist('checklist-{{ loop.index }}')">Copiar</button>
+        </div>
+        <ul class="checklist-model" id="checklist-{{ loop.index }}">
+          {% for item in model.items %}
+          <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<script>
+  function copyModelText(id) {
+    const field = document.getElementById(id);
+    if (!field) return;
+    navigator.clipboard.writeText(field.value).then(function() {
+      alert('Modelo copiado.');
+    });
+  }
+  function copyChecklist(id) {
+    const list = document.getElementById(id);
+    if (!list) return;
+    const text = Array.from(list.querySelectorAll('li')).map(function(item) {
+      return '- ' + item.textContent.trim();
+    }).join('\n');
+    navigator.clipboard.writeText(text).then(function() {
+      alert('Checklist copiado.');
+    });
+  }
+</script>
+{% endblock %}

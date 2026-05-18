@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block page_title %}Feedbacks{% endblock %}
+{% block page_subtitle %}Aprendizados do uso real da Vitória{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-primary" type="button" onclick="copyCodexReport()">Copiar relatório para Codex</button>
+{% endblock %}
+{% block content %}
+{% set arquivo = namespace(problemas=0, melhorias=0) %}
+{% for item in feedbacks.resolved %}
+  {% if item.tipo == 'problema' %}{% set arquivo.problemas = arquivo.problemas + 1 %}{% endif %}
+  {% if item.tipo == 'melhoria' %}{% set arquivo.melhorias = arquivo.melhorias + 1 %}{% endif %}
+{% endfor %}
+<div class="content stack-lg">
+  <section class="quick-grid">
+    <div class="card stat-card stat-tasks"><div class="stat-label">Novos</div><div class="stat-value">{{ feedbacks.new|length }}</div><div class="stat-sub">comentários para avaliar</div></div>
+    <div class="card stat-card stat-proposals"><div class="stat-label">Em análise</div><div class="stat-value">{{ feedbacks.new|length + feedbacks.planned|length }}</div><div class="stat-sub">comentários abertos</div></div>
+    <div class="card stat-card stat-meetings"><div class="stat-label">Planejados</div><div class="stat-value">{{ feedbacks.planned|length }}</div><div class="stat-sub">analisados ou no roadmap</div></div>
+    <div class="card stat-card stat-projects"><div class="stat-label">Resolvidos</div><div class="stat-value">{{ feedbacks.resolved|length }}</div><div class="stat-sub">{{ arquivo.problemas }} problemas · {{ arquivo.melhorias }} melhorias feitas</div></div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div><div class="section-title">Relatório para Codex</div><div class="section-note">copie e cole na conversa</div></div>
+      <button class="btn btn-primary" type="button" onclick="copyCodexReport()">Copiar relatório para Codex</button>
+    </div>
+    <div class="card-body">
+      <textarea class="form-textarea feedback-report" id="codexReport" readonly>{{ report }}</textarea>
+      <div class="ghost-note">Use este texto para me mandar uma rodada de ajustes com contexto real, sem precisar reorganizar tudo manualmente.</div>
+    </div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div><div class="section-title">Comentários abertos</div><div class="section-note">somente o que ainda precisa de decisão ou ajuste</div></div>
+      <div class="topbar-actions">
+        <form method="post" action="{{ url_for('resolve_all_feedbacks') }}" onsubmit="return confirm('Marcar todos os comentários abertos como resolvidos?')"><button class="btn btn-ghost" type="submit">Resolver todos</button></form>
+      </div>
+    </div>
+    <div class="projects-clean-list compact-list feedback-list">
+      {% set aberto = namespace(existe=false) %}
+      {% for item in feedbacks.all %}
+      {% if item.status != 'resolvido' %}
+      {% set aberto.existe = true %}
+      <div class="project-clean-row compact-row clients-row feedback-row">
+        <div class="project-clean-main">
+          <div class="project-clean-title">{{ item.descricao }}</div>
+          <div class="project-clean-sub">{{ item.data }} · {{ item.tela or 'Sem tela informada' }}</div>
+          <div class="chips-row compact-chips">
+            <span class="mini-status">{{ item.tipo }}</span>
+          </div>
+        </div>
+        <div class="project-clean-col"><span class="project-clean-label">Status</span><strong>{{ item.status or 'novo' }}</strong></div>
+        <div class="project-clean-col status-align">
+          <form method="post" action="{{ url_for('update_feedback_status', feedback_id=item.id) }}" class="feedback-status-form">
+            <select class="form-select" name="status" onchange="this.form.submit()">
+              <option value="novo" {% if item.status == 'novo' %}selected{% endif %}>Novo</option>
+              <option value="analisado" {% if item.status == 'analisado' %}selected{% endif %}>Analisado</option>
+              <option value="planejado" {% if item.status == 'planejado' %}selected{% endif %}>Planejado</option>
+              <option value="resolvido" {% if item.status == 'resolvido' %}selected{% endif %}>Resolvido</option>
+            </select>
+          </form>
+        </div>
+        <div class="project-clean-col status-align">
+          <form method="post" action="{{ url_for('delete_feedback', feedback_id=item.id) }}" onsubmit="return confirm('Excluir este feedback?')">
+            <button class="mini-btn danger" type="submit">Excluir</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+      {% if not aberto.existe %}
+      <div class="empty-state">Nenhum comentário aberto. A tela está limpa para novos feedbacks.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div><div class="section-title">Arquivo de resolvidos</div><div class="section-note">histórico do que já foi tratado</div></div>
+      <form method="post" action="{{ url_for('clear_resolved_feedbacks') }}" onsubmit="return confirm('Remover definitivamente o arquivo de resolvidos?')"><button class="btn btn-ghost" type="submit">Limpar arquivo</button></form>
+    </div>
+    <div class="card-body">
+      <div class="ghost-note">{{ feedbacks.resolved|length }} resolvidos: {{ arquivo.problemas }} problemas corrigidos e {{ arquivo.melhorias }} melhorias feitas.</div>
+      <details class="feedback-archive-details">
+        <summary>Ver itens resolvidos</summary>
+        <div class="projects-clean-list compact-list feedback-list">
+          {% for item in feedbacks.resolved %}
+          <div class="project-clean-row compact-row clients-row feedback-row">
+            <div class="project-clean-main">
+              <div class="project-clean-title">{{ item.resumo_resolucao or item.descricao }}</div>
+              <div class="project-clean-sub">{{ item.resolvido_em or item.data }} · {{ item.tela or 'Sem tela informada' }}</div>
+              <div class="chips-row compact-chips">
+                <span class="mini-status">{{ item.tipo }}</span>
+                <span class="mini-status soft">resolvido</span>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="empty-state">Nenhum item resolvido arquivado.</div>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+  </section>
+</div>
+<script>
+  function copyCodexReport() {
+    const field = document.getElementById('codexReport');
+    if (!field) return;
+    field.select();
+    field.setSelectionRange(0, 999999);
+    navigator.clipboard.writeText(field.value).then(function() {
+      alert('Relatório copiado. Agora é só colar no Codex.');
+    }).catch(function() {
+      document.execCommand('copy');
+      alert('Relatório copiado. Agora é só colar no Codex.');
+    });
+  }
+</script>
+{% endblock %}

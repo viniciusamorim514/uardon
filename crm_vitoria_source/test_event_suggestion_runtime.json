@@ -1,0 +1,49 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Juliano e Simone",
+      "tel": "",
+      "status": "ativo"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto area gourmet",
+      "cliente_id": 1,
+      "cliente": "Juliano e Simone",
+      "pagamentos": [],
+      "contrato": {},
+      "arquivos": []
+    }
+  ],
+  "tarefas": [],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Projeto area gourmet - Juliano",
+      "tipo": "Reunião",
+      "data": "2026-05-03",
+      "hora": "10:00",
+      "status": "agendado",
+      "google_event_id": "g1"
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

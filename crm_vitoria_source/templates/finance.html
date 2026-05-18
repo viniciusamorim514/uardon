@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block page_title %}Financeiro{% endblock %}
+{% block page_subtitle %}Entradas e saídas sem virar ERP{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-primary" type="button" onclick="document.getElementById('newExpensePanel').classList.toggle('open')">Nova despesa</button>
+{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="receivables-hero finance-hero">
+    <a class="card receivable-metric metric-paid" href="{{ url_for('receivables_page', mes=finance.month) }}">
+      <span>Previsto receber</span>
+      <strong>{{ finance.summary.receivable_value_fmt }}</strong>
+      <em>{{ finance.month_label }}</em>
+    </a>
+    <a class="card receivable-metric metric-overdue" href="{{ url_for('finance_page', mes=finance.month, status='todos') }}">
+      <span>Previsto pagar</span>
+      <strong>{{ finance.summary.expense_value_fmt }}</strong>
+      <em>{{ finance.expenses.totals.month_count }} despesa(s)</em>
+    </a>
+    <div class="card receivable-metric metric-open">
+      <span>Saldo previsto</span>
+      <strong>{{ finance.summary.expected_balance_fmt }}</strong>
+      <em>entradas menos saídas</em>
+    </div>
+    <div class="card receivable-metric metric-week">
+      <span>Saldo realizado</span>
+      <strong>{{ finance.summary.real_balance_fmt }}</strong>
+      <em>recebido menos pago</em>
+    </div>
+  </section>
+
+  <section class="card receivables-workbench">
+    <div class="section-header receivables-workbench-head">
+      <div>
+        <div class="section-title">Despesas</div>
+        <div class="section-note">contas fixas, softwares, fornecedores e custos leves</div>
+      </div>
+      <a class="mini-link" href="{{ url_for('finance_page') }}">Limpar filtros</a>
+    </div>
+
+    <div class="receivables-tools refined finance-tools">
+      <div class="forecast-panel">
+        <div class="tool-label">Visão do mês</div>
+        <div class="forecast-inline">
+          <div class="forecast-item active current-month">
+            <span>{{ finance.month_label }}</span>
+            <strong>{{ finance.expenses.totals.month_value_fmt }}</strong>
+            <em>{{ finance.expenses.totals.month_count }} despesa(s)</em>
+          </div>
+          <a class="forecast-item" href="{{ url_for('finance_page', mes=finance.month, status='Atrasado') }}">
+            <span>Atrasadas</span>
+            <strong>{{ finance.expenses.totals.overdue_value_fmt }}</strong>
+            <em>{{ finance.expenses.totals.overdue_count }} pendência(s)</em>
+          </a>
+        </div>
+      </div>
+
+      <form class="receivables-filter-inline" method="get" action="{{ url_for('finance_page') }}">
+        <div class="tool-label">Encontrar rápido</div>
+        <div class="filter-inline-grid">
+          <select class="form-select" name="status" aria-label="Status">
+            {% for status in ['todos', 'Atrasado', 'Vence em breve', 'Pendente', 'Pago'] %}
+            <option value="{{ status }}" {% if finance.filters.status == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+          <input class="form-input" type="month" name="mes" value="{{ finance.filters.mes }}" aria-label="Mês">
+          <input class="form-input" name="q" value="{{ finance.filters.q }}" placeholder="despesa, categoria ou observação" aria-label="Buscar">
+          <button class="btn btn-primary" type="submit">Filtrar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="new-payment-panel" id="newExpensePanel">
+      <form class="new-payment-form expense-form" method="post" action="{{ url_for('create_expense') }}">
+        <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" name="descricao" placeholder="Ex.: Aluguel do escritório" required></div>
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select class="form-select" name="categoria">
+            {% for category in expense_categories %}<option>{{ category }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Valor</label><input class="form-input" name="valor" placeholder="1500" required></div>
+        <div class="form-group"><label class="form-label">Vencimento</label><input class="form-input" type="date" name="vencimento" required></div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" name="status"><option>Pendente</option><option>Pago</option></select>
+        </div>
+        <label class="form-check expense-check"><input type="checkbox" name="recorrente" value="1"> Recorrente</label>
+        <div class="form-group span-2"><label class="form-label">Observações</label><input class="form-input" name="observacoes" placeholder="Opcional"></div>
+        <button class="btn btn-primary" type="submit">Adicionar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Saídas</div>
+        <div class="section-note">{{ finance.expenses['items']|length }} na visão atual</div>
+      </div>
+    </div>
+    <div class="receivables-list refined-list">
+      {% for item in finance.expenses['items'] %}
+      <div class="receivable-row expense-row status-{{ item.status_calculado|lower|replace(' ', '-') }}">
+        <div class="receivable-main">
+          <div class="receivable-title">{{ item.descricao }}</div>
+          <div class="receivable-sub">{{ item.categoria }} · {{ item.recorrente_label }}</div>
+          <div class="compact-chips">
+            <span class="contact-pill {% if item.status_calculado == 'Pago' %}good{% elif item.status_calculado == 'Atrasado' %}alert{% elif item.status_calculado == 'Vence em breve' %}watch{% else %}muted{% endif %}">{{ item.status_calculado }}</span>
+            <span class="contact-pill muted">vence {{ item.vencimento_fmt or 'sem data' }}</span>
+          </div>
+          {% if item.observacoes %}<div class="project-clean-subline">{{ item.observacoes }}</div>{% endif %}
+        </div>
+        <div class="receivable-value">{{ item.valor_fmt }}</div>
+        <div class="receivable-actions">
+          {% if item.status_calculado != 'Pago' %}
+          <form method="post" action="{{ url_for('mark_expense_paid', expense_id=item.id) }}"><button class="mini-btn primary" type="submit">Pago</button></form>
+          {% else %}
+          <form method="post" action="{{ url_for('mark_expense_pending', expense_id=item.id) }}"><button class="mini-btn" type="submit">Reabrir</button></form>
+          {% endif %}
+          <form method="post" action="{{ url_for('delete_expense', expense_id=item.id) }}" onsubmit="return confirm('Excluir esta despesa?')"><button class="mini-btn danger" type="submit">Excluir</button></form>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state">Nenhuma despesa encontrada nesta visão.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

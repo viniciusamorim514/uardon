@@ -1,0 +1,30 @@
+<div class="item compact-item task-item task-tone-{{ task.tone }} source-{{ task.source_key }}">
+  <a class="task-card-link" href="{{ task.open_url }}">
+    <div class="item-main">
+      <div class="item-title">{{ task.titulo }}</div>
+      <div class="item-sub">{{ task.label }} · {{ task.source_label }}{% if task.contexto %} · {{ task.contexto }}{% endif %}</div>
+      <div class="compact-chips task-chips">
+        <span class="contact-pill muted">{{ task.origin_label }}</span>
+        <span class="contact-pill {% if task.pri == 'Alta' %}alert{% elif task.pri == 'Baixa' %}good{% else %}watch{% endif %}">{{ task.pri }}</span>
+      </div>
+      {% if task.automation_reason %}
+      <div class="task-automation-reason">{{ task.automation_reason }}</div>
+      {% endif %}
+    </div>
+  </a>
+  <div class="task-actions-row">
+    {% if task.whatsapp_url and task.whatsapp_url != '#' %}
+    <a class="mini-btn primary" href="{{ task.whatsapp_url }}" target="_blank">WhatsApp</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('complete_task', task_id=task.id) }}">
+      <button class="mini-btn {% if not task.whatsapp_url or task.whatsapp_url == '#' %}primary{% endif %}" type="submit">Concluir</button>
+    </form>
+    <form method="post" action="{{ url_for('postpone_task', task_id=task.id, days=1) }}">
+      <button class="mini-btn" type="submit">Amanha</button>
+    </form>
+    <form method="post" action="{{ url_for('postpone_task', task_id=task.id, days=7) }}">
+      <button class="mini-btn" type="submit">Semana</button>
+    </form>
+    <a class="mini-btn" href="{{ task.open_url }}">Abrir</a>
+  </div>
+</div>

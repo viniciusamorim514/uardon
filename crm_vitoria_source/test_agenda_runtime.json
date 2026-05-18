@@ -1,0 +1,60 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Cliente Agenda",
+      "tel": "47999999999",
+      "email": "",
+      "local": "Itajai",
+      "status": "ativo"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto Agenda",
+      "cliente_id": 1,
+      "cliente": "Cliente Agenda",
+      "status": "ativo",
+      "pagamentos": [],
+      "contrato": {},
+      "arquivos": []
+    }
+  ],
+  "tarefas": [],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Reunião de briefing",
+      "tipo": "Reunião",
+      "data": "2026-05-01",
+      "hora": "14:00",
+      "cliente_id": 1,
+      "cliente": "Cliente Agenda",
+      "projeto_id": 1,
+      "projeto": "Projeto Agenda",
+      "reuniao_tipo": "Google Meet",
+      "link": "https://meet.google.com/teste",
+      "local": "",
+      "observacoes": "Validar briefing",
+      "status": "concluido",
+      "concluido_em": "01/05/2026"
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

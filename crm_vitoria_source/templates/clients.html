@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block page_title %}Clientes{% endblock %}
+{% block page_subtitle %}Relacionamento, histórico e projetos vinculados{% endblock %}
+{% block topbar_actions %}
+<a class="btn btn-ghost" href="{{ url_for('import_csv_page', kind='clientes') }}">Importar CSV</a>
+<button class="btn btn-primary" onclick="document.getElementById('novo-cliente').classList.add('open')">+ Novo cliente</button>
+{% endblock %}
+{% block content %}
+<div class="content">
+  <section class="quick-grid">
+    <div class="card stat-card stat-projects"><div class="stat-label">Clientes na base</div><div class="stat-value">{{ clients|length }}</div><div class="stat-sub">base ativa de relacionamento</div></div>
+    <div class="card stat-card stat-meetings"><div class="stat-label">Aniversários</div><div class="stat-value">{{ relationship.birthdays_week|length + relationship.birthdays_today|length }}</div><div class="stat-sub">hoje + próximos 7 dias</div></div>
+    <div class="card stat-card stat-tasks"><div class="stat-label">Sem contato 21+ dias</div><div class="stat-value">{{ relationship.no_contact|length }}</div><div class="stat-sub">pedem retomada</div></div>
+    <div class="card stat-card stat-proposals"><div class="stat-label">Clientes ativos</div><div class="stat-value">{{ clients|selectattr('status', 'equalto', 'ativo')|list|length }}</div><div class="stat-sub">com potencial de novos projetos</div></div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header"><div><div class="section-title">Base de clientes</div><div class="section-note">clique para abrir ficha completa</div></div></div>
+    <div class="projects-clean-list compact-list">
+      {% for client in clients %}
+      <a class="project-clean-row compact-row clients-row" href="{{ url_for('client_detail', client_id=client.id) }}">
+        <div class="project-clean-main">
+          <div class="project-clean-title">{{ client.nome }}</div>
+          <div class="project-clean-sub">{{ client.email or 'Sem e-mail' }} · {{ client.tel or 'Sem telefone' }}</div>
+          <div class="chips-row compact-chips">
+            <span class="mini-status">{{ client.relacionamento_status or 'ativo' }}</span>
+            {% if client.preferencia_contato %}<span class="mini-status soft">{{ client.preferencia_contato }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="project-clean-col"><span class="project-clean-label">Profissão</span><strong>{{ client.profissao or '-' }}</strong></div>
+        <div class="project-clean-col"><span class="project-clean-label">Projetos</span><strong>{{ client.projetos }}</strong></div>
+        <div class="project-clean-col"><span class="project-clean-label">Parcelas</span><strong>{% if client.financeiro.pending_count %}{{ client.financeiro.pending_count }} faltam{% else %}Em dia{% endif %}</strong>{% if client.financeiro.open_total %}<div class="project-clean-subline">{{ client.financeiro.open_total_fmt }}</div>{% endif %}</div>
+        <div class="project-clean-col"><span class="project-clean-label">Última interação</span><strong>{{ client.ultima_interacao or '-' }}</strong></div>
+        <div class="project-clean-col status-align">
+          {% if client.badge is defined and client.badge %}
+            <span class="contact-pill {{ client.badge.tone }}">{{ client.badge.label }}</span>
+          {% else %}
+            <span class="contact-pill neutral">Sem classificação</span>
+          {% endif %}
+        </div>
+      </a>
+      {% else %}
+      <div class="empty-state">Nenhum cliente cadastrado.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="novo-cliente" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Novo cliente</div><button class="modal-close" onclick="document.getElementById('novo-cliente').classList.remove('open')">×</button></div>
+    <form method="post" action="{{ url_for('create_client') }}">
+      <div class="modal-body">
+        <div class="form-row"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" name="nome" required></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" name="tel"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" name="email"></div><div class="form-group"><label class="form-label">Profissão</label><input class="form-input" name="profissao"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Cidade / local</label><input class="form-input" name="local"></div><div class="form-group"><label class="form-label">Aniversário</label><input class="form-input" name="aniversario" placeholder="22/04/1990"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Origem</label><input class="form-input" name="origem"></div><div class="form-group"><label class="form-label">Quem indicou</label><input class="form-input" name="indicacao_por"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Última interação</label><input class="form-input" name="ultima_interacao" placeholder="23/04/2026"></div><div class="form-group"><label class="form-label">Preferência de contato</label><input class="form-input" name="preferencia_contato" value="WhatsApp"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Status</label><input class="form-input" name="status" value="ativo"></div><div class="form-group"><label class="form-label">Status de relacionamento</label><input class="form-input" name="relacionamento_status" value="ativo"></div></div>
+        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="obs"></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('novo-cliente').classList.remove('open')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar cliente</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

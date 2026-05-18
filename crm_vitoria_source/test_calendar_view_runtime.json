@@ -1,0 +1,39 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [],
+  "projetos": [],
+  "tarefas": [],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Briefing",
+      "tipo": "Reunião",
+      "data": "2026-05-02",
+      "hora": "10:00",
+      "status": "agendado"
+    },
+    {
+      "id": 2,
+      "titulo": "Apresentação 3D",
+      "tipo": "Apresentação",
+      "data": "2026-05-02",
+      "hora": "15:00",
+      "status": "agendado"
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

@@ -1,0 +1,102 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "",
+      "password": "123456",
+      "name": "Vit?ria Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vit?ria Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Juliano e Simone",
+      "tel": "47999999999",
+      "historico": [
+        {
+          "data": "01/05/2026",
+          "titulo": "Agenda: Briefing projeto ?rea gourmet",
+          "descricao": "Compromisso concluído pela Agenda: Briefing projeto ?rea gourmet em 05/05/2026 às 09:30.",
+          "origem": "agenda",
+          "source_event_id": 1,
+          "source_key": "agenda:1"
+        }
+      ],
+      "ultima_interacao": "01/05/2026"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto ?rea gourmet",
+      "cliente_id": 1,
+      "cliente": "Juliano e Simone",
+      "historico": [
+        {
+          "data": "01/05/2026",
+          "titulo": "Agenda: Briefing projeto ?rea gourmet",
+          "descricao": "Compromisso concluído pela Agenda: Briefing projeto ?rea gourmet em 05/05/2026 às 09:30.",
+          "origem": "agenda",
+          "source_event_id": 1,
+          "source_key": "agenda:1"
+        }
+      ],
+      "status": "Em andamento"
+    }
+  ],
+  "tarefas": [
+    {
+      "id": 1,
+      "titulo": "Registrar decisões do briefing",
+      "text": "Registrar decisões do briefing",
+      "descricao": "Consolidar decisões, pendências e próximo passo do briefing. Origem: compromisso 'Briefing projeto ?rea gourmet'.",
+      "tipo": "Projeto",
+      "pri": "Média",
+      "prazo": "2026-05-02",
+      "done": false,
+      "status": "Pendente",
+      "responsavel": "Vitória Uardon",
+      "vinculo_tipo": "projeto",
+      "vinculo_id": 1,
+      "vinculo_nome": "Projeto ?rea gourmet",
+      "cliente_id": 1,
+      "origem": "automacao",
+      "automation_key": "event_next_action:1",
+      "source_event_id": 1,
+      "done_at": ""
+    }
+  ],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Briefing projeto ?rea gourmet",
+      "data": "2026-05-05",
+      "hora": "09:30",
+      "tipo": "Reuni?o",
+      "cliente_id": 1,
+      "projeto_id": 1,
+      "status": "concluido",
+      "concluido_em": "01/05/2026",
+      "historico_registrado_em": "01/05/2026",
+      "next_action_task_id": 1
+    },
+    {
+      "id": 2,
+      "titulo": "Torneio de Padel",
+      "data": "2026-05-09",
+      "hora": "08:30",
+      "tipo": "Outro",
+      "status": "concluido",
+      "concluido_em": "01/05/2026",
+      "historico_registrado_em": "01/05/2026"
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

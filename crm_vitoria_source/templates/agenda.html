@@ -1,0 +1,558 @@
+{% extends 'base.html' %}
+{% block page_title %}Agenda{% endblock %}
+{% block page_subtitle %}Compromissos e reuniões conectados à operação{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-primary" type="button" onclick="toggleNewEventPanel(true)">Novo compromisso</button>
+{% endblock %}
+{% block content %}
+<div class="content stack-lg agenda-page">
+  <section class="agenda-hero-grid">
+    <div class="card agenda-metric tone-today">
+      <span>Hoje</span>
+      <strong>{{ agenda.today|length }}</strong>
+      <em>compromissos para acompanhar</em>
+    </div>
+    <div class="card agenda-metric tone-overdue">
+      <span>Atrasados</span>
+      <strong>{{ agenda.overdue|length }}</strong>
+      <em>precisam de decisão</em>
+    </div>
+    <div class="card agenda-metric tone-upcoming">
+      <span>Próximos</span>
+      <strong>{{ agenda.upcoming|length }}</strong>
+      <em>planejamento aberto</em>
+    </div>
+    <div class="card agenda-metric tone-google">
+      <span>Google Agenda</span>
+      <strong>{{ agenda.all|selectattr('google_event_id')|list|length }}</strong>
+      <em>{{ 'conectado' if google_status.ready else 'pendente' }}</em>
+    </div>
+  </section>
+
+  <section class="card google-calendar-card agenda-google-panel">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Google Agenda</div>
+        <div class="section-note">
+          {% if google_status.ready %}conectado e pronto para importar{% elif google_status.credentials_exists %}credenciais encontradas, falta autorizar{% else %}aguardando credenciais do Google Cloud{% endif %}
+        </div>
+      </div>
+      {% if google_status.credentials_exists %}
+      <div class="topbar-actions">
+        {% if google_status.ready %}
+        <form method="post" action="{{ url_for('import_google_calendar') }}">
+          <button class="btn btn-primary" type="submit">Importar Google</button>
+        </form>
+        {% endif %}
+        <a class="btn btn-ghost" href="{{ url_for('connect_google_calendar') }}">{{ 'Reconectar' if google_status.connected else 'Conectar' }}</a>
+      </div>
+      {% endif %}
+    </div>
+    {% if not google_status.credentials_exists %}
+    <div class="card-body">
+      <div class="ghost-note">Salve o OAuth como <strong>google_credentials.json</strong> dentro da pasta do CRM. Depois volte aqui e clique em Conectar.</div>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card agenda-filter-card">
+    <div class="agenda-filter-bar">
+      <button class="agenda-filter active" type="button" data-filter="all" onclick="filterAgenda('all', this)">Todos <span>{{ agenda.all|length }}</span></button>
+      <button class="agenda-filter" type="button" data-filter="today" onclick="filterAgenda('today', this)">Hoje <span>{{ agenda.today|length }}</span></button>
+      <button class="agenda-filter" type="button" data-filter="overdue" onclick="filterAgenda('overdue', this)">Atrasados <span>{{ agenda.overdue|length }}</span></button>
+      <button class="agenda-filter" type="button" data-filter="google" onclick="filterAgenda('google', this)">Google <span>{{ agenda.all|selectattr('google_event_id')|list|length }}</span></button>
+      <button class="agenda-filter" type="button" data-filter="unlinked" onclick="filterAgenda('unlinked', this)">Sem vínculo <span>{{ agenda.all|selectattr('is_unlinked')|list|length }}</span></button>
+      <button class="agenda-filter" type="button" data-filter="done" onclick="filterAgenda('done', this)">Concluídos <span>{{ agenda.done|length }}</span></button>
+    </div>
+  </section>
+
+  <section class="card agenda-new-panel" id="new-event-panel">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Novo compromisso</div>
+        <div class="section-note">criação rápida, com vínculo opcional ao cliente ou projeto</div>
+      </div>
+      <button class="mini-btn" type="button" onclick="toggleNewEventPanel(false)">Fechar</button>
+    </div>
+    <form class="agenda-create-form" method="post" action="{{ url_for('create_event') }}">
+      <div class="form-group span-2">
+        <label class="form-label">Título *</label>
+        <input class="form-input" name="titulo" required placeholder="Ex.: Apresentação do 3D - Juliano">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data *</label>
+        <input class="form-input" type="date" name="data" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hora</label>
+        <input class="form-input" type="time" name="hora">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="tipo">{% for type in event_types %}<option>{{ type }}</option>{% endfor %}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Formato</label>
+        <select class="form-select" name="reuniao_tipo">{% for type in meeting_types %}<option>{{ type }}</option>{% endfor %}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cliente</label>
+        <select class="form-select" name="cliente_id">
+          <option value="">Sem cliente</option>
+          {% for client in clients %}<option value="{{ client.id }}">{{ client.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Projeto</label>
+        <select class="form-select" name="projeto_id">
+          <option value="">Sem projeto</option>
+          {% for project in projects %}<option value="{{ project.id }}">{{ project.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Link</label>
+        <input class="form-input" name="link" placeholder="Meet, Teams, Zoom ou outro link">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Local</label>
+        <input class="form-input" name="local" placeholder="Opcional">
+      </div>
+      <div class="form-group span-2">
+        <label class="form-label">Observações</label>
+        <textarea class="form-textarea" name="observacoes" placeholder="Anotações úteis para a reunião"></textarea>
+      </div>
+      <div class="agenda-form-footer span-2">
+        {% if google_status.ready %}
+        <label class="form-check"><input type="checkbox" name="sync_google" value="1" checked> Enviar também para o Google Agenda</label>
+        {% else %}
+        <span class="muted">Conecte o Google Agenda para criar eventos nos dois lugares.</span>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">Salvar compromisso</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card calendar-card agenda-calendar">
+    <div class="section-header calendar-header">
+      <div>
+        <div class="section-title">{{ calendar_month.label }}</div>
+        <div class="section-note">visão mensal do CRM e Google Agenda</div>
+      </div>
+      <div class="calendar-nav">
+        <a class="mini-btn" href="{{ calendar_month.prev_url }}">Anterior</a>
+        <a class="mini-btn" href="{{ calendar_month.today_url }}">Hoje</a>
+        <a class="mini-btn" href="{{ calendar_month.next_url }}">Próximo</a>
+      </div>
+    </div>
+    <div class="calendar-weekdays">
+      <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+    </div>
+    <div class="calendar-month-grid">
+      {% for week in calendar_month.weeks %}
+        {% for day in week %}
+        <div class="calendar-day {% if not day.in_month %}outside{% endif %} {% if day.is_today %}today{% endif %}" {% if day.in_month %}onclick="openNewEventForDate('{{ day.date.isoformat() }}')" title="Criar compromisso em {{ day.day }}"{% endif %}>
+          <div class="calendar-day-number">{{ day.day }}</div>
+          <div class="calendar-events">
+            {% for event in day.events[:3] %}
+            <button class="calendar-event tone-{{ event.tone }} {% if event.is_unlinked %}is-unlinked{% endif %}" type="button" onclick='event.stopPropagation(); openEventSummaryModal({{ event|tojson }})' title="{{ event.titulo }}">
+              <span>{{ event.hora or '--:--' }}</span>
+              <strong>{{ event.titulo }}</strong>
+            </button>
+            {% endfor %}
+            {% if day.overflow %}
+            <div class="calendar-more">+{{ day.overflow }} compromisso(s)</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Precisa atenção</div>
+        <div class="section-note">atrasados e compromissos de hoje entram no sino</div>
+      </div>
+    </div>
+    <div class="projects-clean-list agenda-list">
+      {% for event in agenda.overdue + agenda.today %}
+      {% include 'partials/event_row.html' %}
+      {% else %}
+      <div class="empty-state">Nenhum compromisso crítico agora.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Próximos compromissos</div>
+        <div class="section-note">lista operacional para o que vem pela frente</div>
+      </div>
+    </div>
+    <div class="projects-clean-list agenda-list agenda-list-compact">
+      {% set compact_agenda = true %}
+      {% for event in agenda.upcoming[:8] %}
+      {% include 'partials/event_row.html' %}
+      {% else %}
+      <div class="empty-state">Nenhum próximo compromisso registrado.</div>
+      {% endfor %}
+      {% set compact_agenda = false %}
+    </div>
+  </section>
+
+  {% if agenda.done %}
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Concluídos</div>
+        <div class="section-note">histórico operacional recente</div>
+      </div>
+    </div>
+    <div class="projects-clean-list agenda-list agenda-list-compact">
+      {% set compact_agenda = true %}
+      {% for event in agenda.done[:6] %}
+      {% include 'partials/event_row.html' %}
+      {% endfor %}
+      {% set compact_agenda = false %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+<div class="modal-overlay" id="event-summary-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="event-summary-title">Compromisso</div>
+        <div class="lead-detail-sub" id="event-summary-sub"></div>
+      </div>
+      <button class="modal-close" type="button" onclick="document.getElementById('event-summary-modal').classList.remove('open')">x</button>
+    </div>
+    <div class="modal-body">
+      <div class="agenda-summary-meta">
+        <span id="event-summary-status"></span>
+        <span id="event-summary-context"></span>
+      </div>
+      <div class="ghost-note" id="event-summary-note"></div>
+      <div class="modal-footer agenda-summary-actions">
+        <a class="btn btn-ghost" id="event-summary-google" href="#" target="_blank" rel="noopener">Google</a>
+        <a class="btn btn-ghost" id="event-summary-open" href="#">Abrir vínculo</a>
+        <button class="btn btn-ghost" type="button" id="event-summary-link">Vincular</button>
+        <form method="post" id="event-summary-confirm-form">
+          <button class="btn btn-ghost" type="submit" id="event-summary-confirm-label">Confirmar sugestão</button>
+        </form>
+        <button class="btn btn-ghost" type="button" id="event-summary-edit">Editar</button>
+        <button class="btn btn-primary" type="button" id="event-summary-action">Ação</button>
+        <form method="post" id="event-summary-complete-form">
+          <button class="btn btn-primary" type="submit" id="event-summary-complete-label">Concluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="event-action-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Criar próxima ação</div>
+        <div class="lead-detail-sub" id="event-action-title"></div>
+      </div>
+      <button class="modal-close" type="button" onclick="document.getElementById('event-action-modal').classList.remove('open')">x</button>
+    </div>
+    <form class="modal-body" method="post" id="event-action-form">
+      <div class="form-group">
+        <label class="form-label">Ação</label>
+        <select class="form-select" name="acao_tipo" onchange="syncActionTitle(this)">
+          <option>Enviar proposta</option>
+          <option>Ajustar layout</option>
+          <option>Preparar 3D</option>
+          <option>Cobrar retorno</option>
+          <option>Agendar próxima reunião</option>
+          <option>Registrar decisão</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Título da tarefa</label>
+        <input class="form-input" name="titulo" value="Enviar proposta">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Prazo</label>
+          <input class="form-input" type="date" name="prazo">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prioridade</label>
+          <select class="form-select" name="pri">
+            <option>Média</option>
+            <option>Alta</option>
+            <option>Baixa</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="tipo">
+          {% for type in task_types %}<option>{{ type }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observação</label>
+        <textarea class="form-textarea" name="descricao" placeholder="O que precisa ser feito depois deste compromisso?"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="document.getElementById('event-action-modal').classList.remove('open')">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Criar tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="event-edit-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal wide-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Editar compromisso</div>
+        <div class="lead-detail-sub" id="event-edit-title"></div>
+      </div>
+      <button class="modal-close" type="button" onclick="document.getElementById('event-edit-modal').classList.remove('open')">x</button>
+    </div>
+    <form class="modal-body agenda-edit-form" method="post" id="event-edit-form">
+      <div class="form-group span-2">
+        <label class="form-label">Título *</label>
+        <input class="form-input" name="titulo" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data *</label>
+        <input class="form-input" type="date" name="data" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hora</label>
+        <input class="form-input" type="time" name="hora">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="tipo">{% for type in event_types %}<option>{{ type }}</option>{% endfor %}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Formato</label>
+        <select class="form-select" name="reuniao_tipo">{% for type in meeting_types %}<option>{{ type }}</option>{% endfor %}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cliente</label>
+        <select class="form-select" name="cliente_id">
+          <option value="">Sem cliente</option>
+          {% for client in clients %}<option value="{{ client.id }}">{{ client.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Projeto</label>
+        <select class="form-select" name="projeto_id">
+          <option value="">Sem projeto</option>
+          {% for project in projects %}<option value="{{ project.id }}">{{ project.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Link</label>
+        <input class="form-input" name="link">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Local</label>
+        <input class="form-input" name="local">
+      </div>
+      <div class="form-group span-2">
+        <label class="form-label">Observações</label>
+        <textarea class="form-textarea" name="observacoes"></textarea>
+      </div>
+      <div class="modal-footer span-2">
+        {% if google_status.ready %}
+        <label class="form-check"><input type="checkbox" name="sync_google" value="1"> Atualizar também no Google Agenda</label>
+        {% endif %}
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" type="button" onclick="document.getElementById('event-edit-modal').classList.remove('open')">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Salvar alterações</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="event-link-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div><div class="modal-title">Vincular compromisso</div><div class="lead-detail-sub" id="event-link-title"></div></div><button class="modal-close" type="button" onclick="document.getElementById('event-link-modal').classList.remove('open')">x</button></div>
+    <form class="modal-body" method="post" id="event-link-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cliente</label>
+          <select class="form-select" name="cliente_id">
+            <option value="">Sem cliente</option>
+            {% for client in clients %}<option value="{{ client.id }}">{{ client.nome }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Projeto</label>
+          <select class="form-select" name="projeto_id">
+            <option value="">Sem projeto</option>
+            {% for project in projects %}<option value="{{ project.id }}">{{ project.nome }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="ghost-note">Quando houver projeto, ele será o vínculo principal. O cliente será preenchido a partir do projeto quando possível.</div>
+      <div class="modal-footer"><button class="btn btn-ghost" type="button" onclick="document.getElementById('event-link-modal').classList.remove('open')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar vínculo</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleNewEventPanel(show) {
+  const panel = document.getElementById('new-event-panel');
+  if (!panel) return;
+  panel.classList.toggle('open', Boolean(show));
+  if (show) panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function openNewEventForDate(dateValue) {
+  toggleNewEventPanel(true);
+  const panel = document.getElementById('new-event-panel');
+  const dateInput = panel ? panel.querySelector('[name="data"]') : null;
+  if (dateInput) dateInput.value = dateValue || '';
+}
+function filterAgenda(filter, button) {
+  document.querySelectorAll('.agenda-filter').forEach(item => item.classList.remove('active'));
+  if (button) button.classList.add('active');
+  document.querySelectorAll('[data-agenda-item]').forEach(item => {
+    const status = item.dataset.status;
+    const google = item.dataset.google === '1';
+    const linked = item.dataset.linked === '1';
+    let show = filter === 'all';
+    if (filter === 'today') show = status === 'today';
+    if (filter === 'overdue') show = status === 'overdue';
+    if (filter === 'done') show = status === 'done';
+    if (filter === 'google') show = google;
+    if (filter === 'unlinked') show = !linked;
+    item.style.display = show ? '' : 'none';
+  });
+}
+function openEventLinkModal(eventId, title, suggestionType, suggestionId) {
+  const modal = document.getElementById('event-link-modal');
+  const form = document.getElementById('event-link-form');
+  const label = document.getElementById('event-link-title');
+  if (!modal || !form) return;
+  form.action = `/agenda/${eventId}/vincular`;
+  if (label) label.textContent = title || '';
+  const clientSelect = form.querySelector('select[name="cliente_id"]');
+  const projectSelect = form.querySelector('select[name="projeto_id"]');
+  if (clientSelect) clientSelect.value = suggestionType === 'client' ? suggestionId : '';
+  if (projectSelect) projectSelect.value = suggestionType === 'project' ? suggestionId : '';
+  modal.classList.add('open');
+}
+function setFormValue(form, name, value) {
+  const field = form.querySelector(`[name="${name}"]`);
+  if (!field) return;
+  field.value = value || '';
+}
+function openEventEditModal(eventData) {
+  const modal = document.getElementById('event-edit-modal');
+  const form = document.getElementById('event-edit-form');
+  const title = document.getElementById('event-edit-title');
+  if (!modal || !form || !eventData) return;
+  form.action = `/agenda/${eventData.id}/editar`;
+  if (title) title.textContent = eventData.titulo || '';
+  setFormValue(form, 'titulo', eventData.titulo);
+  setFormValue(form, 'data', eventData.data);
+  setFormValue(form, 'hora', eventData.hora);
+  setFormValue(form, 'tipo', eventData.tipo);
+  setFormValue(form, 'reuniao_tipo', eventData.reuniao_tipo);
+  setFormValue(form, 'cliente_id', eventData.cliente_id);
+  setFormValue(form, 'projeto_id', eventData.projeto_id);
+  setFormValue(form, 'link', eventData.link);
+  setFormValue(form, 'local', eventData.local);
+  setFormValue(form, 'observacoes', eventData.observacoes);
+  const syncField = form.querySelector('[name="sync_google"]');
+  if (syncField) syncField.checked = Boolean(eventData.google_event_id);
+  modal.classList.add('open');
+}
+function openEventSummaryModal(eventData) {
+  const modal = document.getElementById('event-summary-modal');
+  if (!modal || !eventData) return;
+  document.getElementById('event-summary-title').textContent = eventData.titulo || 'Compromisso';
+  document.getElementById('event-summary-sub').textContent = `${eventData.data_fmt || ''} · ${eventData.hora || 'sem horário'}`;
+  document.getElementById('event-summary-status').textContent = eventData.status_label || '';
+  document.getElementById('event-summary-context').textContent = eventData.context_label || 'Agenda';
+  document.getElementById('event-summary-note').textContent = eventData.observacoes || 'Sem observações registradas.';
+  const confirmForm = document.getElementById('event-summary-confirm-form');
+  const confirmLabel = document.getElementById('event-summary-confirm-label');
+  if (eventData.link_suggestion) {
+    confirmForm.action = `/agenda/${eventData.id}/confirmar-vinculo`;
+    confirmLabel.textContent = `Confirmar ${eventData.link_suggestion.label || 'sugestão'}`;
+    confirmForm.style.display = '';
+  } else {
+    confirmForm.style.display = 'none';
+  }
+  const google = document.getElementById('event-summary-google');
+  google.href = eventData.google_html_link || eventData.google_calendar_url || '#';
+  google.style.display = google.href.endsWith('#') ? 'none' : '';
+  const openLink = document.getElementById('event-summary-open');
+  openLink.href = eventData.open_url || '#';
+  openLink.style.display = eventData.has_link ? '' : 'none';
+  document.getElementById('event-summary-action').onclick = () => {
+    modal.classList.remove('open');
+    openEventActionModal(eventData);
+  };
+  document.getElementById('event-summary-edit').onclick = () => {
+    modal.classList.remove('open');
+    openEventEditModal(eventData);
+  };
+  document.getElementById('event-summary-link').onclick = () => {
+    modal.classList.remove('open');
+    openEventLinkModal(eventData.id, eventData.titulo, eventData.link_suggestion ? eventData.link_suggestion.type : '', eventData.link_suggestion ? eventData.link_suggestion.id : '');
+  };
+  const completeForm = document.getElementById('event-summary-complete-form');
+  const completeLabel = document.getElementById('event-summary-complete-label');
+  if (eventData.status === 'concluido') {
+    completeForm.action = `/agenda/${eventData.id}/reabrir`;
+    completeLabel.textContent = 'Reabrir';
+  } else {
+    completeForm.action = `/agenda/${eventData.id}/concluir`;
+    completeLabel.textContent = 'Concluir';
+  }
+  modal.classList.add('open');
+}
+function syncActionTitle(select) {
+  const form = document.getElementById('event-action-form');
+  const title = form ? form.querySelector('[name="titulo"]') : null;
+  if (title && !title.dataset.touched) title.value = select.value || '';
+}
+function openEventActionModal(eventData) {
+  const modal = document.getElementById('event-action-modal');
+  const form = document.getElementById('event-action-form');
+  const title = document.getElementById('event-action-title');
+  if (!modal || !form || !eventData) return;
+  form.action = `/agenda/${eventData.id}/acao`;
+  if (title) title.textContent = eventData.titulo || '';
+  const actionSelect = form.querySelector('[name="acao_tipo"]');
+  const taskTitle = form.querySelector('[name="titulo"]');
+  const due = form.querySelector('[name="prazo"]');
+  const type = form.querySelector('[name="tipo"]');
+  const priority = form.querySelector('[name="pri"]');
+  const note = form.querySelector('[name="descricao"]');
+  if (actionSelect) actionSelect.value = 'Enviar proposta';
+  if (taskTitle) {
+    taskTitle.value = 'Enviar proposta';
+    taskTitle.dataset.touched = '';
+    taskTitle.oninput = () => { taskTitle.dataset.touched = '1'; };
+  }
+  if (due) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    due.value = tomorrow.toISOString().slice(0, 10);
+  }
+  if (type) type.value = 'Projeto';
+  if (priority) priority.value = 'Média';
+  if (note) note.value = '';
+  modal.classList.add('open');
+}
+</script>
+{% endblock %}

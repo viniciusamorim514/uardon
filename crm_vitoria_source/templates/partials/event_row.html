@@ -1,0 +1,59 @@
+<div class="project-clean-row agenda-row agenda-tone-{{ event.tone }} {% if event.is_unlinked %}agenda-unlinked{% endif %}" id="evento-{{ event.id }}" data-agenda-item data-status="{{ event.tone }}" data-google="{{ '1' if event.google_event_id else '0' }}" data-linked="{{ '1' if event.has_link else '0' }}">
+  <a class="project-clean-main agenda-open-link" href="{{ event.open_url }}">
+    <div class="agenda-row-head">
+      <div class="project-clean-title">{{ event.titulo }}</div>
+      <span>{{ event.data_fmt }} · {{ event.hora or 'sem horário' }}</span>
+    </div>
+    <div class="project-clean-sub">
+      {{ event.context_label }}
+      {% if event.local and event.context_label != event.local %} · {{ event.local }}{% endif %}
+    </div>
+    {% if event.observacoes and not compact_agenda %}
+    <div class="project-clean-subline">{{ event.observacoes }}</div>
+    {% endif %}
+    <div class="chips-row compact-chips">
+      <span class="mini-status">{{ event.tipo }}</span>
+      {% if event.reuniao_tipo %}<span class="mini-status soft">{{ event.reuniao_tipo }}</span>{% endif %}
+      <span class="mini-status agenda-status-{{ event.tone }}">{{ event.status_label }}</span>
+      {% if event.google_event_id %}<span class="mini-status google-synced">Google</span>{% endif %}
+      {% if event.is_unlinked %}<span class="mini-status link-suggested">Vincular</span>{% endif %}
+      {% if event.link_suggestion %}<span class="mini-status suggestion-chip">Sugestão {{ event.link_suggestion.confidence }}</span>{% endif %}
+      {% if event.next_action_task_id %}<span class="mini-status next-action-created">Próxima ação</span>{% endif %}
+    </div>
+    {% if event.google_sync_error %}
+    <div class="project-clean-subline error-line">{{ event.google_sync_error }}</div>
+    {% endif %}
+  </a>
+  <div class="project-clean-col agenda-link-col">
+    <span class="project-clean-label">Vínculo</span>
+    <strong>{{ event.context_label }}</strong>
+    {% if event.link_suggestion %}<small>Sugestão: {{ event.link_suggestion.label }}{% if event.link_suggestion.reason %} · {{ event.link_suggestion.reason }}{% endif %}</small>{% endif %}
+  </div>
+  <div class="project-clean-col status-align">
+    <div class="task-actions-row agenda-actions">
+      {% if event.google_html_link %}
+      <a class="mini-btn" href="{{ event.google_html_link }}" target="_blank" rel="noopener">Google</a>
+      {% elif google_status.ready %}
+      <form method="post" action="{{ url_for('sync_google_event', event_id=event.id) }}"><button class="mini-btn" type="submit">Enviar Google</button></form>
+      {% else %}
+      <a class="mini-btn" href="{{ event.google_calendar_url }}" target="_blank" rel="noopener">Google</a>
+      {% endif %}
+      {% if event.link_suggestion %}
+      <form method="post" action="{{ url_for('confirm_event_link_suggestion', event_id=event.id) }}"><button class="mini-btn primary-soft" type="submit">Confirmar vínculo</button></form>
+      {% endif %}
+      <button class="mini-btn primary-soft" type="button" onclick='openEventActionModal({{ event|tojson }})'>Ação</button>
+      <button class="mini-btn" type="button" onclick='openEventEditModal({{ event|tojson }})'>Editar</button>
+      <button class="mini-btn" type="button" onclick="openEventLinkModal('{{ event.id }}', '{{ event.titulo|e }}', '{{ event.link_suggestion.type if event.link_suggestion else '' }}', '{{ event.link_suggestion.id if event.link_suggestion else '' }}')">Vincular</button>
+      {% if event.status == 'concluido' %}
+      <form method="post" action="{{ url_for('reopen_event', event_id=event.id) }}"><button class="mini-btn" type="submit">Reabrir</button></form>
+      {% else %}
+      <form method="post" action="{{ url_for('complete_event', event_id=event.id) }}"><button class="mini-btn primary" type="submit">Concluir</button></form>
+      {% endif %}
+      {% if not compact_agenda %}
+      <form method="post" action="{{ url_for('delete_event', event_id=event.id) }}" onsubmit="return confirm('Excluir este compromisso?')">
+        <button class="mini-btn danger" type="submit">Excluir</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>

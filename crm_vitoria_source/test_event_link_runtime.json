@@ -1,0 +1,54 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Cliente Vínculo",
+      "tel": "",
+      "status": "ativo"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto Vínculo",
+      "cliente_id": 1,
+      "cliente": "Cliente Vínculo",
+      "pagamentos": [],
+      "contrato": {},
+      "arquivos": []
+    }
+  ],
+  "tarefas": [],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Evento importado",
+      "tipo": "Reunião",
+      "data": "2026-05-03",
+      "hora": "10:00",
+      "status": "agendado",
+      "google_event_id": "g1",
+      "projeto_id": 1,
+      "projeto": "Projeto Vínculo",
+      "cliente_id": 1,
+      "cliente": "Cliente Vínculo",
+      "vinculo_atualizado_em": "01/05/2026"
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

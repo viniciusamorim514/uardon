@@ -1,0 +1,938 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "password": "123456",
+      "name": "Vitória Uardon",
+      "email": "vit.cs99@gmail.com"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [
+    {
+      "id": 1,
+      "nome": "Vinicus",
+      "tel": "47996370025",
+      "email": "vinicius.luan.amorim@outlook.com",
+      "profissao": "",
+      "aniversario": "",
+      "origem": "Instagram",
+      "ambiente": "apartamento",
+      "orcamento": "Acima de R$ 30 mil",
+      "prazo": "Próximos 3 meses",
+      "obs": "N/A",
+      "ultima_interacao": "01/05/2026",
+      "etapa": "Proposta enviada",
+      "status": "Em contato",
+      "created_at": "2026-04-30T00:17:29",
+      "convertido_em": "01/05/2026",
+      "futuro_retorno": "02/05/2026",
+      "perda_obs": ""
+    },
+    {
+      "id": 2,
+      "nome": "Lead Parado Teste",
+      "tel": "47999999999",
+      "email": "parado@example.com",
+      "profissao": "",
+      "aniversario": "",
+      "origem": "Instagram",
+      "ambiente": "Sala",
+      "orcamento": "R$ 30 mil",
+      "prazo": "Próximos 30 dias",
+      "obs": "Teste parado",
+      "ultima_interacao": "28/04/2026",
+      "etapa": "Orçamento recebido",
+      "status": "Novo",
+      "created_at": "2026-05-01T10:04:23"
+    }
+  ],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Vinicius Amorim",
+      "tel": "47 996370025",
+      "email": "vinicius@gmail.com",
+      "local": "Itajai",
+      "projetos": 0,
+      "valorTotal": 0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Cliente recorrente",
+      "profissao": "assessor",
+      "aniversario": "03/01/1998",
+      "ultima_interacao": "18/04/2026",
+      "origem": "Indicacao",
+      "indicacao_por": "Vitoria",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "25/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Mike e Bruna",
+      "tel": "47999914525",
+      "email": "",
+      "local": "Itajai",
+      "projetos": 1,
+      "valorTotal": 83000.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Primeiro apto, tem 2 filhos",
+      "profissao": "Empresários",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Helton",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto do Lar vinculado à ficha do cliente."
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Juliano e Simone",
+      "tel": "49988047323",
+      "email": "",
+      "local": "Xaxim",
+      "projetos": 1,
+      "valorTotal": 2500.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Cliente recorrente, terceiro projeto",
+      "profissao": "Empresários",
+      "aniversario": "",
+      "ultima_interacao": "27/04/2026",
+      "origem": "",
+      "indicacao_por": "Helton",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto de área gourmet + área externa vinculado à ficha do cliente."
+        },
+        {
+          "data": "27/04/2026",
+          "titulo": "Reunião para apresentação de layout",
+          "descricao": "Considerações reunião dia 27/04\r\nsem concregrama\r\ncanteiro no cantinho esquerdo\r\nopção da piscina horizontal não da pois querem mais longe da casa\r\nconfirmar o tamanho do jardim de inverno, algumas plantas vão sair?\r\ntentar aumentar a piscina e considerar o espaço da espreguiçadeira no lado maior da piscina \r\ncascata de parede, fazer volume no muro\r\ncolocar escadinha pra acessar deposito atras\r\npreferencia por telha sanduiche"
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nome": "Ligia (L CLINIC)",
+      "tel": "47992254232",
+      "email": "",
+      "local": "Camboriu",
+      "projetos": 1,
+      "valorTotal": 6000.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Não é a primeira clinica",
+      "profissao": "Empresária",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Kelly (cliente)",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto clinica vinculado à ficha do cliente."
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "nome": "Thiago e Caio",
+      "tel": "47996125576",
+      "email": "",
+      "local": "Barra velha",
+      "projetos": 1,
+      "valorTotal": 6500.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Apartamento de férias, comprado por 2 casais de amigos. Querem alugar para airbnb também",
+      "profissao": "Assessores",
+      "aniversario": "",
+      "ultima_interacao": "27/04/2026",
+      "origem": "",
+      "indicacao_por": "Vinicius",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto Lar de praia vinculado à ficha do cliente."
+        },
+        {
+          "data": "27/04/2026",
+          "titulo": "Envio do detalhamento",
+          "descricao": "Envio de arquivo para análise, solicitaram alterações nos armários. Aguardando outros integrantes"
+        },
+        {
+          "data": "07/03/2026",
+          "titulo": "Reunião de apresentação de projeto",
+          "descricao": ""
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "nome": "Geovane e Joceline",
+      "tel": "15997750525",
+      "email": "gsgurtado@adv.oabsp.org.br",
+      "local": "Balneário Camboriú",
+      "projetos": 1,
+      "valorTotal": 80000.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Apartamento de veraneio, clientes de SP",
+      "profissao": "Empresários",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Eliacim",
+      "preferencia_contato": "Ligação",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto de quartos, banheiros e lavanderia vinculado à ficha do cliente."
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "nome": "Bruna (CLINICA DE FISIO)",
+      "tel": "47996097354",
+      "email": "brunamattos.fiso@gmail.com",
+      "local": "Balneário Camboriú",
+      "projetos": 0,
+      "valorTotal": 0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Reforma parcial em clinica, já teve outro profissional",
+      "profissao": "Empresária",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Vanessa (cliente)",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "nome": "Anderson e Vânia",
+      "tel": "2037883576",
+      "email": "",
+      "local": "Camboriu",
+      "projetos": 1,
+      "valorTotal": 6600.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Apartamento para férias no Brasil, clientes americanos",
+      "profissao": "Empresários",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Vinicius",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto apto completo vinculado à ficha do cliente."
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "nome": "Edinéia",
+      "tel": "54981544666",
+      "email": "edineia84@yahoo.com.br",
+      "local": "Porto Belo",
+      "projetos": 1,
+      "valorTotal": 6000.0,
+      "indicacoes": 0,
+      "status": "ativo",
+      "obs": "Apartamento de veraneio, clientes gaúchos",
+      "profissao": "Empresária",
+      "aniversario": "",
+      "ultima_interacao": "28/04/2026",
+      "origem": "",
+      "indicacao_por": "Helton",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "historico": [
+        {
+          "data": "28/04/2026",
+          "titulo": "Projeto criado",
+          "descricao": "Projeto Projeto apto completo vinculado à ficha do cliente."
+        },
+        {
+          "data": "28/04/2026",
+          "titulo": "Cliente importado por CSV",
+          "descricao": "Registro criado a partir de planilha."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "nome": "Vinicus",
+      "tel": "47996370025",
+      "email": "vinicius.luan.amorim@outlook.com",
+      "profissao": "",
+      "aniversario": "",
+      "cidade": "",
+      "origem": "Instagram",
+      "obs": "N/A",
+      "quem_indicou": "",
+      "preferencia_contato": "WhatsApp",
+      "relacionamento_status": "ativo",
+      "ultima_interacao": "01/05/2026"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto Lar de praia",
+      "cliente": "Thiago e Caio",
+      "cliente_id": 5,
+      "valor": 6500.0,
+      "prazo": "07/04/2026",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 100,
+      "status": "Entregue",
+      "obs": "Aguardando alterações e falta 01 projeto executivo de iluminação",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": true,
+          "data": "28/04"
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Assinado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": []
+    },
+    {
+      "id": 2,
+      "nome": "Projeto clinica",
+      "cliente": "Ligia (L CLINIC)",
+      "cliente_id": 4,
+      "valor": 6000.0,
+      "prazo": "02/02/2026",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 100,
+      "status": "Planejamento",
+      "obs": "Cliente está executando sozinha, falta cobrar 1.740,00",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": true,
+          "data": "28/04"
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Não iniciado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": []
+    },
+    {
+      "id": 3,
+      "nome": "Projeto do Lar",
+      "cliente": "Mike e Bruna",
+      "cliente_id": 2,
+      "valor": 83000.0,
+      "prazo": "28/05/2026",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 60,
+      "status": "Planejamento",
+      "obs": "Clientes vão executar em etapas",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": false,
+          "data": ""
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Não iniciado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": [
+        {
+          "id": 1,
+          "descricao": "3/5",
+          "valor": 1660.0,
+          "vencimento": "20/05/2026",
+          "status": "Pendente",
+          "lembrete_dias_antes": 3,
+          "pago_em": "",
+          "ultimo_lembrete_em": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nome": "Projeto de área gourmet + área externa",
+      "cliente": "Juliano e Simone",
+      "cliente_id": 3,
+      "valor": 2500.0,
+      "prazo": "30/05/2026",
+      "tipo": "Projeto completo de interiores + arquitetônico",
+      "progresso": 40,
+      "status": "Planejamento",
+      "obs": "",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": false,
+          "data": ""
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Não iniciado",
+        "emitido_em": "",
+        "assinado_em": "07/04/2026",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": [
+        {
+          "id": 1,
+          "descricao": "2/4",
+          "valor": 580.0,
+          "vencimento": "07/05/2026",
+          "status": "Pendente",
+          "lembrete_dias_antes": 3,
+          "pago_em": "",
+          "ultimo_lembrete_em": ""
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "nome": "Projeto de quartos, banheiros e lavanderia",
+      "cliente": "Geovane e Joceline",
+      "cliente_id": 6,
+      "valor": 80000.0,
+      "prazo": "",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 100,
+      "status": "Planejamento",
+      "obs": "",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": true,
+          "data": "28/04"
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Assinado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": [
+        {
+          "id": 1,
+          "descricao": "3/4",
+          "valor": 2000.0,
+          "vencimento": "23/05/2026",
+          "status": "Pendente",
+          "lembrete_dias_antes": 3,
+          "pago_em": "",
+          "ultimo_lembrete_em": ""
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "nome": "Projeto apto completo",
+      "cliente": "Edinéia",
+      "cliente_id": 9,
+      "valor": 6000.0,
+      "prazo": "12/12/2025",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 100,
+      "status": "Planejamento",
+      "obs": "Apto de 1 suite + 1 em Porto Belo",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": true,
+          "data": "28/04"
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": true,
+          "data": "28/04"
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Assinado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": []
+    },
+    {
+      "id": 7,
+      "nome": "Projeto apto completo",
+      "cliente": "Anderson e Vânia",
+      "cliente_id": 8,
+      "valor": 6600.0,
+      "prazo": "15/06/2026",
+      "tipo": "Projeto completo de interiores",
+      "progresso": 0,
+      "status": "Planejamento",
+      "obs": "",
+      "etapas": [
+        {
+          "nome": "Briefing e medição",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Reunião de layout",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Apresentação do 3D",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Detalhamento de marcenaria",
+          "done": false,
+          "data": ""
+        },
+        {
+          "nome": "Entrega do caderno final",
+          "done": false,
+          "data": ""
+        }
+      ],
+      "arquivos": [],
+      "contrato": {
+        "status": "Enviado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": null,
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": ""
+      },
+      "pagamentos": [
+        {
+          "id": 1,
+          "descricao": "2/6",
+          "valor": 1100.0,
+          "vencimento": "11/05",
+          "status": "Pendente",
+          "lembrete_dias_antes": 3,
+          "pago_em": "",
+          "ultimo_lembrete_em": ""
+        }
+      ]
+    }
+  ],
+  "tarefas": [
+    {
+      "id": 1,
+      "titulo": "Fazer follow-up do lead",
+      "text": "Fazer follow-up do lead",
+      "descricao": "Lead Parado Teste está sem avanço há 3 dias. Chamar no WhatsApp e definir o próximo passo.",
+      "tipo": "Comercial",
+      "pri": "Alta",
+      "prazo": "2026-05-01",
+      "done": false,
+      "status": "Pendente",
+      "responsavel": "Vitória Uardon",
+      "vinculo_tipo": "lead",
+      "vinculo_id": 2,
+      "vinculo_nome": "Lead Parado Teste",
+      "cliente_id": "",
+      "origem": "automacao",
+      "automation_key": "lead_response:2",
+      "done_at": ""
+    }
+  ],
+  "eventos": [],
+  "feedbacks": [
+    {
+      "id": 1,
+      "tipo": "problema",
+      "tela": "Vinicius Amorim",
+      "descricao": "Quando clico em abri whatsapp ou qualquer interação com o whatsapp ele vai para este link\r\nhttps://web.whatsapp.com/send/?phone=5547996370025&text=Ol%C3%A1%2C+Vinicius%21+Passando+para+saber+como+voc%C3%AA+est%C3%A1+e+se+posso+te+ajudar+em+algo+por+aqui.+%EF%BF%BD&type=phone_number&app_absent=0\r\n\r\nporem meu whatsapp é o bussiness e nao funciona neste link",
+      "urgencia": "alta",
+      "status": "resolvido",
+      "data": "25/04/2026",
+      "created_at": "2026-04-25T16:36:58",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Corrigido: link de WhatsApp passou por ajuste para abrir no navegador/WhatsApp Business com mais confiabilidade.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 2,
+      "tipo": "melhoria",
+      "tela": "Projeto Lar de praia",
+      "descricao": "etapas do projeto estão erradas\r\nbriefing e medição\r\nreunião de layout\r\nApresentação do 3D\r\nDetalhamento de marcenaria\r\nEntrega do caderno final",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T12:00:07",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Corrigido: etapas padrao do projeto atualizadas para o fluxo real da Vitoria.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 3,
+      "tipo": "melhoria",
+      "tela": "Projeto de área gourmet + área externa",
+      "descricao": "quando adiciono valores de parcelas pagas ele dá erro",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T17:32:04",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Corrigido: parcelas e valores monetarios brasileiros passaram a ser tratados com seguranca.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 4,
+      "tipo": "melhoria",
+      "tela": "Projeto Lar de praia",
+      "descricao": "falta um resumo do financeiro, com quantas parcelas faltam de cada cliente",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T19:01:04",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Implementado: resumo financeiro simples por cliente com pendencias de parcelas.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 5,
+      "tipo": "melhoria",
+      "tela": "Projeto Lar de praia",
+      "descricao": "Não pretendo adicionar os arquivos de projeto, são muitas coisas, posso adicionar links no maximo",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T19:01:52",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Implementado: projetos aceitam links alem de upload de arquivos.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 6,
+      "tipo": "melhoria",
+      "tela": "Tarefas",
+      "descricao": "ter a opção de adicionar o cliente",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T19:03:00",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Implementado: tarefas agora aceitam cliente vinculado.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 7,
+      "tipo": "melhoria",
+      "tela": "Feedbacks",
+      "descricao": "agenda não da pra clicar ainda",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "28/04/2026",
+      "created_at": "2026-04-28T19:03:45",
+      "resolvido_em": "29/04/2026",
+      "arquivo": "alteracao_aplicada",
+      "resumo_resolucao": "Implementado: caminho leve de agenda por link para Google Agenda.",
+      "updated_at": "2026-04-29T22:30:00"
+    },
+    {
+      "id": 8,
+      "tipo": "melhoria",
+      "tela": "Leads",
+      "descricao": "Em lead nao precisa ter o botão de função de retomar, pq lead ele é convertido ou perdido",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "30/04/2026",
+      "created_at": "2026-04-30T00:22:01",
+      "resolvido_em": "30/04/2026"
+    },
+    {
+      "id": 9,
+      "tipo": "melhoria",
+      "tela": "Tarefas",
+      "descricao": "quando é criado um lead sobe no sino a notificação, aparece o numero 1 na aba tarefas ao lado no nome, mas quando voce clica para abrir o painel de tarefas, não tem tarefas de lead",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "30/04/2026",
+      "created_at": "2026-04-30T00:23:12",
+      "resolvido_em": "30/04/2026"
+    },
+    {
+      "id": 10,
+      "tipo": "melhoria",
+      "tela": "Feedbacks",
+      "descricao": "para feedback nao pecisa ter urgencias, pq a demanda ainda é pouca",
+      "urgencia": "baixa",
+      "status": "resolvido",
+      "data": "30/04/2026",
+      "created_at": "2026-04-30T00:23:47",
+      "resolvido_em": "30/04/2026"
+    },
+    {
+      "id": 11,
+      "tipo": "problema",
+      "tela": "Leads",
+      "descricao": "quando clico em perdido no lead nao aparece nada nas opções/motivo da perda",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "30/04/2026",
+      "created_at": "2026-04-30T00:33:25",
+      "resolvido_em": "30/04/2026"
+    },
+    {
+      "id": 12,
+      "tipo": "melhoria",
+      "tela": "Sino",
+      "descricao": "quando tem uma pendencia eu preciso clicar em cima para ela sumir, mas nao some e fica com um numero no sino",
+      "urgencia": "media",
+      "status": "resolvido",
+      "data": "30/04/2026",
+      "created_at": "2026-04-30T00:34:32",
+      "resolvido_em": "30/04/2026"
+    }
+  ],
+  "dismissed_notifications": [
+    "lead:1"
+  ]
+}

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block page_title %}Atividades{% endblock %}
+{% block page_subtitle %}Linha do tempo da operação{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="receivables-hero activity-hero">
+    <div class="card receivable-metric metric-open">
+      <span>Total</span>
+      <strong>{{ activities.summary.total }}</strong>
+      <em>registros encontrados</em>
+    </div>
+    <div class="card receivable-metric metric-paid">
+      <span>Clientes</span>
+      <strong>{{ activities.summary.clientes }}</strong>
+      <em>histórico de relacionamento</em>
+    </div>
+    <div class="card receivable-metric metric-week">
+      <span>Projetos</span>
+      <strong>{{ activities.summary.projetos }}</strong>
+      <em>operação registrada</em>
+    </div>
+    <div class="card receivable-metric metric-overdue">
+      <span>Comercial</span>
+      <strong>{{ activities.summary.leads }}</strong>
+      <em>movimentos de leads</em>
+    </div>
+  </section>
+
+  <section class="card activity-workbench">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Central de atividades</div>
+        <div class="section-note">memória operacional do CRM</div>
+      </div>
+      <a class="mini-link" href="{{ url_for('activities_page') }}">Limpar filtros</a>
+    </div>
+    <form class="activity-filter-bar" method="get" action="{{ url_for('activities_page') }}">
+      <select class="form-select" name="tipo" aria-label="Tipo">
+        {% for type in activities.types %}
+        <option value="{{ type }}" {% if activities.filters.tipo == type %}selected{% endif %}>{{ type }}</option>
+        {% endfor %}
+      </select>
+      <input class="form-input" name="q" value="{{ activities.filters.q }}" placeholder="buscar cliente, projeto, lead ou ação" aria-label="Buscar">
+      <button class="btn btn-primary" type="submit">Filtrar</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Linha do tempo</div>
+        <div class="section-note">{{ activities['items']|length }} na visão atual</div>
+      </div>
+    </div>
+    <div class="activity-list">
+      {% for item in activities['items'] %}
+      <a class="activity-row tone-{{ item.tone }} {% if item.url %}link-row{% endif %}" {% if item.url %}href="{{ item.url }}"{% endif %}>
+        <div class="activity-date">{{ item.data or '—' }}</div>
+        <div class="activity-main">
+          <div class="activity-title">{{ item.kind }} · {{ item.title }}</div>
+          <div class="activity-sub">{{ item.description }}</div>
+          {% if item.context %}<div class="activity-context">{{ item.context }}</div>{% endif %}
+        </div>
+        <span>{{ item.kind }}</span>
+      </a>
+      {% else %}
+      <div class="empty-state">Nenhuma atividade encontrada nesta visão.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+INTEGRACAO GOOGLE AGENDA - CRM VITORIA UARDON
+
+Objetivo:
+Criar e atualizar compromissos do CRM direto no Google Agenda da Vitoria.
+
+Status tecnico:
+- O CRM ja tem a integracao preparada.
+- A agenda continua funcionando offline.
+- Quando o Google estiver conectado, cada compromisso pode ser enviado para o Google Agenda.
+- Novos compromissos podem ser criados no CRM e no Google Agenda ao mesmo tempo.
+
+Arquivo necessario:
+google_credentials.json
+
+Onde colocar no laptop da Vitoria:
+Na pasta do CRM usada no dia a dia:
+CRM Vitoria Uardon\google_credentials.json
+
+Como gerar o arquivo:
+1. Entrar no Google Cloud Console.
+2. Criar ou abrir um projeto do CRM.
+3. Ativar a Google Calendar API.
+4. Configurar a tela de consentimento OAuth.
+5. Criar credencial OAuth do tipo Desktop app.
+6. Baixar o JSON.
+7. Renomear para google_credentials.json.
+8. Colocar na pasta do CRM.
+
+Depois:
+1. Abrir o CRM.
+2. Ir em Agenda.
+3. Clicar em Conectar.
+4. Fazer login com a conta da Vitoria.
+5. Autorizar o acesso.
+
+Arquivos que serao criados automaticamente:
+- google_token.json
+
+Nao apagar:
+- data.json
+- uploads
+- google_token.json, depois que a conexao funcionar
+
+Escopo usado:
+https://www.googleapis.com/auth/calendar.events
+
+Por que esse escopo:
+Permite criar e atualizar eventos, sem pedir acesso amplo a todos os dados da conta.

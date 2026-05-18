@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block page_title %}Projetos{% endblock %}
+{% block page_subtitle %}Visão limpa dos projetos ativos · a operação detalhada fica dentro de cada projeto{% endblock %}
+{% block topbar_actions %}
+<a href="#novo-projeto" class="btn btn-primary" onclick="document.getElementById('novo-projeto').classList.add('open');return false;">+ Novo projeto</a>
+{% endblock %}
+{% block content %}
+<div class="content">
+  <section class="quick-grid project-summary-grid">
+    <div class="card stat-card stat-projects">
+      <div class="stat-label">Projetos ativos</div>
+      <div class="stat-value">{{ projects|length }}</div>
+      <div class="stat-sub">visão geral da operação</div>
+    </div>
+    <div class="card stat-card stat-proposals">
+      <div class="stat-label">Em apresentação</div>
+      <div class="stat-value">{{ projects | selectattr('status', 'equalto', 'Em apresentação') | list | length }}</div>
+      <div class="stat-sub">fase de validação com cliente</div>
+    </div>
+    <div class="card stat-card stat-meetings">
+      <div class="stat-label">Prioritários</div>
+      <div class="stat-value">{{ projects | selectattr('status', 'equalto', 'Prioritário') | list | length }}</div>
+      <div class="stat-sub">pedem acompanhamento mais próximo</div>
+    </div>
+    <div class="card stat-card stat-tasks">
+      <div class="stat-label">Concluídos</div>
+      <div class="stat-value">{{ projects | selectattr('status', 'equalto', 'Concluído') | list | length }}</div>
+      <div class="stat-sub">histórico já finalizado</div>
+    </div>
+  </section>
+
+  <section class="card clean-projects-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Projetos</div>
+        <div class="section-note">clique para abrir a operação completa</div>
+      </div>
+    </div>
+    <div class="projects-clean-list">
+      {% for project in projects %}
+      <a class="project-clean-row" href="{{ url_for('project_detail', project_id=project.id) }}">
+        <div class="project-clean-main">
+          <div class="project-clean-title">{{ project.nome }}</div>
+          <div class="project-clean-sub">{{ project.cliente }} · {{ project.tipo }}</div>
+        </div>
+        <div class="project-clean-col">
+          <span class="project-clean-label">Etapa atual</span>
+          <strong>{{ (project.etapas | selectattr('done', 'equalto', false) | map(attribute='nome') | list | first) or 'Finalizado' }}</strong>
+        </div>
+        <div class="project-clean-col">
+          <span class="project-clean-label">Prazo</span>
+          <strong>{{ project.prazo }}</strong>
+        </div>
+        <div class="project-clean-col">
+          <span class="project-clean-label">Progresso</span>
+          <strong>{{ project.progresso }}%</strong>
+        </div>
+        <div class="project-clean-col">
+          <span class="project-clean-label">Cobrança</span>
+          <strong>
+            {% if project.payment_overdue_total %}
+              {{ project.payment_overdue_total }} atrasado(s)
+            {% elif project.payment_pending_total %}
+              {{ project.payment_pending_total }} pendente(s)
+            {% else %}
+              Em dia
+            {% endif %}
+          </strong>
+          {% if project.payment_next_due %}<div class="project-clean-subline">Próx. {{ project.payment_next_due }}</div>{% endif %}
+        </div>
+        <div class="project-clean-col">
+          <span class="project-clean-label">Contrato</span>
+          <strong>{{ project.contract_data.label }}</strong>
+          {% if project.contract_data.days_open is not none and project.contract_data.is_pending %}<div class="project-clean-subline">há {{ project.contract_data.days_open }} dia(s)</div>{% endif %}
+        </div>
+        <div class="project-clean-col status-align">
+          <span class="mini-status">{{ project.status }}</span>
+        </div>
+      </a>
+      {% else %}
+      <div class="empty-state">Nenhum projeto cadastrado ainda.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="novo-projeto" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Novo projeto</div>
+      <button class="modal-close" onclick="document.getElementById('novo-projeto').classList.remove('open')">×</button>
+    </div>
+    <form method="post" action="{{ url_for('create_project') }}">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome do projeto</label><input class="form-input" name="nome" required></div>
+          <div class="form-group"><label class="form-label">Cliente</label><input class="form-input" name="cliente" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Prazo</label><input class="form-input" name="prazo" placeholder="30/05/2026"></div>
+          <div class="form-group"><label class="form-label">Valor</label><input class="form-input" name="valor" placeholder="15000"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Tipo</label><input class="form-input" name="tipo" placeholder="Projeto completo de interiores"></div>
+          <div class="form-group"><label class="form-label">Status</label><input class="form-input" name="status" placeholder="Planejamento"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Observações rápidas</label><textarea class="form-textarea" name="obs" placeholder="Anote só o essencial. O restante será desenvolvido dentro do projeto."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" onclick="document.getElementById('novo-projeto').classList.remove('open')">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Criar projeto</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

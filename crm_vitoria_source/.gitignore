@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Runtime local data / segredos
+data.json
+google_credentials.json
+google_token.json
+uploads/
+backups/
+
+# Logs e artefatos locais
+*.log
+launcher_test.*.log
+source_runtime.*.log
+tmp_cookies.txt
+
+# Build local
+build/
+dist/

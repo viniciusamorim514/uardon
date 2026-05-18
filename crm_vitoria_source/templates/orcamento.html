@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faça seu orçamento - Vitória Uardon</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="budget-public-body">
+  <main class="budget-public-shell">
+    <section class="budget-public-card">
+      <div class="budget-brand">
+        <div class="login-eyebrow">Arquitetura & Interiores</div>
+        <h1>Faça seu orçamento</h1>
+        <p>Conte um pouco sobre o ambiente que você quer transformar. A equipe da Vitória vai receber seu pedido e retornar pelo WhatsApp.</p>
+      </div>
+      <form method="post" class="budget-form">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" name="nome" required></div>
+          <div class="form-group"><label class="form-label">WhatsApp *</label><input class="form-input" name="telefone" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" type="email" name="email"></div>
+          <div class="form-group"><label class="form-label">Cidade</label><input class="form-input" name="cidade"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Ambiente de interesse</label><input class="form-input" name="ambiente" placeholder="Ex.: apartamento completo, sala, cozinha, clínica"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Orçamento estimado</label><select class="form-select" name="orcamento"><option value="">Prefiro conversar</option><option>Até R$ 5 mil</option><option>R$ 5 mil a R$ 15 mil</option><option>R$ 15 mil a R$ 30 mil</option><option>Acima de R$ 30 mil</option></select></div>
+          <div class="form-group"><label class="form-label">Prazo desejado</label><select class="form-select" name="prazo"><option value="">Ainda não sei</option><option>O quanto antes</option><option>Próximos 30 dias</option><option>Próximos 3 meses</option><option>Sem pressa</option></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">O que você imagina para o projeto?</label><textarea class="form-textarea" name="observacoes" placeholder="Descreva seu momento, dúvidas, ambiente e expectativas."></textarea></div>
+        <button class="btn btn-primary full login-submit" type="submit">Enviar pedido de orçamento</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Cliente Teste",
+      "tel": "47999999999",
+      "email": "cliente@teste.com",
+      "local": "Itajai",
+      "status": "ativo"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto Teste",
+      "cliente": "Cliente Teste",
+      "cliente_id": 1,
+      "valor": 3500,
+      "prazo": "10/05/2026",
+      "tipo": "Interiores",
+      "progresso": 0,
+      "status": "Planejamento",
+      "obs": "",
+      "etapas": [],
+      "arquivos": [],
+      "contrato": {
+        "status": "Assinado",
+        "emitido_em": "25/04/2026",
+        "assinado_em": "01/05/2026",
+        "modelo": "Contrato padrão Vitória",
+        "observacoes": "ok",
+        "lembrete_assinatura_dias": "3",
+        "ultimo_followup_em": "01/05/2026",
+        "status_atualizado_em": "01/05/2026"
+      },
+      "pagamentos": []
+    }
+  ],
+  "tarefas": [],
+  "eventos": [],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

@@ -1,0 +1,39 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Cliente Teste",
+      "tel": "47999999999",
+      "email": "cliente@teste.com",
+      "local": "Itajai",
+      "status": "ativo",
+      "ultima_interacao": "01/05/2026",
+      "historico": [
+        {
+          "data": "01/05/2026",
+          "titulo": "Contato registrado",
+          "descricao": "Contato rápido registrado pelo CRM."
+        }
+      ]
+    }
+  ],
+  "projetos": [],
+  "tarefas": [],
+  "eventos": [],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}

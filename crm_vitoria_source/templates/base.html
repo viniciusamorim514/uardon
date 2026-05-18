@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Vitória Uardon — CRM{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% if session.get('user') %}
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:12px">
+        <circle cx="16" cy="16" r="11.5" stroke="#E9DFCC" stroke-width="1.8" fill="none"/>
+        <path d="M16 8.5 L18.5 14 L24 16 L18.5 18 L16 23.5 L13.5 18 L8 16 L13.5 14 Z" fill="#E9DFCC"/>
+        <line x1="26.5" y1="16" x2="42" y2="16" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="31" cy="16" r="1.6" fill="#E9DFCC"/>
+        <circle cx="37" cy="16" r="1.2" fill="#E9DFCC"/>
+        <line x1="38" y1="16" x2="38" y2="21" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="40.5" y1="16" x2="40.5" y2="19.5" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="43" y1="16" x2="43" y2="22" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <div class="logo-mark">Vitória<br>Uardon</div>
+      <div class="logo-sub">Arq. & Interiores</div>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-section">Principal</span>
+        <a class="nav-item {% if active=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">D</span> Dashboard</a>
+        <a class="nav-item {% if active=='leads' %}active{% endif %}" href="{{ url_for('leads') }}"><span class="nav-icon">L</span> Leads <span class="nav-badge">{{ nav_counts.propostas }}</span></a>
+      <span class="nav-section">Gestão</span>
+        <a class="nav-item {% if active=='clientes' %}active{% endif %}" href="{{ url_for('clients') }}"><span class="nav-icon">C</span> Clientes <span class="nav-badge">{{ nav_counts.clientes }}</span></a>
+        <a class="nav-item {% if active=='projetos' %}active{% endif %}" href="{{ url_for('projects') }}"><span class="nav-icon">P</span> Projetos <span class="nav-badge">{{ nav_counts.projetos }}</span></a>
+        <a class="nav-item {% if active=='agenda' %}active{% endif %}" href="{{ url_for('agenda_page') }}"><span class="nav-icon">A</span> Agenda</a>
+        <a class="nav-item {% if active=='tarefas' %}active{% endif %}" href="{{ url_for('tasks_page') }}"><span class="nav-icon">T</span> Tarefas {% if open_tasks_count %}<span class="nav-badge">{{ open_tasks_count }}</span>{% endif %}</a>
+        <a class="nav-item {% if active=='atividades' %}active{% endif %}" href="{{ url_for('activities_page') }}"><span class="nav-icon">H</span> Atividades</a>
+      <a class="nav-item {% if active=='financeiro' %}active{% endif %}" href="{{ url_for('finance_page') }}"><span class="nav-icon">R$</span> Financeiro</a>
+      <a class="nav-item {% if active=='recebiveis' %}active{% endif %}" href="{{ url_for('receivables_page') }}"><span class="nav-icon">R$</span> Recebíveis</a>
+      <span class="nav-section">Controle</span>
+        <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ session['user']['name'][0] }}</div>
+      <div>
+        <div class="user-name">{{ session['user']['name'] }}</div>
+        <div class="user-role">{{ brand_studio }}</div>
+      </div>
+    </div>
+  </aside>
+  {% endif %}
+
+  <main class="{% if session.get('user') %}main{% else %}login-main{% endif %}">
+    {% if session.get('user') %}
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-sub">{% block page_subtitle %}CRM de arquitetura{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+        <button class="btn btn-ghost" type="button" onclick="openFeedbackModal()">Feedback</button>
+        <div class="notif-wrap" id="notifWrap">
+          <button class="bell-btn" type="button" onclick="toggleNotifications(event)" aria-label="Pendências do dia">
+            <span class="bell-icon">◔</span>
+            {% if notifications_count %}<span class="bell-badge">{{ notifications_count }}</span>{% endif %}
+          </button>
+          <div class="notif-panel" id="notifPanel">
+            <div class="notif-panel-head">
+              <div>
+                <strong>Pendências do dia</strong>
+                <div class="notif-panel-sub">Tarefas, follow-ups, cobranças e contratos.</div>
+              </div>
+              <span>{{ notifications_count }}</span>
+            </div>
+            <div class="notif-summary">
+              {% for label, count in notifications_summary.items() %}
+              {% if count %}
+              <span>{{ label }} <strong>{{ count }}</strong></span>
+              {% endif %}
+              {% endfor %}
+            </div>
+            <div class="notif-list">
+              {% for n in notifications_menu %}
+              <div class="notif-item category-{{ n.category|lower|replace('ç','c')|replace('ã','a')|replace(' ','-') }}">
+                <a class="notif-card-link" href="{{ url_for('open_notification', key=n.key, next=n.action_url) }}">
+                <div class="notif-topline">
+                  <span class="notif-category">{{ n.category }}</span>
+                </div>
+                <div class="notif-texts">
+                  <div class="notif-title">{{ n.title }}</div>
+                  <div class="notif-subtitle">{{ n.subtitle }}</div>
+                </div>
+                </a>
+              </div>
+              {% else %}
+              <div class="empty-state" style="padding:14px 12px">Sem pendências críticas agora. Bom momento para revisar tarefas sem prazo.</div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn btn-ghost">Sair</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <div class="flash-wrap">
+        {% for message in messages %}
+        <div class="flash">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if session.get('user') %}
+  <div class="modal-overlay" id="feedback-modal" onclick="if(event.target===this)closeFeedbackModal()">
+    <div class="modal feedback-modal">
+      <div class="modal-header"><div class="modal-title">Feedback rapido</div><button class="modal-close" type="button" onclick="closeFeedbackModal()">x</button></div>
+      <form class="modal-body" method="post" action="{{ url_for('create_feedback') }}">
+        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" name="tipo"><option value="problema">Problema</option><option value="melhoria" selected>Melhoria</option><option value="duvida">Duvida</option><option value="ideia">Ideia futura</option><option value="elogio">Ponto positivo</option></select></div>
+        <div class="form-group"><label class="form-label">Tela</label><input class="form-input" name="tela" id="feedbackTela" placeholder="Ex: Clientes, Projetos, Importacao"></div>
+        <div class="form-group"><label class="form-label">O que aconteceu ou o que poderia melhorar?</label><textarea class="form-textarea" name="descricao" required placeholder="Escreva do jeito que vier. Depois a gente organiza."></textarea></div>
+        <div class="modal-footer"><button class="btn btn-ghost" type="button" onclick="closeFeedbackModal()">Cancelar</button><button class="btn btn-primary" type="submit">Salvar feedback</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  <script>
+    function openFeedbackModal() {
+      const modal = document.getElementById('feedback-modal');
+      const input = document.getElementById('feedbackTela');
+      const title = document.querySelector('.topbar-title');
+      if (input && !input.value) input.value = title ? title.textContent.trim() : document.title;
+      if (modal) modal.classList.add('open');
+    }
+    function closeFeedbackModal() {
+      const modal = document.getElementById('feedback-modal');
+      if (modal) modal.classList.remove('open');
+    }
+    function toggleNotifications(event) {
+      event.stopPropagation();
+      const panel = document.getElementById('notifPanel');
+      panel.classList.toggle('open');
+    }
+    document.addEventListener('click', function(event) {
+      const panel = document.getElementById('notifPanel');
+      const wrap = document.getElementById('notifWrap');
+      if (panel && wrap && !wrap.contains(event.target)) panel.classList.remove('open');
+    });
+    function openLeadModal(id, type) {
+      const modal = document.getElementById(type === 'lost' ? 'lead-lost-modal' : 'lead-future-modal');
+      if (!modal) return;
+      modal.classList.add('open');
+      const input = modal.querySelector('input[name="lead_id"]');
+      if (input) input.value = id;
+    }
+    function closeLeadModal(id) {
+      const modal = document.getElementById(id);
+      if (modal) modal.classList.remove('open');
+    }
+    function submitLeadStatus(form, type) {
+      const leadId = form.querySelector('input[name="lead_id"]').value;
+      form.action = `/leads/${leadId}/${type}`;
+    }
+  </script>
+</body>
+</html>
+
+
+

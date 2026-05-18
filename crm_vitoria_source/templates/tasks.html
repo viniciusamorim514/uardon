@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block page_title %}Tarefas{% endblock %}
+{% block page_subtitle %}Central operacional do dia{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="document.getElementById('nova-tarefa-modal').classList.add('open')">Nova tarefa</button>
+{% endblock %}
+{% block content %}
+<div class="content task-v2">
+  <section class="card task-v2-hero">
+    <div class="task-v2-summary">
+      <div class="task-v2-title">Tarefas</div>
+      <div class="task-v2-sub">o motor da Mesa Inteligente</div>
+    </div>
+    <div class="task-v2-metrics">
+      <a href="#today"><span>Hoje</span><strong>{{ board.today|length }}</strong></a>
+      <a href="#overdue"><span>Atrasadas</span><strong>{{ board.overdue|length }}</strong></a>
+      <a href="#automation"><span>Automacao</span><strong>{{ board.automation.open }}</strong></a>
+      <a href="#without-deadline"><span>Sem prazo</span><strong>{{ board.without_deadline|length }}</strong></a>
+    </div>
+  </section>
+
+  <section class="card task-next-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Proxima tarefa</div>
+        <div class="section-note">a melhor acao aberta agora</div>
+      </div>
+      <a class="mini-link" href="{{ url_for('dashboard') }}">Voltar para a Mesa</a>
+    </div>
+    {% if board.next_task %}
+    <div class="task-next-summary source-{{ board.next_task.source_key }}">
+      <a href="{{ board.next_task.open_url }}">
+        <span>{{ board.next_task.label }} ? {{ board.next_task.source_label }}</span>
+        <strong>{{ board.next_task.titulo }}</strong>
+        {% if board.next_task.contexto %}<em>{{ board.next_task.contexto }}</em>{% endif %}
+      </a>
+      <div class="task-actions-row">
+        {% if board.next_task.whatsapp_url and board.next_task.whatsapp_url != '#' %}<a class="mini-btn primary" href="{{ board.next_task.whatsapp_url }}" target="_blank">WhatsApp</a>{% endif %}
+        <form method="post" action="{{ url_for('complete_task', task_id=board.next_task.id) }}"><button class="mini-btn" type="submit">Concluir</button></form>
+        <form method="post" action="{{ url_for('postpone_task', task_id=board.next_task.id, days=1) }}"><button class="mini-btn" type="submit">Amanha</button></form>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">Nenhuma tarefa aberta agora.</div>
+    {% endif %}
+  </section>
+
+  <section class="card task-focus-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Execucao</div>
+        <div class="section-note">hoje, atrasadas, automacoes e tarefas soltas</div>
+      </div>
+    </div>
+    <div class="task-focus-grid">
+      {% for group in board.focus_groups %}
+      <div class="task-focus-col" id="{{ group.key|replace('_','-') }}">
+        <div class="task-focus-head">
+          <div>
+            <strong>{{ group.label }}</strong>
+            <span>{{ group.note }}</span>
+          </div>
+          <em>{{ group.count }}</em>
+        </div>
+        <div class="list clean-list">
+          {% for task in group.tasks %}
+          {% include 'partials/task_item.html' %}
+          {% else %}
+          <div class="empty-state">Nada aqui.</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card automation-control-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Automacoes</div>
+        <div class="section-note">regras que estao puxando trabalho para a fila</div>
+      </div>
+    </div>
+    <div class="automation-control-grid compact-automation-grid">
+      <div class="automation-control-metric">
+        <span>Abertas</span>
+        <strong>{{ board.automation.open }}</strong>
+        <em>geradas por regra</em>
+      </div>
+      <div class="automation-control-metric">
+        <span>Hoje</span>
+        <strong>{{ board.automation.today }}</strong>
+        <em>para executar agora</em>
+      </div>
+      <div class="automation-control-rules">
+        {% for rule in board.automation.rules %}
+        <div class="automation-rule-row">
+          <div>
+            <strong>{{ rule.label }}</strong>
+            <span>{{ rule.note }}</span>
+          </div>
+          <em>{{ rule.open }} aberta(s)</em>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhuma automacao gerou tarefa ainda.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card task-source-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Origem do trabalho</div>
+        <div class="section-note">onde a operacao esta concentrada</div>
+      </div>
+    </div>
+    <div class="task-source-strip source-summary-only">
+      {% for source in board.by_source %}
+      <div class="task-source-pill source-{{ source.key }}">
+        <span>{{ source.label }}</span>
+        <strong>{{ source.count }}</strong>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="dashboard-clean-grid">
+    <div class="card dashboard-clean-card">
+      <div class="section-header"><div><div class="section-title">Concluidas recentemente</div><div class="section-note">ultimos registros</div></div></div>
+      <div class="list clean-list">
+        {% for task in board.recent_done %}
+        <div class="item compact-item done-item">
+          <div class="item-main">
+            <div class="item-title">{{ task.titulo }}</div>
+            <div class="item-sub">{{ task.done_at or 'Concluida' }} · {{ task.source_label }}{% if task.contexto %} · {{ task.contexto }}{% endif %}</div>
+          </div>
+          <div class="task-actions-row">
+            <form method="post" action="{{ url_for('reopen_task', task_id=task.id) }}"><button class="mini-btn" type="submit">Reabrir</button></form>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhuma tarefa concluida recentemente.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card dashboard-clean-card">
+      <div class="section-header"><div><div class="section-title">Follow-ups sugeridos</div><div class="section-note">relacionamento sem virar tarefa automatica</div></div></div>
+      <div class="list clean-list">
+        {% for item in board.suggested %}
+        <div class="item compact-item">
+          <div class="item-main">
+            <div class="item-title">{{ item.titulo }}</div>
+            <div class="item-sub">{{ item.subtitle }}</div>
+          </div>
+          <div class="task-actions-row">
+            <a class="mini-btn primary" href="{{ item.action_url }}" {% if 'whatsapp' in item.action_url %}target="_blank"{% endif %}>{{ item.action_label }}</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state">Sem follow-ups sugeridos pelo CRM agora.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" id="nova-tarefa-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Nova tarefa</div><button class="modal-close" onclick="document.getElementById('nova-tarefa-modal').classList.remove('open')">x</button></div>
+    <form class="modal-body" method="post" action="{{ url_for('create_task') }}">
+      <div class="form-group"><label class="form-label">Titulo *</label><input class="form-input" name="titulo" required></div>
+      <div class="form-group"><label class="form-label">Descricao</label><textarea class="form-textarea" name="descricao"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" name="tipo">{% for t in task_types %}<option>{{ t }}</option>{% endfor %}</select></div>
+        <div class="form-group"><label class="form-label">Prioridade</label><select class="form-select" name="pri"><option>Alta</option><option selected>Media</option><option>Baixa</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Prazo</label><input class="form-input" type="date" name="prazo"></div>
+        <div class="form-group"><label class="form-label">Cliente</label><select class="form-select" name="cliente_id"><option value="">Sem cliente</option>{% for client in clients %}<option value="{{ client.id }}">{{ client.nome }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Projeto</label><select class="form-select" name="projeto_id"><option value="">Sem projeto</option>{% for project in projects %}<option value="{{ project.id }}">{{ project.cliente }} · {{ project.nome }}</option>{% endfor %}</select></div>
+      <div class="modal-footer"><button class="btn btn-ghost" type="button" onclick="document.getElementById('nova-tarefa-modal').classList.remove('open')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar tarefa</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

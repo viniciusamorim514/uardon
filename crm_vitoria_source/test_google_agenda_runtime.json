@@ -1,0 +1,60 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "vitoria",
+      "email": "vit.cs99@gmail.com",
+      "password": "123456",
+      "name": "Vitória Uardon"
+    }
+  ],
+  "config": {
+    "nomeArquiteta": "Vitória Uardon",
+    "estudio": "Studio Arq. & Int."
+  },
+  "leads": [],
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "Cliente Google",
+      "tel": "47999999999",
+      "email": "",
+      "local": "Itajai",
+      "status": "ativo"
+    }
+  ],
+  "projetos": [
+    {
+      "id": 1,
+      "nome": "Projeto Google",
+      "cliente_id": 1,
+      "cliente": "Cliente Google",
+      "status": "ativo",
+      "pagamentos": [],
+      "contrato": {},
+      "arquivos": []
+    }
+  ],
+  "tarefas": [],
+  "eventos": [
+    {
+      "id": 1,
+      "titulo": "Reunião Google",
+      "tipo": "Reunião",
+      "data": "2026-05-01",
+      "hora": "15:00",
+      "cliente_id": 1,
+      "cliente": "Cliente Google",
+      "projeto_id": 1,
+      "projeto": "Projeto Google",
+      "reuniao_tipo": "Google Meet",
+      "link": "",
+      "local": "",
+      "observacoes": "Teste",
+      "status": "agendado",
+      "google_sync_error": "Arquivo google_credentials.json não encontrado na pasta do CRM."
+    }
+  ],
+  "feedbacks": [],
+  "dismissed_notifications": []
+}
