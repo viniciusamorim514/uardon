@@ -3,6 +3,7 @@ import calendar
 import json
 import os
 import re
+import shutil
 import sys
 import unicodedata
 import urllib.parse
@@ -31,6 +32,12 @@ APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
 DEFAULT_STORAGE_BASE = Path("/data") if os.environ.get("RAILWAY_ENVIRONMENT") else APP_DIR
 DATA_FILE = Path(os.environ.get("CRM_DATA_FILE", str(DEFAULT_STORAGE_BASE / "data.json")))
 UPLOAD_DIR = Path(os.environ.get("CRM_UPLOAD_DIR", str(DEFAULT_STORAGE_BASE / "uploads")))
+SEED_DATA_FILE = BASE_DIR / "data.json"
+
+# Em produção com volume novo, restaura o snapshot local para não iniciar zerado.
+if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SEED_DATA_FILE, DATA_FILE)
 
 DEFAULT_DATA = {
     "users": [
