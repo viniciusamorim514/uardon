@@ -7,6 +7,8 @@ import shutil
 import sys
 import unicodedata
 import urllib.parse
+import urllib.error
+import urllib.request
 import uuid
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -29,7 +31,7 @@ from flask import (
 BASE_DIR = Path(__file__).resolve().parent
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
 APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else BASE_DIR
-DEFAULT_STORAGE_BASE = Path("/data") if os.environ.get("RAILWAY_ENVIRONMENT") else APP_DIR
+DEFAULT_STORAGE_BASE = Path("/data") if (os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER")) else APP_DIR
 DATA_FILE = Path(os.environ.get("CRM_DATA_FILE", str(DEFAULT_STORAGE_BASE / "data.json")))
 UPLOAD_DIR = Path(os.environ.get("CRM_UPLOAD_DIR", str(DEFAULT_STORAGE_BASE / "uploads")))
 SEED_DATA_FILE = BASE_DIR / "data.json"
@@ -93,6 +95,12 @@ CRM_SECRET = os.environ.get("CRM_SECRET_KEY")
 if CRM_ENV == "production" and not CRM_SECRET:
     raise RuntimeError("CRM_SECRET_KEY não configurada para produção.")
 app.secret_key = CRM_SECRET or "crm-vitoria-local-dev-only"
+
+PUBLIC_LEAD_RATE_LIMIT = {}
+PUBLIC_LEAD_ALLOWED_ORIGINS = {
+    "https://uardon.com.br",
+    "https://www.uardon.com.br",
+}
 
 
 def ensure_data_file():
@@ -174,6 +182,123 @@ def whatsapp_link(phone, message=""):
     digits = phone_digits(phone)
     text = urllib.parse.quote_plus(message or "")
     return f"https://web.whatsapp.com/send?phone={digits}&text={text}" if digits else "#"
+
+
+def public_lead_origin():
+    allowed = set(PUBLIC_LEAD_ALLOWED_ORIGINS)
+    extra = os.environ.get("CRM_ALLOWED_ORIGINS", "")
+    allowed.update(origin.strip().rstrip("/") for origin in extra.split(",") if origin.strip())
+    origin = (request.headers.get("Origin") or "").rstrip("/")
+    if origin in allowed:
+        return origin
+    if origin.startswith("http://localhost:") or origin.startswith("http://127.0.0.1:"):
+        return origin
+    return ""
+
+
+def public_lead_response(payload=None, status=200):
+    response = Response(
+        json.dumps(payload or {}, ensure_ascii=False),
+        status=status,
+        mimetype="application/json",
+    )
+    origin = public_lead_origin()
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-User-Id"
+    response.headers["Access-Control-Max-Age"] = "86400"
+    return response
+
+
+def public_lead_error(message, status=400, code="invalid_request"):
+    return public_lead_response({"ok": False, "error": message, "code": code}, status)
+
+
+def public_lead_client_ip():
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def public_lead_rate_limited(ip, limit=5, window_seconds=600):
+    now = datetime.now()
+    cutoff = now - timedelta(seconds=window_seconds)
+    attempts = [item for item in PUBLIC_LEAD_RATE_LIMIT.get(ip, []) if item > cutoff]
+    if len(attempts) >= limit:
+        PUBLIC_LEAD_RATE_LIMIT[ip] = attempts
+        return True
+    attempts.append(now)
+    PUBLIC_LEAD_RATE_LIMIT[ip] = attempts
+    return False
+
+
+def normalize_brazil_phone(value):
+    digits = re.sub(r"\D", "", str(value or ""))
+    if digits.startswith("55") and len(digits) == 13:
+        digits = digits[2:]
+    return digits
+
+
+def is_sequential_phone(value, direction=1):
+    for index in range(1, len(value)):
+        expected = (int(value[index - 1]) + direction) % 10
+        if int(value[index]) != expected:
+            return False
+    return True
+
+
+def is_valid_brazil_whatsapp(value):
+    digits = normalize_brazil_phone(value)
+    if not re.fullmatch(r"\d{11}", digits):
+        return False
+    ddd = int(digits[:2])
+    if ddd < 11 or ddd > 99:
+        return False
+    if digits[2] != "9":
+        return False
+    local = digits[2:]
+    if re.fullmatch(r"(\d)\1+", digits) or re.fullmatch(r"(\d)\1+", local):
+        return False
+    if is_sequential_phone(local, 1) or is_sequential_phone(local, -1):
+        return False
+    return True
+
+
+def turnstile_secret():
+    for key in ("TURNSTILE_SECRET_KEY", "CLOUDFLARE_TURNSTILE_SECRET", "CHAVE_SECRETA_DA_CATRACA"):
+        value = (os.environ.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def verify_turnstile_token(token, remote_ip=""):
+    secret = turnstile_secret()
+    if not secret:
+        return True, ""
+    if not token:
+        return False, "Confirmação de segurança pendente."
+    payload = {"secret": secret, "response": token}
+    if remote_ip and remote_ip != "unknown":
+        payload["remoteip"] = remote_ip
+    encoded = urllib.parse.urlencode(payload).encode("utf-8")
+    try:
+        req = urllib.request.Request(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            data=encoded,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=8) as result:
+            parsed = json.loads(result.read().decode("utf-8"))
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return False, "Não foi possível validar a segurança agora. Tente novamente em alguns instantes."
+    if not parsed.get("success"):
+        return False, "Confirmação de segurança inválida. Atualize a página e tente novamente."
+    return True, ""
 
 
 def google_calendar_url(title, start_date, start_time="", end_time="", details="", location=""):
@@ -3195,6 +3320,102 @@ def public_budget_request():
         save_data(data)
         return render_template("orcamento_obrigado.html", lead=lead)
     return render_template("orcamento.html")
+
+
+@app.route("/health")
+def health_check():
+    return public_lead_response({"ok": True, "service": "uardon-crm"})
+
+
+@app.route("/v1/leads", methods=["POST", "OPTIONS"])
+def public_create_lead():
+    if request.method == "OPTIONS":
+        return public_lead_response({}, 204)
+
+    origin = public_lead_origin()
+    if request.headers.get("Origin") and not origin:
+        return public_lead_error("Origem não autorizada para enviar orçamento.", 403, "origin_not_allowed")
+
+    ip = public_lead_client_ip()
+    if public_lead_rate_limited(ip):
+        return public_lead_error(
+            "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.",
+            429,
+            "rate_limited",
+        )
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return public_lead_error("Envio inválido. Revise os dados e tente novamente.")
+
+    if str(payload.get("company_site") or "").strip():
+        return public_lead_error("Não foi possível enviar agora. Revise os dados e tente novamente.", 400, "blocked")
+
+    name = str(payload.get("name") or payload.get("nome") or "").strip()
+    phone_raw = str(payload.get("phone") or payload.get("telefone") or payload.get("whatsapp") or "").strip()
+    phone = normalize_brazil_phone(phone_raw)
+    city = str(payload.get("city") or payload.get("cidade") or "").strip()
+    project_type = str(payload.get("project_type") or payload.get("tipo") or "").strip()
+    message = str(payload.get("message") or payload.get("msg") or payload.get("observacoes") or "").strip()
+
+    if len(name) < 2:
+        return public_lead_error("Digite seu nome para continuar.", 400, "invalid_name")
+    if not is_valid_brazil_whatsapp(phone):
+        return public_lead_error("WhatsApp inválido. Use um número real no formato (DDD) 9XXXX-XXXX.", 400, "invalid_phone")
+    if not project_type:
+        return public_lead_error("Selecione o tipo de projeto para continuar.", 400, "invalid_project_type")
+
+    turnstile_ok, turnstile_message = verify_turnstile_token(
+        str(payload.get("turnstile_token") or payload.get("cf_turnstile_response") or "").strip(),
+        ip,
+    )
+    if not turnstile_ok:
+        return public_lead_error(turnstile_message, 400, "turnstile_failed")
+
+    data = load_data()
+    lead = {
+        "id": next_id(data["leads"]),
+        "nome": name,
+        "tel": phone,
+        "email": "",
+        "profissao": "",
+        "aniversario": "",
+        "origem": "Landing Page",
+        "cidade": city,
+        "ambiente": project_type,
+        "orcamento": "",
+        "prazo": "",
+        "obs": message,
+        "ultima_interacao": today_br(),
+        "etapa": "Novo",
+        "status": "Novo",
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "source_url": ((payload.get("metadata") or {}).get("current_url") if isinstance(payload.get("metadata"), dict) else "") or "",
+        "referrer": ((payload.get("metadata") or {}).get("referrer") if isinstance(payload.get("metadata"), dict) else "") or "",
+    }
+    if city or project_type or message:
+        details = []
+        if city:
+            details.append(f"Cidade do projeto: {city}")
+        if project_type:
+            details.append(f"Tipo de projeto: {project_type}")
+        if message:
+            details.append(f"Mensagem: {message}")
+        lead["obs"] = "\n".join(details)
+
+    data["leads"].append(lead)
+    create_lead_response_task(data, lead, "Responder lead da landing")
+    register_operation_history(
+        data,
+        "Novo lead recebido pela landing",
+        f"{lead.get('nome')} enviou pedido de orçamento pelo site uardon.com.br.",
+        "lead",
+        f"landing_lead:{lead.get('id')}",
+        lead=lead,
+        update_client=False,
+    )
+    save_data(data)
+    return public_lead_response({"ok": True, "lead_id": lead["id"], "status": lead["status"]}, 201)
 
 
 @app.route("/")
