@@ -281,9 +281,9 @@ def verify_turnstile_token(token, remote_ip=""):
         return True, ""
     if not token:
         return False, "Confirmação de segurança pendente."
+    # Do not send remoteip here: requests pass through Cloudflare and Railway,
+    # and proxy IP mismatches can make otherwise valid Turnstile tokens fail.
     payload = {"secret": secret, "response": token}
-    if remote_ip and remote_ip != "unknown":
-        payload["remoteip"] = remote_ip
     encoded = urllib.parse.urlencode(payload).encode("utf-8")
     try:
         req = urllib.request.Request(
