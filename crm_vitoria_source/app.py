@@ -15,6 +15,11 @@ from datetime import date, datetime, timedelta
 from functools import wraps
 from pathlib import Path
 
+try:
+    import psycopg
+except Exception:
+    psycopg = None
+
 from flask import (
     Flask,
     Response,
@@ -35,6 +40,7 @@ DEFAULT_STORAGE_BASE = Path("/data") if (os.environ.get("RAILWAY_ENVIRONMENT") o
 DATA_FILE = Path(os.environ.get("CRM_DATA_FILE", str(DEFAULT_STORAGE_BASE / "data.json")))
 UPLOAD_DIR = Path(os.environ.get("CRM_UPLOAD_DIR", str(DEFAULT_STORAGE_BASE / "uploads")))
 SEED_DATA_FILE = BASE_DIR / "data.json"
+DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 
 # Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
@@ -110,7 +116,69 @@ def ensure_data_file():
         save_data(deepcopy(DEFAULT_DATA))
 
 
-def load_data():
+def db_enabled():
+    return bool(DATABASE_URL and psycopg is not None)
+
+
+def db_connect():
+    if not db_enabled():
+        return None
+    return psycopg.connect(DATABASE_URL)
+
+
+def ensure_db_schema(conn):
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS crm_state (
+                id SMALLINT PRIMARY KEY,
+                payload JSONB NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    conn.commit()
+
+
+def db_load_data():
+    conn = db_connect()
+    if conn is None:
+        return None
+    try:
+        ensure_db_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute("SELECT payload FROM crm_state WHERE id = 1")
+            row = cur.fetchone()
+        if row and row[0]:
+            return row[0]
+        return None
+    finally:
+        conn.close()
+
+
+def db_save_data(data):
+    conn = db_connect()
+    if conn is None:
+        return False
+    try:
+        ensure_db_schema(conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO crm_state (id, payload, updated_at)
+                VALUES (1, %s::jsonb, NOW())
+                ON CONFLICT (id)
+                DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+                """,
+                (json.dumps(data, ensure_ascii=False),),
+            )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def load_data_from_file():
     ensure_data_file()
     try:
         raw = DATA_FILE.read_text(encoding="utf-8-sig")
@@ -127,7 +195,34 @@ def load_data():
     return data
 
 
+def load_data():
+    if db_enabled():
+        try:
+            db_data = db_load_data()
+            if db_data is not None:
+                data = db_data
+            else:
+                data = load_data_from_file()
+                db_save_data(data)
+        except Exception:
+            data = load_data_from_file()
+    else:
+        data = load_data_from_file()
+    for key, value in DEFAULT_DATA.items():
+        data.setdefault(key, deepcopy(value))
+    for user in data.get("users", []):
+        user.setdefault("email", "")
+    data.setdefault("dismissed_notifications", [])
+    return data
+
+
 def save_data(data):
+    if db_enabled():
+        try:
+            if db_save_data(data):
+                return
+        except Exception:
+            pass
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
