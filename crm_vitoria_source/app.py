@@ -107,6 +107,8 @@ PUBLIC_LEAD_ALLOWED_ORIGINS = {
     "https://uardon.com.br",
     "https://www.uardon.com.br",
 }
+LEAD_OWNER_DEFAULT = "Vitória Uardon"
+LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 
 
 def ensure_data_file():
@@ -2269,9 +2271,10 @@ def create_lead_response_task(data, lead, title="Responder orÃ§amento"):
         "tipo": "Comercial",
         "pri": "Alta",
         "prazo": date.today().isoformat(),
+        "prazo_contato_at": lead.get("primeiro_contato_prazo") or "",
         "done": False,
         "status": "Pendente",
-        "responsavel": "VitÃ³ria Uardon",
+        "responsavel": LEAD_OWNER_DEFAULT,
         "vinculo_tipo": "lead",
         "vinculo_id": lead.get("id"),
         "vinculo_nome": lead.get("nome"),
@@ -2287,6 +2290,44 @@ def create_lead_response_task(data, lead, title="Responder orÃ§amento"):
 def lead_days_since_interaction(lead):
     last = parse_date(lead.get("ultima_interacao") or lead.get("created_at") or lead.get("data"))
     return (date.today() - last).days if last else None
+
+
+def parse_datetime_iso(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def lead_first_contact_deadline(created_at_iso):
+    created = parse_datetime_iso(created_at_iso) or datetime.now()
+    return (created + timedelta(minutes=LEAD_FIRST_CONTACT_SLA_MINUTES)).isoformat(timespec="seconds")
+
+
+def lead_sla_minutes_without_action(lead):
+    stage_key = lead_stage_key(lead)
+    if stage_key != "new":
+        return 0
+    created = parse_datetime_iso(lead.get("created_at"))
+    if not created:
+        return 0
+    return max(0, int((datetime.now() - created).total_seconds() // 60))
+
+
+def build_lead_whatsapp_message(lead):
+    first = str(lead.get("nome") or "").split(" ")[0] or "tudo bem"
+    stage_key = lead_stage_key(lead)
+    if stage_key == "new":
+        return f"Olá, {first}! Recebi seu pedido de orçamento e vou te chamar para entender melhor seu projeto."
+    if stage_key == "contacted":
+        return f"Olá, {first}! Passando para alinhar os próximos passos do seu projeto."
+    if stage_key == "briefing":
+        return f"Olá, {first}! Vamos confirmar os pontos do briefing para avançarmos com segurança."
+    if stage_key == "proposal":
+        return f"Olá, {first}! Queria te ajudar com qualquer dúvida para avançarmos com a proposta."
+    return f"Olá, {first}! Tudo bem por aí?"
 
 
 def is_stale_lead(lead):
@@ -2463,7 +2504,11 @@ def build_lead_pipeline(leads):
         item["days_since_interaction"] = lead_days_since_interaction(item)
         item["is_stale"] = is_stale_lead(item)
         item["stale_label"] = f"{item['days_since_interaction']} dias sem avanÃ§o" if item["is_stale"] else ""
-        item["whatsapp_url"] = whatsapp_link(item.get("tel"), f"OlÃ¡, {str(item.get('nome','')).split(' ')[0]}! Recebi seu contato e vou te chamar para entender melhor.")
+        item["owner_name"] = item.get("responsavel") or LEAD_OWNER_DEFAULT
+        item["sla_minutes"] = lead_sla_minutes_without_action(item)
+        item["sla_overdue"] = item["sla_minutes"] > LEAD_FIRST_CONTACT_SLA_MINUTES
+        item["sla_label"] = f"SLA estourado: {item['sla_minutes']} min sem resposta" if item["sla_overdue"] else ""
+        item["whatsapp_url"] = whatsapp_link(item.get("tel"), build_lead_whatsapp_message(item))
         if item["stage_key"] == "future":
             future.append(item)
         elif item["stage_key"] == "lost":
@@ -2488,12 +2533,42 @@ def build_commercial_metrics(data, board, pipeline):
         if not task.get("done") and task.get("vinculo_tipo") == "lead"
     ]
     stale_leads = [lead for lead in open_leads if is_stale_lead(lead)]
+    overdue_sla = [lead for lead in open_leads if lead_sla_minutes_without_action(lead) > LEAD_FIRST_CONTACT_SLA_MINUTES]
     return {
         "new_budgets": len(budget_leads),
         "open_leads": len(open_leads),
         "lead_tasks": len(lead_tasks),
         "stale_leads": len(stale_leads),
+        "overdue_sla": len(overdue_sla),
         "pipeline_total": sum(len(column["items"]) for column in pipeline["columns"]),
+    }
+
+
+def build_weekly_metrics(data):
+    today = date.today()
+    start = today - timedelta(days=today.weekday())
+    leads_week = [lead for lead in data.get("leads", []) if (parse_datetime_iso(lead.get("created_at")) or datetime.min).date() >= start]
+    lead_ids_week = {lead.get("id") for lead in leads_week}
+
+    response_minutes = []
+    for lead in leads_week:
+        created = parse_datetime_iso(lead.get("created_at"))
+        first_contact = parse_date(lead.get("ultima_interacao"))
+        if created and first_contact and first_contact >= created.date():
+            response_minutes.append(max(0, int((datetime.combine(first_contact, datetime.min.time()) - created).total_seconds() // 60)))
+
+    proposal_count = 0
+    for lead in data.get("leads", []):
+        if lead.get("id") in lead_ids_week and lead_stage_key(lead) in ("proposal", "closed"):
+            proposal_count += 1
+
+    advance_rate = round((proposal_count / len(leads_week)) * 100, 1) if leads_week else 0.0
+    avg_response = round(sum(response_minutes) / len(response_minutes), 1) if response_minutes else 0.0
+    return {
+        "week_label": f"{start.strftime('%d/%m')} a {today.strftime('%d/%m')}",
+        "leads_week": len(leads_week),
+        "avg_response_minutes": avg_response,
+        "proposal_advance_rate": advance_rate,
     }
 
 
@@ -3480,6 +3555,7 @@ def public_create_lead():
         turnstile_warning = f"Turnstile em modo tolerante. Motivo: {turnstile_error_code or 'unknown'}"
 
     data = load_data()
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
     lead = {
         "id": next_id(data["leads"]),
         "nome": name,
@@ -3496,9 +3572,17 @@ def public_create_lead():
         "ultima_interacao": today_br(),
         "etapa": "Novo",
         "status": "Novo",
+        "responsavel": LEAD_OWNER_DEFAULT,
         "created_at": datetime.now().isoformat(timespec="seconds"),
-        "source_url": ((payload.get("metadata") or {}).get("current_url") if isinstance(payload.get("metadata"), dict) else "") or "",
-        "referrer": ((payload.get("metadata") or {}).get("referrer") if isinstance(payload.get("metadata"), dict) else "") or "",
+        "primeiro_contato_prazo": lead_first_contact_deadline(datetime.now().isoformat(timespec="seconds")),
+        "source_url": str(metadata.get("current_url") or "").strip(),
+        "entry_page": str(metadata.get("entry_page") or metadata.get("current_url") or "").strip(),
+        "referrer": str(metadata.get("referrer") or "").strip(),
+        "utm_source": str(metadata.get("utm_source") or "").strip(),
+        "utm_medium": str(metadata.get("utm_medium") or "").strip(),
+        "utm_campaign": str(metadata.get("utm_campaign") or "").strip(),
+        "utm_content": str(metadata.get("utm_content") or "").strip(),
+        "utm_term": str(metadata.get("utm_term") or "").strip(),
     }
     if city or project_type or message or turnstile_warning:
         details = []
@@ -3553,6 +3637,7 @@ def dashboard():
         "ref_label": today_br(),
     }
     relationship = relationship_data(data)
+    weekly_metrics = build_weekly_metrics(data)
     funnel = {"AtraÃ§Ã£o": 0, "Interesse": 0, "Proposta": len(data["leads"]), "NegociaÃ§Ã£o": 0, "Fechamento": 0}
     alerts = [{"title": n["title"], "subtitle": n["subtitle"]} for n in build_notifications(data)[:4]]
     return render_template(
@@ -3572,6 +3657,7 @@ def dashboard():
         pipeline=pipeline,
         automation_actions=build_automation_actions(data, board),
         relationship=relationship,
+        weekly_metrics=weekly_metrics,
         funnel=funnel,
     )
 
@@ -4318,8 +4404,10 @@ def create_lead():
         "obs": request.form.get("obs") or "",
         "ultima_interacao": today_br(),
         "status": "Novo",
+        "responsavel": LEAD_OWNER_DEFAULT,
         "etapa": request.form.get("etapa") or "AtraÃ§Ã£o",
         "created_at": datetime.now().isoformat(timespec="seconds"),
+        "primeiro_contato_prazo": lead_first_contact_deadline(datetime.now().isoformat(timespec="seconds")),
     }
     data["leads"].append(lead)
     create_lead_response_task(data, lead, "Responder lead")

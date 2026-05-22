@@ -131,7 +131,9 @@
             </div>
             <div class="lead-card-sub">{{ lead.origem or 'Origem não informada' }} · {{ lead.ambiente or 'Ambiente não informado' }}</div>
             <div class="lead-card-meta">
+              <span>{{ lead.owner_name }}</span>
               <span>{{ lead.orcamento or 'orçamento a conversar' }}</span>
+              {% if lead.sla_overdue %}<span class="lead-stale-pill">{{ lead.sla_label }}</span>{% endif %}
               {% if lead.is_stale %}<span class="lead-stale-pill">{{ lead.stale_label }}</span>{% endif %}
             </div>
             <div class="lead-card-actions">

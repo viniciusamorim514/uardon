@@ -120,6 +120,7 @@
         <span><strong>{{ commercial.new_budgets }}</strong> novos orçamentos</span>
         <span><strong>{{ commercial.open_leads }}</strong> leads abertos</span>
         <span><strong>{{ commercial.stale_leads }}</strong> sem avanço</span>
+        <span><strong>{{ commercial.overdue_sla }}</strong> SLA estourado</span>
       </div>
       <div class="list clean-list">
         {% for lead in budget_leads[:3] %}
@@ -157,6 +158,20 @@
         <div class="empty-state">Nenhum projeto cadastrado.</div>
         {% endfor %}
       </div>
+    </div>
+  </section>
+
+  <section class="card dashboard-clean-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Métrica semanal</div>
+        <div class="section-note">{{ weekly_metrics.week_label }}</div>
+      </div>
+    </div>
+    <div class="dashboard-inline-metrics" style="padding:14px 18px 18px">
+      <span><strong>{{ weekly_metrics.leads_week }}</strong> leads da semana</span>
+      <span><strong>{{ weekly_metrics.avg_response_minutes }} min</strong> tempo médio de resposta</span>
+      <span><strong>{{ weekly_metrics.proposal_advance_rate }}%</strong> avanço para proposta</span>
     </div>
   </section>
 
