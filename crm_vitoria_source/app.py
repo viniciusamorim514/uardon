@@ -24,6 +24,7 @@ from flask import (
     Flask,
     Response,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -41,6 +42,7 @@ DATA_FILE = Path(os.environ.get("CRM_DATA_FILE", str(DEFAULT_STORAGE_BASE / "dat
 UPLOAD_DIR = Path(os.environ.get("CRM_UPLOAD_DIR", str(DEFAULT_STORAGE_BASE / "uploads")))
 SEED_DATA_FILE = BASE_DIR / "data.json"
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
+WRITE_LOCK_KEY = 761451
 
 # Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
@@ -178,6 +180,41 @@ def db_save_data(data):
         return True
     finally:
         conn.close()
+
+
+def acquire_write_lock():
+    if not db_enabled():
+        return
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return
+    if request.method == "OPTIONS":
+        return
+    lock_conn = db_connect()
+    if lock_conn is None:
+        return
+    try:
+        with lock_conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_lock(%s)", (WRITE_LOCK_KEY,))
+        g.crm_write_lock_conn = lock_conn
+    except Exception:
+        lock_conn.close()
+        raise
+
+
+def release_write_lock(_exc=None):
+    lock_conn = getattr(g, "crm_write_lock_conn", None)
+    if not lock_conn:
+        return
+    try:
+        with lock_conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_unlock(%s)", (WRITE_LOCK_KEY,))
+    finally:
+        lock_conn.close()
+        g.crm_write_lock_conn = None
+
+
+app.before_request(acquire_write_lock)
+app.teardown_request(release_write_lock)
 
 
 def load_data_from_file():
