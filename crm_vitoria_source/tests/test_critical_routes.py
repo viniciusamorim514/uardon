@@ -145,6 +145,13 @@ class CriticalRoutesTest(unittest.TestCase):
         )
         self.assertEqual(signed.status_code, 201)
 
+    def test_leads_template_has_no_mojibake_tokens(self):
+        template_path = Path(__file__).resolve().parents[1] / "templates" / "leads.html"
+        content = template_path.read_text(encoding="utf-8")
+        bad_tokens = ["Ã", "Â", "â€”", "\ufffd"]
+        for token in bad_tokens:
+            self.assertNotIn(token, content, f"Mojibake token found in leads template: {token}")
+
     def test_public_lead_invalid_phone_returns_400(self):
         payload = {
             "name": "Maria Silva",
