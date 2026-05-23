@@ -177,15 +177,19 @@ class CriticalRoutesTest(unittest.TestCase):
                 {"created_at": "2026-05-23T10:00:01", "event": "crm_visible", "status": "ok", "code": "", "lead_id": 11},
                 {"created_at": "2026-05-23T10:02:00", "event": "landing_submit", "status": "blocked", "code": "turnstile_failed"},
                 {"created_at": "2026-05-23T10:03:00", "event": "api_accept", "status": "duplicate", "code": "idempotent_replay"},
+                {"created_at": "2026-05-23T10:04:00", "event": "smoke_check", "status": "ok", "code": "smoke_ok"},
+                {"created_at": "2026-05-23T10:05:00", "event": "smoke_check", "status": "failed", "code": "smoke_failed"},
             ]
         }
         report = self.crm.build_technical_health(sample, window_hours=99999)
-        self.assertEqual(report["totals"]["events"], 4)
+        self.assertEqual(report["totals"]["events"], 6)
         self.assertEqual(report["totals"]["status_4xx"], 1)
         self.assertEqual(report["totals"]["turnstile_failed"], 1)
         self.assertEqual(report["totals"]["duplicate_replay"], 1)
         self.assertEqual(report["totals"]["lead_ingestion_fail"], 1)
         self.assertEqual(report["totals"]["avg_latency_seconds"], 1.0)
+        self.assertEqual(report["totals"]["smoke_total"], 2)
+        self.assertEqual(report["totals"]["smoke_failed"], 1)
 
     def test_public_lead_invalid_phone_returns_400(self):
         payload = {

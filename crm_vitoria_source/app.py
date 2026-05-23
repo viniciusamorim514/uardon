@@ -116,6 +116,7 @@ PUBLIC_LEAD_ALLOWED_ORIGINS = {
 }
 LEAD_OWNER_DEFAULT = "Vitória Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
+LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
 
 
 def fix_mojibake_text(value):
@@ -478,6 +479,79 @@ def audit_public_lead(data, event, status="ok", lead=None, code="", details=None
     logs = data.setdefault("audit_logs", [])
     logs.append(entry)
     del logs[:-500]
+
+
+def append_system_audit_log(data, event, status="ok", code="", details=None):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "event": event,
+        "status": status,
+        "code": code,
+        "lead_id": None,
+        "ip": "",
+        "origin": "system",
+        "user_agent": "system",
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "details": details or {},
+    }
+    logs = data.setdefault("audit_logs", [])
+    logs.append(entry)
+    del logs[:-500]
+
+
+def latest_smoke_check(data):
+    latest = None
+    for item in data.get("audit_logs", []) or []:
+        if str(item.get("event") or "") != "smoke_check":
+            continue
+        raw = str(item.get("created_at") or "").strip()
+        if not raw:
+            continue
+        try:
+            created_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if latest is None or created_at > latest[0]:
+            latest = (created_at, item)
+    return latest
+
+
+def run_lead_ingestion_smoke_check(data, reason="manual"):
+    started = time.time()
+    backend = "postgres" if db_enabled() else "file"
+    details = {"reason": reason, "storage": backend}
+    try:
+        if db_enabled():
+            conn = db_connect()
+            if conn is None:
+                raise RuntimeError("db_connect returned none")
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+            conn.close()
+        if "leads" not in data or "audit_logs" not in data:
+            raise RuntimeError("state keys missing")
+        save_data(data)
+        details["duration_ms"] = int((time.time() - started) * 1000)
+        append_system_audit_log(data, "smoke_check", "ok", code="smoke_ok", details=details)
+        save_data(data)
+        return True, details
+    except Exception as exc:
+        details["duration_ms"] = int((time.time() - started) * 1000)
+        details["error"] = str(exc)[:180]
+        append_system_audit_log(data, "smoke_check", "failed", code="smoke_failed", details=details)
+        save_data(data)
+        return False, details
+
+
+def ensure_recent_smoke_check(data, reason="auto"):
+    latest = latest_smoke_check(data)
+    if latest is not None:
+        age_seconds = (datetime.now() - latest[0]).total_seconds()
+        if age_seconds < LEAD_SMOKE_CHECK_INTERVAL_SECONDS:
+            return False
+    run_lead_ingestion_smoke_check(data, reason=reason)
+    return True
 
 def normalize_brazil_phone(value):
     digits = re.sub(r"\D", "", str(value or ""))
@@ -3553,6 +3627,10 @@ def build_technical_health(data, window_hours=24):
     lead_ingestion_fail = 0
     status_4xx = 0
     status_5xx = 0
+    smoke_total = 0
+    smoke_failed = 0
+    last_smoke_at = None
+    last_smoke_status = "none"
 
     first_submit = {}
     first_visible = {}
@@ -3573,6 +3651,13 @@ def build_technical_health(data, window_hours=24):
             lead_ingestion_fail += 1
         if code in ("siteverify_unavailable", "db_error", "internal_error"):
             status_5xx += 1
+        if event == "smoke_check":
+            smoke_total += 1
+            if last_smoke_at is None or created_at > last_smoke_at:
+                last_smoke_at = created_at
+                last_smoke_status = status or "unknown"
+            if status != "ok":
+                smoke_failed += 1
 
         if lead_id is not None and event == "landing_submit":
             first_submit.setdefault(lead_id, created_at)
@@ -3596,6 +3681,10 @@ def build_technical_health(data, window_hours=24):
         alerts.append({"level": "medium", "title": "Falha de ingestao", "note": f"{lead_ingestion_fail} bloqueios na entrada de leads nas ultimas {window_hours}h."})
     if turnstile_failed > 0:
         alerts.append({"level": "medium", "title": "Turnstile falhando", "note": f"{turnstile_failed} falhas de validacao nas ultimas {window_hours}h."})
+    if smoke_total == 0:
+        alerts.append({"level": "medium", "title": "Smoke check ausente", "note": f"Nenhum smoke check executado nas ultimas {window_hours}h."})
+    elif smoke_failed > 0:
+        alerts.append({"level": "high", "title": "Smoke check falhou", "note": f"{smoke_failed} falhas de smoke check nas ultimas {window_hours}h."})
     if total_events == 0:
         alerts.append({"level": "low", "title": "Sem telemetria recente", "note": f"Nao houve logs tecnicos nas ultimas {window_hours}h."})
 
@@ -3610,6 +3699,10 @@ def build_technical_health(data, window_hours=24):
             "duplicate_replay": duplicate_replay,
             "lead_ingestion_fail": lead_ingestion_fail,
             "avg_latency_seconds": avg_latency_seconds,
+            "smoke_total": smoke_total,
+            "smoke_failed": smoke_failed,
+            "last_smoke_status": last_smoke_status,
+            "last_smoke_at": last_smoke_at.isoformat(timespec="seconds") if last_smoke_at else "",
         },
         "alerts": alerts[:4],
     }
@@ -3910,6 +4003,7 @@ def public_create_lead():
 @login_required
 def dashboard():
     data = load_data()
+    ensure_recent_smoke_check(data, reason="dashboard_auto")
     if ensure_daily_automation_tasks(data):
         save_data(data)
     board = build_task_board(data)
@@ -3962,12 +4056,26 @@ def dashboard():
 @admin_required
 def admin_diagnostics():
     data = load_data()
+    ensure_recent_smoke_check(data, reason="diagnostics_auto")
     report = build_technical_health(data, window_hours=24)
     return render_template(
         "diagnostics.html",
         active="diagnostics",
         technical_health=report,
     )
+
+
+@app.route("/admin/diagnostico/smoke-check", methods=["POST"])
+@login_required
+@admin_required
+def admin_run_smoke_check():
+    data = load_data()
+    ok, details = run_lead_ingestion_smoke_check(data, reason="manual_admin")
+    if ok:
+        flash(f"Smoke check concluido em {details.get('duration_ms', 0)} ms.")
+    else:
+        flash("Smoke check falhou. Veja detalhes no diagnostico.")
+    return redirect(url_for("admin_diagnostics"))
 
 
 @app.route("/atividades")
