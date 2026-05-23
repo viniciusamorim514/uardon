@@ -4,7 +4,7 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "sh -c 'gunicorn app:app --chdir crm_vitoria_source --bind 0.0.0.0:$PORT --workers 1 --timeout 120'",
+    "startCommand": "sh -c 'gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120'",
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE",
