@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}VitÃ³ria Uardon â€” CRM{% endblock %}</title>
+  <title>{% block title %}Vitória Uardon — CRM{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -20,26 +20,23 @@
         <line x1="40.5" y1="16" x2="40.5" y2="19.5" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
         <line x1="43" y1="16" x2="43" y2="22" stroke="#E9DFCC" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
-      <div class="logo-mark">VitÃ³ria<br>Uardon</div>
+      <div class="logo-mark">Vitória<br>Uardon</div>
       <div class="logo-sub">Arq. & Interiores</div>
     </div>
     <nav class="sidebar-nav">
       <span class="nav-section">Principal</span>
         <a class="nav-item {% if active=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">D</span> Dashboard</a>
         <a class="nav-item {% if active=='leads' %}active{% endif %}" href="{{ url_for('leads') }}"><span class="nav-icon">L</span> Leads <span class="nav-badge">{{ nav_counts.propostas }}</span></a>
-      <span class="nav-section">GestÃ£o</span>
+      <span class="nav-section">Gestão</span>
         <a class="nav-item {% if active=='clientes' %}active{% endif %}" href="{{ url_for('clients') }}"><span class="nav-icon">C</span> Clientes <span class="nav-badge">{{ nav_counts.clientes }}</span></a>
         <a class="nav-item {% if active=='projetos' %}active{% endif %}" href="{{ url_for('projects') }}"><span class="nav-icon">P</span> Projetos <span class="nav-badge">{{ nav_counts.projetos }}</span></a>
         <a class="nav-item {% if active=='agenda' %}active{% endif %}" href="{{ url_for('agenda_page') }}"><span class="nav-icon">A</span> Agenda</a>
         <a class="nav-item {% if active=='tarefas' %}active{% endif %}" href="{{ url_for('tasks_page') }}"><span class="nav-icon">T</span> Tarefas {% if open_tasks_count %}<span class="nav-badge">{{ open_tasks_count }}</span>{% endif %}</a>
         <a class="nav-item {% if active=='atividades' %}active{% endif %}" href="{{ url_for('activities_page') }}"><span class="nav-icon">H</span> Atividades</a>
       <a class="nav-item {% if active=='financeiro' %}active{% endif %}" href="{{ url_for('finance_page') }}"><span class="nav-icon">R$</span> Financeiro</a>
-      <a class="nav-item {% if active=='recebiveis' %}active{% endif %}" href="{{ url_for('receivables_page') }}"><span class="nav-icon">R$</span> RecebÃ­veis</a>
+      <a class="nav-item {% if active=='recebiveis' %}active{% endif %}" href="{{ url_for('receivables_page') }}"><span class="nav-icon">R$</span> Recebíveis</a>
       <span class="nav-section">Controle</span>
         <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
-      {% if is_admin_user %}
-        <a class="nav-item {% if active=='diagnostics' %}active{% endif %}" href="{{ url_for('admin_diagnostics') }}"><span class="nav-icon">T</span> Diagnostico</a>
-      {% endif %}
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">{{ session['user']['name'][0] }}</div>
@@ -62,15 +59,15 @@
         {% block topbar_actions %}{% endblock %}
         <button class="btn btn-ghost" type="button" onclick="openFeedbackModal()">Feedback</button>
         <div class="notif-wrap" id="notifWrap">
-          <button class="bell-btn" type="button" onclick="toggleNotifications(event)" aria-label="PendÃªncias do dia">
-            <span class="bell-icon">â—”</span>
+          <button class="bell-btn" type="button" onclick="toggleNotifications(event)" aria-label="Pendências do dia">
+            <span class="bell-icon">◔</span>
             {% if notifications_count %}<span class="bell-badge">{{ notifications_count }}</span>{% endif %}
           </button>
           <div class="notif-panel" id="notifPanel">
             <div class="notif-panel-head">
               <div>
-                <strong>PendÃªncias do dia</strong>
-                <div class="notif-panel-sub">Tarefas, follow-ups, cobranÃ§as e contratos.</div>
+                <strong>Pendências do dia</strong>
+                <div class="notif-panel-sub">Tarefas, follow-ups, cobranças e contratos.</div>
               </div>
               <span>{{ notifications_count }}</span>
             </div>
@@ -83,7 +80,7 @@
             </div>
             <div class="notif-list">
               {% for n in notifications_menu %}
-              <div class="notif-item category-{{ n.category|lower|replace('Ã§','c')|replace('Ã£','a')|replace(' ','-') }}">
+              <div class="notif-item category-{{ n.category|lower|replace('ç','c')|replace('ã','a')|replace(' ','-') }}">
                 <a class="notif-card-link" href="{{ url_for('open_notification', key=n.key, next=n.action_url) }}">
                 <div class="notif-topline">
                   <span class="notif-category">{{ n.category }}</span>
@@ -95,7 +92,7 @@
                 </a>
               </div>
               {% else %}
-              <div class="empty-state" style="padding:14px 12px">Sem pendÃªncias crÃ­ticas agora. Bom momento para revisar tarefas sem prazo.</div>
+              <div class="empty-state" style="padding:14px 12px">Sem pendências críticas agora. Bom momento para revisar tarefas sem prazo.</div>
               {% endfor %}
             </div>
           </div>
