@@ -121,6 +121,9 @@
             data-lead-stale="{{ '1' if lead.is_stale else '0' }}"
             data-lead-stale-label="{{ lead.stale_label|default('', true)|e }}"
             data-lead-whatsapp="{{ lead.whatsapp_url|default('#', true)|e }}"
+            data-ai-title="{{ lead.ai.title|default('', true)|e }}"
+            data-ai-note="{{ lead.ai.note|default('', true)|e }}"
+            data-ai-message="{{ lead.ai.message|default('', true)|e }}"
             data-lead-future-id="{{ lead.id }}"
             data-lead-lost-id="{{ lead.id }}"
             onclick="openLeadDetail(event)"
@@ -231,6 +234,7 @@
     </div>
     <div class="modal-footer">
       <a class="btn btn-ghost" id="leadDetailWhatsApp" href="#" target="_blank">WhatsApp</a>
+      <button class="btn btn-ghost" type="button" onclick="copyLeadAiMessage()">Copiar mensagem</button>
       <button class="btn btn-ghost" type="button" onclick="openLeadDetailFuture()">Mover para futuro</button>
       <button class="btn btn-ghost danger-btn" type="button" onclick="openLeadDetailLost()">Marcar perdido</button>
     </div>
@@ -241,6 +245,7 @@
   let draggedLeadId = null;
   let currentLeadDetailId = null;
   let leadDragActive = false;
+  let currentLeadAiMessage = '';
 
   function startLeadDrag(event) {
     const card = event.currentTarget;
@@ -336,13 +341,26 @@
     setLeadText('leadDetailStatus', button.dataset.leadStatus);
     setLeadText('leadDetailStage', button.dataset.leadStage);
     setLeadText('leadDetailNotes', sanitizeLeadNotes(button.dataset.leadNotes));
-    updateLeadNextAction(button.dataset.leadStage, button.dataset.leadStale, button.dataset.leadStaleLabel);
+    updateLeadNextAction(
+      button.dataset.leadStage,
+      button.dataset.leadStale,
+      button.dataset.leadStaleLabel,
+      button.dataset.aiTitle,
+      button.dataset.aiNote,
+      button.dataset.aiMessage
+    );
     const whats = document.getElementById('leadDetailWhatsApp');
     if (whats) whats.href = button.dataset.leadWhatsapp || '#';
     if (modal) modal.classList.add('open');
   }
 
-  function updateLeadNextAction(stage, isStale, staleLabel) {
+  function updateLeadNextAction(stage, isStale, staleLabel, aiTitle, aiNote, aiMessage) {
+    if (aiTitle || aiNote) {
+      setLeadText('leadDetailNextAction', aiTitle || 'Proxima acao sugerida');
+      setLeadText('leadDetailNextNote', aiNote || '');
+      currentLeadAiMessage = String(aiMessage || '').trim();
+      return;
+    }
     const normalized = (stage || '').toLowerCase();
     let title = 'Responder pelo WhatsApp';
     let note = 'Use a conversa para confirmar escopo, prazo e expectativa de investimento.';
@@ -364,6 +382,21 @@
     }
     setLeadText('leadDetailNextAction', title);
     setLeadText('leadDetailNextNote', note);
+    currentLeadAiMessage = '';
+  }
+
+  function copyLeadAiMessage() {
+    if (!currentLeadAiMessage) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentLeadAiMessage);
+      return;
+    }
+    const temp = document.createElement('textarea');
+    temp.value = currentLeadAiMessage;
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand('copy');
+    document.body.removeChild(temp);
   }
 
   function openLeadDetailFuture() {

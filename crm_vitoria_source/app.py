@@ -2556,6 +2556,9 @@ def lead_sla_minutes_without_action(lead):
 
 
 def build_lead_whatsapp_message(lead):
+    ai = build_lead_ai_insight(lead)
+    if ai.get("message"):
+        return ai.get("message")
     first = str(lead.get("nome") or "").split(" ")[0] or "tudo bem"
     stage_key = lead_stage_key(lead)
     if stage_key == "new":
@@ -2567,6 +2570,57 @@ def build_lead_whatsapp_message(lead):
     if stage_key == "proposal":
         return f"Ol, {first}! Queria te ajudar com qualquer dvida para avanarmos com a proposta."
     return f"Ol, {first}! Tudo bem por a?"
+
+
+def build_lead_ai_insight(lead):
+    first = str(lead.get("nome") or "").split(" ")[0] or "cliente"
+    stage_key = lead_stage_key(lead)
+    stale = is_stale_lead(lead)
+    stale_days = lead_days_since_interaction(lead) or 0
+    ambiente = str(lead.get("ambiente") or "projeto")
+    origem = str(lead.get("origem") or "site")
+
+    if stale:
+        return {
+            "title": "Retomar follow-up agora",
+            "note": f"Lead parado ha {stale_days} dias. Reative com mensagem curta e proposta de proximo passo.",
+            "message": f"Olá, {first}! Passei para retomar seu {ambiente.lower()}. Se fizer sentido, te envio hoje os próximos passos em 2 pontos objetivos.",
+        }
+    if stage_key == "new":
+        return {
+            "title": "Responder em ate 15 min",
+            "note": f"Lead novo vindo de {origem}. Velocidade de resposta aumenta a chance de briefing.",
+            "message": f"Olá, {first}! Recebi seu contato sobre {ambiente.lower()} e vou te ajudar com isso. Posso te fazer 3 perguntas rápidas para alinharmos escopo e prazo?",
+        }
+    if stage_key == "contacted":
+        return {
+            "title": "Agendar briefing",
+            "note": "Transforme interesse em reuniao com horario fechado.",
+            "message": f"Olá, {first}! Para avançarmos com seu {ambiente.lower()}, vamos agendar um briefing de 20 minutos? Te passo duas opções de horário.",
+        }
+    if stage_key == "briefing":
+        return {
+            "title": "Consolidar proposta",
+            "note": "Briefing feito: alinhe escopo final e data de envio da proposta.",
+            "message": f"Olá, {first}! Finalizei a consolidação do briefing do seu {ambiente.lower()}. Vou te enviar a proposta com escopo e cronograma para avaliarmos juntas(os).",
+        }
+    if stage_key == "proposal":
+        return {
+            "title": "Follow-up da proposta",
+            "note": "Conduza decisao com clareza, sem pressao.",
+            "message": f"Olá, {first}! Queria saber como você se sentiu com a proposta do {ambiente.lower()}. Se quiser, te explico em 5 minutos as opções para facilitar a decisão.",
+        }
+    if stage_key == "closed":
+        return {
+            "title": "Abrir onboarding do projeto",
+            "note": "Lead convertido: inicie etapa de execução.",
+            "message": f"Olá, {first}! Vamos iniciar oficialmente seu {ambiente.lower()}. Te envio agora o plano das primeiras etapas.",
+        }
+    return {
+        "title": "Manter relacionamento ativo",
+        "note": "Sem urgencia critica, mantenha contato consultivo.",
+        "message": f"Olá, {first}! Tudo bem? Fico à disposição para te apoiar no próximo passo do seu projeto.",
+    }
 
 
 def is_stale_lead(lead):
@@ -2747,7 +2801,8 @@ def build_lead_pipeline(leads):
         item["sla_minutes"] = lead_sla_minutes_without_action(item)
         item["sla_overdue"] = item["sla_minutes"] > LEAD_FIRST_CONTACT_SLA_MINUTES
         item["sla_label"] = f"SLA estourado: {item['sla_minutes']} min sem resposta" if item["sla_overdue"] else ""
-        item["whatsapp_url"] = whatsapp_link(item.get("tel"), build_lead_whatsapp_message(item))
+        item["ai"] = build_lead_ai_insight(item)
+        item["whatsapp_url"] = whatsapp_link(item.get("tel"), item["ai"].get("message") or build_lead_whatsapp_message(item))
         if item["stage_key"] == "future":
             future.append(item)
         elif item["stage_key"] == "lost":
