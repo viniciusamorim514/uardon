@@ -1,0 +1,32 @@
+name: Deploy landing to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-landing.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: uardon-landing-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Publish web folder
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 7e540279471e49f8fc72d9c8b65bb0a6
+          command: pages deploy web --project-name=uardon-landing --branch=main --commit-dirty=true
