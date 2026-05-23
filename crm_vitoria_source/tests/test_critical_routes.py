@@ -170,6 +170,23 @@ class CriticalRoutesTest(unittest.TestCase):
         pattern = re.compile(r"(Ã.|Â.|\ufffd)")
         self.assertIsNone(pattern.search(content), "Mojibake token found in leads template")
 
+    def test_build_technical_health_aggregates_audit_logs(self):
+        sample = {
+            "audit_logs": [
+                {"created_at": "2026-05-23T10:00:00", "event": "landing_submit", "status": "ok", "code": "", "lead_id": 11},
+                {"created_at": "2026-05-23T10:00:01", "event": "crm_visible", "status": "ok", "code": "", "lead_id": 11},
+                {"created_at": "2026-05-23T10:02:00", "event": "landing_submit", "status": "blocked", "code": "turnstile_failed"},
+                {"created_at": "2026-05-23T10:03:00", "event": "api_accept", "status": "duplicate", "code": "idempotent_replay"},
+            ]
+        }
+        report = self.crm.build_technical_health(sample, window_hours=99999)
+        self.assertEqual(report["totals"]["events"], 4)
+        self.assertEqual(report["totals"]["status_4xx"], 1)
+        self.assertEqual(report["totals"]["turnstile_failed"], 1)
+        self.assertEqual(report["totals"]["duplicate_replay"], 1)
+        self.assertEqual(report["totals"]["lead_ingestion_fail"], 1)
+        self.assertEqual(report["totals"]["avg_latency_seconds"], 1.0)
+
     def test_public_lead_invalid_phone_returns_400(self):
         payload = {
             "name": "Maria Silva",

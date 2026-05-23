@@ -3511,6 +3511,92 @@ def notification_summary(notifications):
     return summary
 
 
+def build_technical_health(data, window_hours=24):
+    now = datetime.now()
+    cutoff = now - timedelta(hours=window_hours)
+    logs = data.get("audit_logs", []) or []
+
+    recent = []
+    for item in logs:
+        raw = str(item.get("created_at") or "").strip()
+        if not raw:
+            continue
+        try:
+            created_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if created_at >= cutoff:
+            recent.append((created_at, item))
+
+    total_events = len(recent)
+    blocked = 0
+    turnstile_failed = 0
+    duplicate_replay = 0
+    lead_ingestion_fail = 0
+    status_4xx = 0
+    status_5xx = 0
+
+    first_submit = {}
+    first_visible = {}
+    for created_at, item in recent:
+        event = str(item.get("event") or "")
+        status = str(item.get("status") or "")
+        code = str(item.get("code") or "")
+        lead_id = item.get("lead_id")
+
+        if status == "blocked":
+            blocked += 1
+            status_4xx += 1
+        if code == "turnstile_failed":
+            turnstile_failed += 1
+        if code == "idempotent_replay":
+            duplicate_replay += 1
+        if event == "landing_submit" and status == "blocked":
+            lead_ingestion_fail += 1
+        if code in ("siteverify_unavailable", "db_error", "internal_error"):
+            status_5xx += 1
+
+        if lead_id is not None and event == "landing_submit":
+            first_submit.setdefault(lead_id, created_at)
+        if lead_id is not None and event == "crm_visible":
+            first_visible.setdefault(lead_id, created_at)
+
+    latency_samples = []
+    for lead_id, submitted_at in first_submit.items():
+        visible_at = first_visible.get(lead_id)
+        if not visible_at:
+            continue
+        delta = (visible_at - submitted_at).total_seconds()
+        if 0 <= delta <= 120:
+            latency_samples.append(delta)
+    avg_latency_seconds = round(sum(latency_samples) / len(latency_samples), 2) if latency_samples else None
+
+    alerts = []
+    if status_5xx > 0:
+        alerts.append({"level": "high", "title": "Falha de backend", "note": f"{status_5xx} eventos tecnicos com perfil 5xx nas ultimas {window_hours}h."})
+    if lead_ingestion_fail > 0:
+        alerts.append({"level": "medium", "title": "Falha de ingestao", "note": f"{lead_ingestion_fail} bloqueios na entrada de leads nas ultimas {window_hours}h."})
+    if turnstile_failed > 0:
+        alerts.append({"level": "medium", "title": "Turnstile falhando", "note": f"{turnstile_failed} falhas de validacao nas ultimas {window_hours}h."})
+    if total_events == 0:
+        alerts.append({"level": "low", "title": "Sem telemetria recente", "note": f"Nao houve logs tecnicos nas ultimas {window_hours}h."})
+
+    return {
+        "window_hours": window_hours,
+        "totals": {
+            "events": total_events,
+            "status_4xx": status_4xx,
+            "status_5xx": status_5xx,
+            "blocked": blocked,
+            "turnstile_failed": turnstile_failed,
+            "duplicate_replay": duplicate_replay,
+            "lead_ingestion_fail": lead_ingestion_fail,
+            "avg_latency_seconds": avg_latency_seconds,
+        },
+        "alerts": alerts[:4],
+    }
+
+
 def split_feedbacks(data):
     items = data.get("feedbacks", [])
     return {
@@ -3828,6 +3914,7 @@ def dashboard():
     }
     relationship = relationship_data(data)
     weekly_metrics = build_weekly_metrics(data)
+    technical_health = build_technical_health(data, window_hours=24)
     funnel = {"Atração": 0, "Interesse": 0, "Proposta": len(data["leads"]), "Negociação": 0, "Fechamento": 0}
     alerts = [{"title": n["title"], "subtitle": n["subtitle"]} for n in build_notifications(data)[:4]]
     return render_template(
@@ -3848,6 +3935,7 @@ def dashboard():
         automation_actions=build_automation_actions(data, board),
         relationship=relationship,
         weekly_metrics=weekly_metrics,
+        technical_health=technical_health,
         funnel=funnel,
     )
 
