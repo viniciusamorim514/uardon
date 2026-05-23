@@ -2780,6 +2780,39 @@ def lead_stage_key(lead):
     return "new"
 
 
+def lead_priority_score(lead):
+    stage_key = lead_stage_key(lead)
+    score = 0
+    if stage_key == "new":
+        score += 45
+    elif stage_key == "contacted":
+        score += 35
+    elif stage_key == "briefing":
+        score += 25
+    elif stage_key == "proposal":
+        score += 30
+
+    if (lead.get("origem") or "").strip().lower() in ("landing page", "instagram"):
+        score += 10
+    if lead_sla_minutes_without_action(lead) > LEAD_FIRST_CONTACT_SLA_MINUTES:
+        score += 20
+    if is_stale_lead(lead):
+        score += 20
+
+    days = lead_days_since_interaction(lead)
+    if days is not None:
+        score += min(days * 3, 18)
+    return min(score, 100)
+
+
+def lead_priority_heat(score):
+    if score >= 65:
+        return "hot", "Quente"
+    if score >= 40:
+        return "warm", "Morno"
+    return "cold", "Frio"
+
+
 def build_lead_pipeline(leads):
     columns = [
         {"key": "new", "stage": "novo", "label": "Novo", "note": "orcamentos e contatos recentes", "items": []},
@@ -2801,6 +2834,8 @@ def build_lead_pipeline(leads):
         item["sla_minutes"] = lead_sla_minutes_without_action(item)
         item["sla_overdue"] = item["sla_minutes"] > LEAD_FIRST_CONTACT_SLA_MINUTES
         item["sla_label"] = f"SLA estourado: {item['sla_minutes']} min sem resposta" if item["sla_overdue"] else ""
+        item["priority_score"] = lead_priority_score(item)
+        item["priority_heat"], item["priority_label"] = lead_priority_heat(item["priority_score"])
         item["ai"] = build_lead_ai_insight(item)
         item["whatsapp_url"] = whatsapp_link(item.get("tel"), item["ai"].get("message") or build_lead_whatsapp_message(item))
         if item["stage_key"] == "future":
@@ -2809,6 +2844,8 @@ def build_lead_pipeline(leads):
             lost.append(item)
         elif item["stage_key"] in by_key:
             by_key[item["stage_key"]]["items"].append(item)
+    for column in columns:
+        column["items"].sort(key=lambda i: i.get("priority_score", 0), reverse=True)
     return {"columns": columns, "future": future, "lost": lost}
 
 

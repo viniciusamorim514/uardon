@@ -94,6 +94,12 @@
         <div class="section-title">Esteira de atendimento</div>
         <div class="section-note">mova o lead pelo próximo passo real</div>
       </div>
+      <div class="lead-heat-filters">
+        <button class="mini-btn" type="button" onclick="filterLeadHeat('all')">Todos</button>
+        <button class="mini-btn" type="button" onclick="filterLeadHeat('hot')">Quentes</button>
+        <button class="mini-btn" type="button" onclick="filterLeadHeat('warm')">Mornos</button>
+        <button class="mini-btn" type="button" onclick="filterLeadHeat('cold')">Frios</button>
+      </div>
     </div>
     <div class="lead-pipeline">
       {% for column in pipeline.columns %}
@@ -121,6 +127,7 @@
             data-lead-stale="{{ '1' if lead.is_stale else '0' }}"
             data-lead-stale-label="{{ lead.stale_label|default('', true)|e }}"
             data-lead-whatsapp="{{ lead.whatsapp_url|default('#', true)|e }}"
+            data-lead-heat="{{ lead.priority_heat|default('cold', true)|e }}"
             data-ai-title="{{ lead.ai.title|default('', true)|e }}"
             data-ai-note="{{ lead.ai.note|default('', true)|e }}"
             data-ai-message="{{ lead.ai.message|default('', true)|e }}"
@@ -136,6 +143,7 @@
             <div class="lead-card-meta">
               <span>{{ lead.owner_name }}</span>
               <span>{{ lead.orcamento or 'orçamento a conversar' }}</span>
+              <span class="lead-heat-pill {{ lead.priority_heat }}">{{ lead.priority_label }}</span>
               {% if lead.sla_overdue %}<span class="lead-stale-pill">{{ lead.sla_label }}</span>{% endif %}
               {% if lead.is_stale %}<span class="lead-stale-pill">{{ lead.stale_label }}</span>{% endif %}
             </div>
@@ -460,6 +468,27 @@
     temp.select();
     document.execCommand('copy');
     document.body.removeChild(temp);
+  }
+
+  function filterLeadHeat(target) {
+    const cards = document.querySelectorAll('.lead-card');
+    cards.forEach(function(card) {
+      const heat = card.dataset.leadHeat || 'cold';
+      card.style.display = (target === 'all' || heat === target) ? '' : 'none';
+    });
+    document.querySelectorAll('.lead-column-list').forEach(function(list) {
+      const visible = Array.from(list.querySelectorAll('.lead-card')).some(function(card) {
+        return card.style.display !== 'none';
+      });
+      const existing = list.querySelector('.dynamic-empty');
+      if (!visible && !existing) {
+        const div = document.createElement('div');
+        div.className = 'empty-state compact-empty dynamic-empty';
+        div.textContent = 'Sem leads neste filtro.';
+        list.appendChild(div);
+      }
+      if (visible && existing) existing.remove();
+    });
   }
 
   function openLeadDetailFuture() {
