@@ -1,0 +1,36 @@
+name: CRM CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "crm_vitoria_source/**"
+      - ".github/workflows/crm-ci.yml"
+  pull_request:
+    paths:
+      - "crm_vitoria_source/**"
+      - ".github/workflows/crm-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  test-crm:
+    name: Run CRM critical route tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r crm_vitoria_source/requirements.txt
+
+      - name: Run tests
+        run: python -m unittest crm_vitoria_source.tests.test_critical_routes -v
