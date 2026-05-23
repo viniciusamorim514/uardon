@@ -259,6 +259,29 @@ a{text-decoration:none;color:inherit}
 .payment-actions{flex-direction:column;align-items:flex-end;gap:8px}
 @media (max-width:1200px){.payments-layout{grid-template-columns:1fr}.payment-summary-strip{grid-template-columns:1fr}}
 
+.goals-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px}
+.goal-area-card{border:1px solid var(--cream-dark);border-radius:8px;background:#fff;overflow:hidden}
+.goal-area-head{padding:12px 14px;border-bottom:1px solid var(--cream-dark);background:#fcfbf8}
+.goal-area-head h3{font-size:17px;font-family:'Cormorant Garamond',serif;font-weight:500}
+.goal-metric-list{display:grid;gap:10px;padding:12px}
+.goal-metric-item{border:1px solid #efebe4;border-radius:8px;padding:10px;background:#fff}
+.goal-metric-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.goal-metric-top strong{font-size:13px}
+.goal-status{font-size:10px;text-transform:uppercase;letter-spacing:.7px;padding:4px 8px;border-radius:999px}
+.goal-status.good{background:#E4EDEA;color:#174A42}
+.goal-status.watch{background:#FAEEDA;color:#633806}
+.goal-status.alert{background:#FAECE7;color:#712B13}
+.goal-metric-values{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.goal-metric-values span{font-size:18px;font-weight:600}
+.goal-metric-values em{font-size:11px;color:var(--text-muted);font-style:normal}
+.goal-progress-track{height:6px;border-radius:999px;background:#efebe4;margin-top:8px;overflow:hidden}
+.goal-progress-fill{height:100%}
+.goal-progress-fill.good{background:#174A42}
+.goal-progress-fill.watch{background:#C8912A}
+.goal-progress-fill.alert{background:#993C1D}
+.goal-metric-item p{margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.35}
+@media (max-width:1200px){.goals-grid{grid-template-columns:1fr}}
+
 .agenda-page{gap:16px}
 .agenda-hero-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .agenda-metric{position:relative;padding:18px 18px 16px;min-height:118px;background:linear-gradient(180deg,#fff,#fcfbf8)}

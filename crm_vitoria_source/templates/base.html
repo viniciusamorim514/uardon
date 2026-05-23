@@ -26,6 +26,7 @@
     <nav class="sidebar-nav">
       <span class="nav-section">Principal</span>
         <a class="nav-item {% if active=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">D</span> Dashboard</a>
+        <a class="nav-item {% if active=='metas' %}active{% endif %}" href="{{ url_for('goals_page') }}"><span class="nav-icon">M</span> Metas</a>
         <a class="nav-item {% if active=='leads' %}active{% endif %}" href="{{ url_for('leads') }}"><span class="nav-icon">L</span> Leads <span class="nav-badge">{{ nav_counts.propostas }}</span></a>
       <span class="nav-section">Gestão</span>
         <a class="nav-item {% if active=='clientes' %}active{% endif %}" href="{{ url_for('clients') }}"><span class="nav-icon">C</span> Clientes <span class="nav-badge">{{ nav_counts.clientes }}</span></a>

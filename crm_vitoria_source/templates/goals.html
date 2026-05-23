@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block page_title %}Metas{% endblock %}
+{% block page_subtitle %}Painel semanal de metas por area{% endblock %}
+{% block content %}
+<div class="content stack-lg">
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Metas da semana</div>
+        <div class="section-note">{{ goals.week_label }}</div>
+      </div>
+    </div>
+    <div class="goals-grid">
+      {% for area in goals.areas %}
+      <article class="goal-area-card">
+        <header class="goal-area-head">
+          <h3>{{ area.title }}</h3>
+        </header>
+        <div class="goal-metric-list">
+          {% for metric in area.metrics %}
+          <div class="goal-metric-item">
+            <div class="goal-metric-top">
+              <strong>{{ metric.name }}</strong>
+              <span class="goal-status {{ metric.tone }}">{{ metric.status }}</span>
+            </div>
+            <div class="goal-metric-values">
+              <span>{{ metric.current }}{{ metric.unit }}</span>
+              <em>meta {{ metric.target }}{{ metric.unit }}</em>
+            </div>
+            <div class="goal-progress-track">
+              <div class="goal-progress-fill {{ metric.tone }}" style="width: {{ metric.progress if metric.progress <= 100 else 100 }}%"></div>
+            </div>
+            <p>{{ metric.note }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

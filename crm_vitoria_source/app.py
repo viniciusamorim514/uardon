@@ -2903,6 +2903,125 @@ def build_weekly_metrics(data):
     }
 
 
+def goal_metric(name, current, target, mode="max", unit="", note=""):
+    current = float(current or 0)
+    target = float(target or 0)
+    if mode == "min":
+        if target <= 0:
+            progress = 100.0 if current <= 0 else 0.0
+        else:
+            progress = 100.0 if current <= target else max(0.0, 100.0 - ((current - target) / target) * 100.0)
+    else:
+        progress = 0.0 if target <= 0 else min(140.0, (current / target) * 100.0)
+    if progress >= 95:
+        status = "no ritmo"
+        tone = "good"
+    elif progress >= 70:
+        status = "atencao"
+        tone = "watch"
+    else:
+        status = "atrasado"
+        tone = "alert"
+    return {
+        "name": name,
+        "current": round(current, 1),
+        "target": round(target, 1),
+        "mode": mode,
+        "unit": unit,
+        "note": note,
+        "progress": round(progress, 1),
+        "status": status,
+        "tone": tone,
+    }
+
+
+def build_week_goals(data):
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    leads_week = [lead for lead in data.get("leads", []) if (parse_datetime_iso(lead.get("created_at")) or datetime.min).date() >= week_start]
+    briefing_count = len([lead for lead in leads_week if lead_stage_key(lead) in ("briefing", "proposal", "closed")])
+    proposal_count = len([lead for lead in leads_week if lead_stage_key(lead) in ("proposal", "closed")])
+    closed_count = len([lead for lead in leads_week if lead_stage_key(lead) == "closed"])
+    close_rate = (closed_count / len(leads_week) * 100.0) if leads_week else 0.0
+
+    projects = data.get("projetos", []) or []
+    active_projects = [p for p in projects if (p.get("status") or "").strip().lower() not in ("concluido", "concluído", "entregue")]
+    total_stages = sum(len(p.get("etapas", []) or []) for p in active_projects)
+    done_stages = sum(1 for p in active_projects for st in (p.get("etapas", []) or []) if st.get("done"))
+    stage_on_time_rate = (done_stages / total_stages * 100.0) if total_stages else 100.0
+
+    weekly_tasks = [t for t in data.get("tarefas", []) if (parse_date(t.get("prazo")) or date.min) >= week_start and (parse_date(t.get("prazo")) or date.min) <= week_end]
+    done_weekly_tasks = [t for t in weekly_tasks if t.get("done")]
+    hour_adherence = (len(done_weekly_tasks) / len(weekly_tasks) * 100.0) if weekly_tasks else 100.0
+    rework_count = len(
+        [
+            t
+            for t in weekly_tasks
+            if "retrabalho" in str(t.get("titulo", "")).lower() or "retrabalho" in str(t.get("descricao", "")).lower()
+        ]
+    )
+
+    receivables = build_receivables(data, {"status": "todos", "mes": today.strftime("%Y-%m"), "q": ""})
+    month_items = receivables.get("items", [])
+    due_items = [i for i in month_items if i.get("due_date")]
+    paid_items = [i for i in due_items if i.get("status_calculado") == "Pago"]
+    paid_on_time = 0
+    for item in paid_items:
+        paid_at = parse_date(item.get("pago_em") or item.get("paid_at"))
+        due = item.get("due_date")
+        if paid_at and due and paid_at <= due:
+            paid_on_time += 1
+    receive_on_time_rate = (paid_on_time / len(paid_items) * 100.0) if paid_items else 100.0
+    overdue_value = sum(i.get("valor_num", 0.0) for i in month_items if i.get("status_calculado") == "Atrasado")
+    month_value = sum(i.get("valor_num", 0.0) for i in month_items) or 0.0
+    delinquency_rate = (overdue_value / month_value * 100.0) if month_value > 0 else 0.0
+
+    financial = build_financial(data, {"mes": today.strftime("%Y-%m"), "status": "todos", "q": ""})
+    paid_receivable = sum(i.get("valor_num", 0.0) for i in financial.get("receivables", {}).get("items", []) if i.get("status_calculado") == "Pago")
+    month_expenses = [normalize_expense(e) for e in data.get("despesas", [])]
+    paid_expense = sum(
+        e.get("valor_num", 0.0)
+        for e in month_expenses
+        if e.get("status_calculado") == "Pago" and e.get("due_date") and e["due_date"].strftime("%Y-%m") == today.strftime("%Y-%m")
+    )
+    margin_rate = ((paid_receivable - paid_expense) / paid_receivable * 100.0) if paid_receivable > 0 else 0.0
+
+    return {
+        "week_label": f"{week_start.strftime('%d/%m')} a {week_end.strftime('%d/%m')}",
+        "areas": [
+            {
+                "key": "comercial",
+                "title": "Comercial",
+                "metrics": [
+                    goal_metric("Briefings agendados", briefing_count, 6, "max", "qtd", "Leads que avancaram para conversa estruturada."),
+                    goal_metric("Propostas enviadas", proposal_count, 4, "max", "qtd", "Leads com proposta em andamento na semana."),
+                    goal_metric("Taxa de fechamento", close_rate, 20, "max", "%", "Fechamento semanal sobre leads novos da semana."),
+                ],
+            },
+            {
+                "key": "projetos",
+                "title": "Projetos",
+                "metrics": [
+                    goal_metric("Etapas no prazo", stage_on_time_rate, 80, "max", "%", "Percentual de etapas concluidas no fluxo ativo."),
+                    goal_metric("Retrabalho", rework_count, 2, "min", "qtd", "Quantidade de tarefas com retrabalho na semana."),
+                    goal_metric("Horas previstas x realizadas", hour_adherence, 85, "max", "%", "Aderencia baseada em tarefas planejadas e concluidas na semana."),
+                ],
+            },
+            {
+                "key": "financeiro",
+                "title": "Financeiro",
+                "metrics": [
+                    goal_metric("Recebimento no prazo", receive_on_time_rate, 80, "max", "%", "Parcelas pagas no prazo dentro do mes atual."),
+                    goal_metric("Inadimplencia", delinquency_rate, 15, "min", "%", "Percentual de valor atrasado sobre o total previsto do mes."),
+                    goal_metric("Margem do mes", margin_rate, 30, "max", "%", "Recebido pago menos despesas pagas no mes."),
+                ],
+            },
+        ],
+    }
+
+
 def build_dashboard_results(data, board):
     today = date.today()
     tasks_done = [task for task in data.get("tarefas", []) if parse_date(task.get("done_at")) == today]
@@ -4141,6 +4260,14 @@ def dashboard():
         weekly_metrics=weekly_metrics,
         funnel=funnel,
     )
+
+
+@app.route("/metas")
+@login_required
+def goals_page():
+    data = load_data()
+    goals = build_week_goals(data)
+    return render_template("goals.html", active="metas", goals=goals)
 
 
 @app.route("/admin/diagnostico")
