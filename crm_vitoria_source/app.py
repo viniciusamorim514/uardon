@@ -1,10 +1,13 @@
 import csv
 import calendar
+import hashlib
+import hmac
 import json
 import os
 import re
 import shutil
 import sys
+import time
 import unicodedata
 import urllib.parse
 import urllib.error
@@ -68,6 +71,7 @@ DEFAULT_DATA = {
     "despesas": [],
     "feedbacks": [],
     "dismissed_notifications": [],
+    "audit_logs": [],
 }
 
 PROJECT_STAGES = [
@@ -105,6 +109,7 @@ if CRM_ENV == "production" and not CRM_SECRET:
 app.secret_key = CRM_SECRET or "crm-vitoria-local-dev-only"
 
 PUBLIC_LEAD_RATE_LIMIT = {}
+PUBLIC_LEAD_CONTACT_RATE_LIMIT = {}
 PUBLIC_LEAD_ALLOWED_ORIGINS = {
     "https://uardon.com.br",
     "https://www.uardon.com.br",
@@ -361,7 +366,7 @@ def public_lead_response(payload=None, status=200):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-User-Id"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-User-Id, X-Uardon-Timestamp, X-Uardon-Signature, Idempotency-Key"
     response.headers["Access-Control-Max-Age"] = "86400"
     return response
 
@@ -388,6 +393,89 @@ def public_lead_rate_limited(ip, limit=5, window_seconds=600):
     PUBLIC_LEAD_RATE_LIMIT[ip] = attempts
     return False
 
+
+
+def public_lead_contact_rate_limited(contact_key, limit=3, window_seconds=3600):
+    if not contact_key:
+        return False
+    now = datetime.now()
+    cutoff = now - timedelta(seconds=window_seconds)
+    attempts = [item for item in PUBLIC_LEAD_CONTACT_RATE_LIMIT.get(contact_key, []) if item > cutoff]
+    if len(attempts) >= limit:
+        PUBLIC_LEAD_CONTACT_RATE_LIMIT[contact_key] = attempts
+        return True
+    attempts.append(now)
+    PUBLIC_LEAD_CONTACT_RATE_LIMIT[contact_key] = attempts
+    return False
+
+
+def public_lead_hmac_secret():
+    return (os.environ.get("PUBLIC_LEAD_HMAC_SECRET") or os.environ.get("CRM_PUBLIC_LEAD_HMAC_SECRET") or "").strip()
+
+
+def verify_public_lead_signature(raw_body):
+    secret = public_lead_hmac_secret()
+    if not secret:
+        return True, ""
+    timestamp = (request.headers.get("X-Uardon-Timestamp") or "").strip()
+    signature = (request.headers.get("X-Uardon-Signature") or "").strip()
+    if not timestamp or not signature:
+        return False, "Assinatura de envio ausente."
+    try:
+        sent_at = int(timestamp)
+    except ValueError:
+        return False, "Assinatura de envio inválida."
+    if abs(int(time.time()) - sent_at) > 300:
+        return False, "Envio expirado. Atualize a página e tente novamente."
+    signed_payload = timestamp.encode("utf-8") + b"." + (raw_body or b"")
+    expected = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
+    provided = signature[7:] if signature.startswith("sha256=") else signature
+    if not hmac.compare_digest(expected, provided):
+        return False, "Assinatura de envio inválida."
+    return True, ""
+
+
+def clean_public_text(value, max_length=300):
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text[:max_length]
+
+
+def public_lead_fingerprint(phone, project_type, name):
+    base = f"{normalize_brazil_phone(phone)}|{clean_public_text(project_type, 80).lower()}|{clean_public_text(name, 120).lower()}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def find_recent_public_lead(data, fingerprint, hours=24):
+    cutoff = datetime.now() - timedelta(hours=hours)
+    for lead in reversed(data.get("leads", [])):
+        if lead.get("idempotency_key") != fingerprint and lead.get("public_fingerprint") != fingerprint:
+            continue
+        created_raw = lead.get("created_at") or ""
+        try:
+            created_at = datetime.fromisoformat(created_raw)
+        except ValueError:
+            return lead
+        if created_at >= cutoff:
+            return lead
+    return None
+
+
+def audit_public_lead(data, event, status="ok", lead=None, code="", details=None):
+    entry = {
+        "id": str(uuid.uuid4()),
+        "event": event,
+        "status": status,
+        "code": code,
+        "lead_id": lead.get("id") if isinstance(lead, dict) else None,
+        "ip": public_lead_client_ip(),
+        "origin": (request.headers.get("Origin") or "").strip(),
+        "user_agent": (request.headers.get("User-Agent") or "")[:220],
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "details": details or {},
+    }
+    logs = data.setdefault("audit_logs", [])
+    logs.append(entry)
+    del logs[:-500]
 
 def normalize_brazil_phone(value):
     digits = re.sub(r"\D", "", str(value or ""))
@@ -3568,12 +3656,26 @@ def public_create_lead():
     if request.method == "OPTIONS":
         return public_lead_response({}, 204)
 
+    raw_body = request.get_data(cache=True)
+    signature_ok, signature_message = verify_public_lead_signature(raw_body)
+    if not signature_ok:
+        data = load_data()
+        audit_public_lead(data, "landing_submit", "blocked", code="invalid_signature")
+        save_data(data)
+        return public_lead_error(signature_message, 401, "invalid_signature")
+
     origin = public_lead_origin()
     if request.headers.get("Origin") and not origin:
+        data = load_data()
+        audit_public_lead(data, "landing_submit", "blocked", code="origin_not_allowed")
+        save_data(data)
         return public_lead_error("Origem não autorizada para enviar orçamento.", 403, "origin_not_allowed")
 
     ip = public_lead_client_ip()
     if public_lead_rate_limited(ip):
+        data = load_data()
+        audit_public_lead(data, "landing_submit", "blocked", code="rate_limited")
+        save_data(data)
         return public_lead_error(
             "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.",
             429,
@@ -3585,14 +3687,17 @@ def public_create_lead():
         return public_lead_error("Envio inválido. Revise os dados e tente novamente.")
 
     if str(payload.get("company_site") or "").strip():
+        data = load_data()
+        audit_public_lead(data, "landing_submit", "blocked", code="honeypot")
+        save_data(data)
         return public_lead_error("Não foi possível enviar agora. Revise os dados e tente novamente.", 400, "blocked")
 
-    name = str(payload.get("name") or payload.get("nome") or "").strip()
+    name = clean_public_text(payload.get("name") or payload.get("nome") or "", 120)
     phone_raw = str(payload.get("phone") or payload.get("telefone") or payload.get("whatsapp") or "").strip()
     phone = normalize_brazil_phone(phone_raw)
-    city = str(payload.get("city") or payload.get("cidade") or "").strip()
-    project_type = str(payload.get("project_type") or payload.get("tipo") or "").strip()
-    message = str(payload.get("message") or payload.get("msg") or payload.get("observacoes") or "").strip()
+    city = clean_public_text(payload.get("city") or payload.get("cidade") or "", 90)
+    project_type = clean_public_text(payload.get("project_type") or payload.get("tipo") or "", 90)
+    message = clean_public_text(payload.get("message") or payload.get("msg") or payload.get("observacoes") or "", 1000)
 
     if len(name) < 2:
         return public_lead_error("Digite seu nome para continuar.", 400, "invalid_name")
@@ -3601,6 +3706,27 @@ def public_create_lead():
     if not project_type:
         return public_lead_error("Selecione o tipo de projeto para continuar.", 400, "invalid_project_type")
 
+    data = load_data()
+    audit_public_lead(data, "landing_submit", "ok")
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    fingerprint = public_lead_fingerprint(phone, project_type, name)
+    existing_lead = find_recent_public_lead(data, fingerprint)
+    if existing_lead:
+        audit_public_lead(data, "api_accept", "duplicate", lead=existing_lead, code="idempotent_replay")
+        save_data(data)
+        return public_lead_response(
+            {"ok": True, "lead_id": existing_lead["id"], "status": existing_lead.get("status", "Novo"), "duplicate": True},
+            200,
+        )
+    if public_lead_contact_rate_limited(phone):
+        audit_public_lead(data, "landing_submit", "blocked", code="contact_rate_limited")
+        save_data(data)
+        return public_lead_error(
+            "Muitas tentativas para este contato. Aguarde alguns minutos e tente novamente.",
+            429,
+            "contact_rate_limited",
+        )
+
     turnstile_ok, turnstile_message, turnstile_error_code = verify_turnstile_token(
         str(payload.get("turnstile_token") or payload.get("cf_turnstile_response") or "").strip(),
         ip,
@@ -3608,11 +3734,13 @@ def public_create_lead():
     turnstile_warning = ""
     if not turnstile_ok:
         if not turnstile_fail_open_enabled():
+            data = load_data()
+            audit_public_lead(data, "landing_submit", "blocked", code="turnstile_failed")
+            save_data(data)
             return public_lead_error(turnstile_message, 400, "turnstile_failed")
         turnstile_warning = f"Turnstile em modo tolerante. Motivo: {turnstile_error_code or 'unknown'}"
 
-    data = load_data()
-    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    created_at = datetime.now().isoformat(timespec="seconds")
     lead = {
         "id": next_id(data["leads"]),
         "nome": name,
@@ -3630,8 +3758,8 @@ def public_create_lead():
         "etapa": "Novo",
         "status": "Novo",
         "responsavel": LEAD_OWNER_DEFAULT,
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-        "primeiro_contato_prazo": lead_first_contact_deadline(datetime.now().isoformat(timespec="seconds")),
+        "created_at": created_at,
+        "primeiro_contato_prazo": lead_first_contact_deadline(created_at),
         "source_url": str(metadata.get("current_url") or "").strip(),
         "entry_page": str(metadata.get("entry_page") or metadata.get("current_url") or "").strip(),
         "referrer": str(metadata.get("referrer") or "").strip(),
@@ -3640,6 +3768,8 @@ def public_create_lead():
         "utm_campaign": str(metadata.get("utm_campaign") or "").strip(),
         "utm_content": str(metadata.get("utm_content") or "").strip(),
         "utm_term": str(metadata.get("utm_term") or "").strip(),
+        "idempotency_key": str(request.headers.get("Idempotency-Key") or payload.get("idempotency_key") or fingerprint).strip()[:160],
+        "public_fingerprint": fingerprint,
     }
     if city or project_type or message or turnstile_warning:
         details = []
@@ -3654,6 +3784,7 @@ def public_create_lead():
         lead["obs"] = "\n".join(details)
 
     data["leads"].append(lead)
+    audit_public_lead(data, "api_accept", "ok", lead=lead)
     create_lead_response_task(data, lead, "Responder lead da landing")
     register_operation_history(
         data,
@@ -3664,6 +3795,8 @@ def public_create_lead():
         lead=lead,
         update_client=False,
     )
+    audit_public_lead(data, "db_write", "ok", lead=lead)
+    audit_public_lead(data, "crm_visible", "ok", lead=lead)
     save_data(data)
     return public_lead_response({"ok": True, "lead_id": lead["id"], "status": lead["status"]}, 201)
 

@@ -1,7 +1,10 @@
 import importlib
+import hashlib
+import hmac
 import json
 import os
 import tempfile
+import time
 import unittest
 from copy import deepcopy
 from pathlib import Path
@@ -26,6 +29,7 @@ BASE_DATA = {
     "despesas": [],
     "feedbacks": [],
     "dismissed_notifications": [],
+    "audit_logs": [],
 }
 
 
@@ -43,6 +47,7 @@ class CriticalRoutesTest(unittest.TestCase):
         os.environ["CRM_UPLOAD_DIR"] = str(cls.upload_dir)
         os.environ["TURNSTILE_FAIL_OPEN"] = "true"
         os.environ["TURNSTILE_SECRET_KEY"] = ""
+        os.environ["PUBLIC_LEAD_HMAC_SECRET"] = ""
         os.environ["DATABASE_URL"] = ""
 
         cls.crm = importlib.import_module("crm_vitoria_source.app")
@@ -56,6 +61,9 @@ class CriticalRoutesTest(unittest.TestCase):
 
     def setUp(self):
         self.crm.save_data(deepcopy(BASE_DATA))
+        self.crm.PUBLIC_LEAD_RATE_LIMIT.clear()
+        self.crm.PUBLIC_LEAD_CONTACT_RATE_LIMIT.clear()
+        os.environ["PUBLIC_LEAD_HMAC_SECRET"] = ""
 
     def _load_state(self):
         return json.loads(self.data_file.read_text(encoding="utf-8"))
@@ -86,8 +94,56 @@ class CriticalRoutesTest(unittest.TestCase):
         self.assertEqual(len(state["leads"]), 1)
         self.assertEqual(state["leads"][0]["nome"], "Maria Silva")
         self.assertEqual(state["leads"][0]["status"], "Novo")
+        self.assertEqual(state["leads"][0]["origem"], "Landing Page")
+        self.assertTrue(state["leads"][0]["public_fingerprint"])
         self.assertEqual(len(state["tarefas"]), 1)
         self.assertEqual(state["tarefas"][0]["origem"], "automacao")
+        self.assertEqual(
+            [item["event"] for item in state["audit_logs"]],
+            ["landing_submit", "api_accept", "db_write", "crm_visible"],
+        )
+
+    def test_public_lead_duplicate_replay_is_idempotent(self):
+        payload = {
+            "name": "Maria Silva",
+            "phone": "(47) 99999-1111",
+            "project_type": "Residencial",
+        }
+        first = self.client.post("/v1/leads", json=payload)
+        second = self.client.post("/v1/leads", json=payload)
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.get_json()["duplicate"])
+
+        state = self._load_state()
+        self.assertEqual(len(state["leads"]), 1)
+        self.assertEqual(len(state["tarefas"]), 1)
+
+    def test_public_lead_requires_signature_when_secret_is_configured(self):
+        os.environ["PUBLIC_LEAD_HMAC_SECRET"] = "test-secret"
+        payload = {
+            "name": "Maria Silva",
+            "phone": "(47) 99999-1111",
+            "project_type": "Residencial",
+        }
+        unsigned = self.client.post("/v1/leads", json=payload)
+        self.assertEqual(unsigned.status_code, 401)
+
+        body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        timestamp = str(int(time.time()))
+        signature = hmac.new(
+            os.environ["PUBLIC_LEAD_HMAC_SECRET"].encode("utf-8"),
+            timestamp.encode("utf-8") + b"." + body,
+            hashlib.sha256,
+        ).hexdigest()
+        signed = self.client.post(
+            "/v1/leads",
+            data=body,
+            content_type="application/json",
+            headers={"X-Uardon-Timestamp": timestamp, "X-Uardon-Signature": f"sha256={signature}"},
+        )
+        self.assertEqual(signed.status_code, 201)
 
     def test_public_lead_invalid_phone_returns_400(self):
         payload = {
