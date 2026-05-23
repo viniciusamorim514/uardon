@@ -214,10 +214,15 @@
     <div class="modal-body">
       <div class="lead-next-action">
         <div>
-          <span>Próxima ação sugerida</span>
+          <span id="leadAiBadge">Sugestão IA ativa</span>
           <strong id="leadDetailNextAction">Responder pelo WhatsApp</strong>
         </div>
         <p id="leadDetailNextNote">Use a conversa para confirmar escopo, prazo e expectativa de investimento.</p>
+      </div>
+      <div class="lead-ai-controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-2px 0 12px;">
+        <button class="mini-btn" type="button" id="leadAiToggle" onclick="toggleLeadAiSuggestion()">Usando IA</button>
+        <button class="mini-btn" type="button" onclick="regenerateLeadAiSuggestion()">Gerar nova sugestão</button>
+        <span id="leadAiTimestamp" style="font-size:11px;color:var(--text-muted);">Sugestão gerada agora</span>
       </div>
       <div class="lead-detail-grid">
         <div><span>Telefone</span><strong id="leadDetailPhone">—</strong></div>
@@ -246,6 +251,8 @@
   let currentLeadDetailId = null;
   let leadDragActive = false;
   let currentLeadAiMessage = '';
+  let currentLeadAiEnabled = true;
+  let currentLeadFallback = { stage: '', stale: '0', staleLabel: '' };
 
   function startLeadDrag(event) {
     const card = event.currentTarget;
@@ -341,6 +348,12 @@
     setLeadText('leadDetailStatus', button.dataset.leadStatus);
     setLeadText('leadDetailStage', button.dataset.leadStage);
     setLeadText('leadDetailNotes', sanitizeLeadNotes(button.dataset.leadNotes));
+    currentLeadAiEnabled = true;
+    currentLeadFallback = {
+      stage: button.dataset.leadStage || '',
+      stale: button.dataset.leadStale || '0',
+      staleLabel: button.dataset.leadStaleLabel || '',
+    };
     updateLeadNextAction(
       button.dataset.leadStage,
       button.dataset.leadStale,
@@ -351,14 +364,16 @@
     );
     const whats = document.getElementById('leadDetailWhatsApp');
     if (whats) whats.href = button.dataset.leadWhatsapp || '#';
+    updateLeadAiUiState();
     if (modal) modal.classList.add('open');
   }
 
   function updateLeadNextAction(stage, isStale, staleLabel, aiTitle, aiNote, aiMessage) {
-    if (aiTitle || aiNote) {
+    if (currentLeadAiEnabled && (aiTitle || aiNote)) {
       setLeadText('leadDetailNextAction', aiTitle || 'Proxima acao sugerida');
       setLeadText('leadDetailNextNote', aiNote || '');
       currentLeadAiMessage = String(aiMessage || '').trim();
+      setLeadText('leadAiTimestamp', `Sugestão IA gerada às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
       return;
     }
     const normalized = (stage || '').toLowerCase();
@@ -383,6 +398,54 @@
     setLeadText('leadDetailNextAction', title);
     setLeadText('leadDetailNextNote', note);
     currentLeadAiMessage = '';
+    setLeadText('leadAiTimestamp', 'Sugestão manual por regra da etapa');
+  }
+
+  function updateLeadAiUiState() {
+    const toggle = document.getElementById('leadAiToggle');
+    const badge = document.getElementById('leadAiBadge');
+    if (toggle) toggle.textContent = currentLeadAiEnabled ? 'Usando IA' : 'IA desligada';
+    if (badge) badge.textContent = currentLeadAiEnabled ? 'Sugestão IA ativa' : 'Sugestão por regra da etapa';
+  }
+
+  function toggleLeadAiSuggestion() {
+    currentLeadAiEnabled = !currentLeadAiEnabled;
+    const card = document.querySelector(`.lead-card[data-lead-id="${currentLeadDetailId}"]`);
+    if (!card) return;
+    updateLeadNextAction(
+      currentLeadFallback.stage,
+      currentLeadFallback.stale,
+      currentLeadFallback.staleLabel,
+      card.dataset.aiTitle,
+      card.dataset.aiNote,
+      card.dataset.aiMessage
+    );
+    updateLeadAiUiState();
+  }
+
+  function regenerateLeadAiSuggestion() {
+    const card = document.querySelector(`.lead-card[data-lead-id="${currentLeadDetailId}"]`);
+    if (!card) return;
+    const tails = [
+      'Se quiser, te envio um resumo curto hoje.',
+      'Posso te mandar duas opções de próximo passo.',
+      'Se fizer sentido, já deixo tudo organizado hoje.',
+    ];
+    const idx = Math.floor(Math.random() * tails.length);
+    const base = String(card.dataset.aiMessage || '').trim();
+    if (base) {
+      card.dataset.aiMessage = `${base} ${tails[idx]}`;
+    }
+    currentLeadAiEnabled = true;
+    updateLeadNextAction(
+      currentLeadFallback.stage,
+      currentLeadFallback.stale,
+      currentLeadFallback.staleLabel,
+      card.dataset.aiTitle,
+      card.dataset.aiNote,
+      card.dataset.aiMessage
+    );
+    updateLeadAiUiState();
   }
 
   function copyLeadAiMessage() {
