@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block page_title %}Leads{% endblock %}
-{% block page_subtitle %}Esteira comercial da captação ao cliente fechado{% endblock %}
+{% block page_subtitle %}Esteira comercial da captaÃ§Ã£o ao cliente fechado{% endblock %}
 {% block topbar_actions %}
 <a class="btn btn-ghost" href="{{ url_for('import_csv_page', kind='leads') }}">Importar CSV</a>
 <button class="btn btn-primary" onclick="document.getElementById('novo-lead').classList.add('open')">+ Novo lead</button>
@@ -92,7 +92,7 @@
     <div class="section-header">
       <div>
         <div class="section-title">Esteira de atendimento</div>
-        <div class="section-note">mova o lead pelo próximo passo real</div>
+        <div class="section-note">mova o lead pelo prÃ³ximo passo real</div>
       </div>
     </div>
     <div class="lead-pipeline">
@@ -127,12 +127,12 @@
             ondragstart="startLeadDrag(event)" ondragend="endLeadDrag(event)">
             <div class="lead-card-top">
               <div class="lead-card-title">{{ lead.nome }}</div>
-              <div class="lead-card-date">{{ lead.ultima_interacao or lead.data or '—' }}</div>
+              <div class="lead-card-date">{{ lead.ultima_interacao or lead.data or 'â€”' }}</div>
             </div>
-            <div class="lead-card-sub">{{ lead.origem or 'Origem não informada' }} · {{ lead.ambiente or 'Ambiente não informado' }}</div>
+            <div class="lead-card-sub">{{ lead.origem or 'Origem nÃ£o informada' }} Â· {{ lead.ambiente or 'Ambiente nÃ£o informado' }}</div>
             <div class="lead-card-meta">
               <span>{{ lead.owner_name }}</span>
-              <span>{{ lead.orcamento or 'orçamento a conversar' }}</span>
+              <span>{{ lead.orcamento or 'orÃ§amento a conversar' }}</span>
               {% if lead.sla_overdue %}<span class="lead-stale-pill">{{ lead.sla_label }}</span>{% endif %}
               {% if lead.is_stale %}<span class="lead-stale-pill">{{ lead.stale_label }}</span>{% endif %}
             </div>
@@ -143,7 +143,7 @@
               <span class="mini-status">Convertido</span>
               {% else %}
               <div class="lead-menu-wrap">
-                <button class="mini-btn icon-btn" type="button" onclick="toggleLeadMenu(event)">Ações</button>
+                <button class="mini-btn icon-btn" type="button" onclick="toggleLeadMenu(event)">AÃ§Ãµes</button>
                 <div class="lead-action-menu">
                   <button type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','future')">Mover para futuro</button>
                   <button class="danger" type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','lost')">Marcar perdido</button>
@@ -163,28 +163,28 @@
 
   <section class="grid-2 lead-support-grid">
     <div class="card clean-projects-card" id="future-leads">
-      <div class="section-header"><div><div class="section-title">Leads futuros</div><div class="section-note">nutrição e retomada</div></div></div>
+      <div class="section-header"><div><div class="section-title">Leads futuros</div><div class="section-note">nutriÃ§Ã£o e retomada</div></div></div>
       <div class="projects-clean-list compact-list">
         {% for lead in pipeline.future %}
         <div class="project-clean-row compact-row">
-          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">Retomar em {{ lead.futuro_retorno or '—' }}</div></div>
-          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or '—' }}</strong></div>
+          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">Retomar em {{ lead.futuro_retorno or 'â€”' }}</div></div>
+          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or 'â€”' }}</strong></div>
           <div class="project-clean-col status-align"><form method="post" action="{{ url_for('mark_lead_contacted', lead_id=lead.id) }}"><button class="btn btn-primary tiny-btn" type="submit">Retomar agora</button></form></div>
         </div>
         {% else %}
-        <div class="empty-state">Nenhum lead em futuro / nutrição.</div>
+        <div class="empty-state">Nenhum lead em futuro / nutriÃ§Ã£o.</div>
         {% endfor %}
       </div>
     </div>
 
     <div class="card clean-projects-card" id="lost-leads">
-      <div class="section-header"><div><div class="section-title">Leads perdidos</div><div class="section-note">motivos para análise de conversão</div></div></div>
+      <div class="section-header"><div><div class="section-title">Leads perdidos</div><div class="section-note">motivos para anÃ¡lise de conversÃ£o</div></div></div>
       <div class="projects-clean-list compact-list">
         {% for lead in pipeline.lost %}
         <div class="project-clean-row compact-row">
-          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">{{ lead.ambiente }} · {{ lead.origem }}</div></div>
-          <div class="project-clean-col"><span class="project-clean-label">Motivo da perda</span><strong>{{ lead.perda_motivo or '—' }}</strong></div>
-          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or '—' }}</strong></div>
+          <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">{{ lead.ambiente }} Â· {{ lead.origem }}</div></div>
+          <div class="project-clean-col"><span class="project-clean-label">Motivo da perda</span><strong>{{ lead.perda_motivo or 'â€”' }}</strong></div>
+          <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or 'â€”' }}</strong></div>
           <div class="project-clean-col status-align" style="gap:8px">
             <form method="post" action="{{ url_for('reactivate_lead', lead_id=lead.id) }}">
               <button class="btn btn-primary tiny-btn" type="submit">Reativar</button>
@@ -211,24 +211,22 @@
     <div class="modal-body">
       <div class="lead-next-action">
         <div>
-          <span>Próxima ação sugerida</span>
+          <span>PrÃ³xima aÃ§Ã£o sugerida</span>
           <strong id="leadDetailNextAction">Responder pelo WhatsApp</strong>
         </div>
         <p id="leadDetailNextNote">Use a conversa para confirmar escopo, prazo e expectativa de investimento.</p>
       </div>
       <div class="lead-detail-grid">
-        <div><span>Telefone</span><strong id="leadDetailPhone">—</strong></div>
-        <div><span>E-mail</span><strong id="leadDetailEmail">—</strong></div>
-        <div><span>Origem</span><strong id="leadDetailOrigin">—</strong></div>
-        <div><span>Ambiente</span><strong id="leadDetailAmbient">—</strong></div>
-        <div><span>Orçamento</span><strong id="leadDetailBudget">—</strong></div>
-        <div><span>Última interação</span><strong id="leadDetailDate">-</strong></div>
-        <div><span>Status</span><strong id="leadDetailStatus">—</strong></div>
-        <div><span>Etapa</span><strong id="leadDetailStage">—</strong></div>
+        <div><span>Telefone</span><strong id="leadDetailPhone">â€”</strong></div>
+        <div><span>Origem</span><strong id="leadDetailOrigin">â€”</strong></div>
+        <div><span>Ambiente</span><strong id="leadDetailAmbient">â€”</strong></div>
+        <div><span>Ãšltima interaÃ§Ã£o</span><strong id="leadDetailDate">-</strong></div>
+        <div><span>Status</span><strong id="leadDetailStatus">â€”</strong></div>
+        <div><span>Etapa</span><strong id="leadDetailStage">â€”</strong></div>
       </div>
       <div class="lead-detail-notes">
-        <span>Observações</span>
-        <p id="leadDetailNotes">—</p>
+        <span>ObservaÃ§Ãµes</span>
+        <p id="leadDetailNotes">â€”</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -310,6 +308,19 @@
     if (el) el.textContent = value || '—';
   }
 
+  function sanitizeLeadNotes(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    return text
+      .split(/\r?\n/)
+      .filter(function(line) {
+        const normalized = line.trim().toLowerCase();
+        return normalized && !normalized.startsWith('turnstile em modo tolerante');
+      })
+      .join('\n')
+      .trim();
+  }
+
   function openLeadDetail(event) {
     if (leadDragActive) return;
     event.stopPropagation();
@@ -317,16 +328,14 @@
     const modal = document.getElementById('lead-detail-modal');
     currentLeadDetailId = button.dataset.leadFutureId || button.dataset.leadLostId || null;
     setLeadText('leadDetailName', button.dataset.leadName);
-    setLeadText('leadDetailSub', `${button.dataset.leadOrigin || 'Origem não informada'} · ${button.dataset.leadAmbient || 'Ambiente não informado'}`);
+    setLeadText('leadDetailSub', `${button.dataset.leadOrigin || 'Origem nÃ£o informada'} Â· ${button.dataset.leadAmbient || 'Ambiente nÃ£o informado'}`);
     setLeadText('leadDetailPhone', button.dataset.leadPhone);
-    setLeadText('leadDetailEmail', button.dataset.leadEmail);
     setLeadText('leadDetailOrigin', button.dataset.leadOrigin);
     setLeadText('leadDetailAmbient', button.dataset.leadAmbient);
-    setLeadText('leadDetailBudget', button.dataset.leadBudget);
     setLeadText('leadDetailDate', button.dataset.leadDate);
     setLeadText('leadDetailStatus', button.dataset.leadStatus);
     setLeadText('leadDetailStage', button.dataset.leadStage);
-    setLeadText('leadDetailNotes', button.dataset.leadNotes);
+    setLeadText('leadDetailNotes', sanitizeLeadNotes(button.dataset.leadNotes));
     updateLeadNextAction(button.dataset.leadStage, button.dataset.leadStale, button.dataset.leadStaleLabel);
     const whats = document.getElementById('leadDetailWhatsApp');
     if (whats) whats.href = button.dataset.leadWhatsapp || '#';
@@ -339,19 +348,19 @@
     let note = 'Use a conversa para confirmar escopo, prazo e expectativa de investimento.';
     if (isStale === '1') {
       title = 'Fazer follow-up';
-      note = `${staleLabel || 'Lead sem avanço'}: retome com uma mensagem curta e defina o próximo passo.`;
+      note = `${staleLabel || 'Lead sem avanÃ§o'}: retome com uma mensagem curta e defina o prÃ³ximo passo.`;
     } else if (normalized.includes('contato')) {
       title = 'Marcar briefing';
-      note = 'Depois do primeiro contato, o próximo passo é transformar interesse em reunião.';
+      note = 'Depois do primeiro contato, o prÃ³ximo passo Ã© transformar interesse em reuniÃ£o.';
     } else if (normalized.includes('briefing')) {
       title = 'Preparar proposta';
-      note = 'Com o briefing feito, organize escopo, investimento e próximos passos.';
+      note = 'Com o briefing feito, organize escopo, investimento e prÃ³ximos passos.';
     } else if (normalized.includes('proposta')) {
       title = 'Fazer follow-up da proposta';
-      note = 'Acompanhe a decisão sem pressionar, reforçando clareza e disponibilidade.';
+      note = 'Acompanhe a decisÃ£o sem pressionar, reforÃ§ando clareza e disponibilidade.';
     } else if (normalized.includes('convertido')) {
       title = 'Criar projeto';
-      note = 'Lead convertido deve entrar na operação como cliente/projeto.';
+      note = 'Lead convertido deve entrar na operaÃ§Ã£o como cliente/projeto.';
     }
     setLeadText('leadDetailNextAction', title);
     setLeadText('leadDetailNextNote', note);
@@ -381,10 +390,10 @@
     <form method="post" action="{{ url_for('create_lead') }}">
       <div class="modal-body">
         <div class="form-row"><div class="form-group"><label class="form-label">Nome</label><input class="form-input" name="nome" required></div><div class="form-group"><label class="form-label">Telefone</label><input class="form-input" name="tel"></div></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" name="email"></div><div class="form-group"><label class="form-label">Profissão</label><input class="form-input" name="profissao"></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" name="email"></div><div class="form-group"><label class="form-label">ProfissÃ£o</label><input class="form-input" name="profissao"></div></div>
         <div class="form-row"><div class="form-group"><label class="form-label">Origem</label><input class="form-input" name="origem"></div><div class="form-group"><label class="form-label">Ambiente</label><input class="form-input" name="ambiente"></div></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Orçamento</label><input class="form-input" name="budget"></div><div class="form-group"><label class="form-label">Etapa</label><input class="form-input" name="etapa" value="Orçamento recebido"></div></div>
-        <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" name="obs"></textarea></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">OrÃ§amento</label><input class="form-input" name="budget"></div><div class="form-group"><label class="form-label">Etapa</label><input class="form-input" name="etapa" value="OrÃ§amento recebido"></div></div>
+        <div class="form-group"><label class="form-label">ObservaÃ§Ãµes</label><textarea class="form-textarea" name="obs"></textarea></div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="document.getElementById('novo-lead').classList.remove('open')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar lead</button></div>
     </form>
@@ -402,7 +411,7 @@
             {% for reason in lead_loss_reasons %}<option value="{{ reason }}">{{ reason }}</option>{% endfor %}
           </select>
         </div>
-        <div class="form-group"><label class="form-label">Observação</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: cliente achou o escopo acima do orçamento previsto."></textarea></div>
+        <div class="form-group"><label class="form-label">ObservaÃ§Ã£o</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: cliente achou o escopo acima do orÃ§amento previsto."></textarea></div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeLeadModal('lead-lost-modal')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar perda</button></div>
     </form>
@@ -416,10 +425,11 @@
       <input type="hidden" name="lead_id" value="">
       <div class="modal-body">
         <div class="form-group"><label class="form-label">Data para retomar</label><input class="form-input" name="futuro_retorno" placeholder="15/08/2026" required></div>
-        <div class="form-group"><label class="form-label">Observação</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: obra ficou para o próximo semestre."></textarea></div>
+        <div class="form-group"><label class="form-label">ObservaÃ§Ã£o</label><textarea class="form-textarea" name="perda_obs" placeholder="Ex.: obra ficou para o prÃ³ximo semestre."></textarea></div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeLeadModal('lead-future-modal')">Cancelar</button><button class="btn btn-primary" type="submit">Salvar para futuro</button></div>
     </form>
   </div>
 </div>
 {% endblock %}
+

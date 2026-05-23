@@ -3771,7 +3771,7 @@ def public_create_lead():
         "idempotency_key": str(request.headers.get("Idempotency-Key") or payload.get("idempotency_key") or fingerprint).strip()[:160],
         "public_fingerprint": fingerprint,
     }
-    if city or project_type or message or turnstile_warning:
+    if city or project_type or message:
         details = []
         if city:
             details.append(f"Cidade do projeto: {city}")
@@ -3779,8 +3779,6 @@ def public_create_lead():
             details.append(f"Tipo de projeto: {project_type}")
         if message:
             details.append(f"Mensagem: {message}")
-        if turnstile_warning:
-            details.append(turnstile_warning)
         lead["obs"] = "\n".join(details)
 
     data["leads"].append(lead)
