@@ -25,12 +25,45 @@
       <a class="today-command-metric tone-relationship" href="{{ url_for('clients') }}"><span>Clientes</span><strong>{{ daily_command.counts.relacionamento }}</strong><em>retomar</em></a>
     </div>
 
+    <div class="office-areas-wrap">
+      <div class="office-areas-head">
+        <div class="section-title small-title">Áreas do escritório</div>
+        <div class="section-note">atalhos de rotina por frente de gestão</div>
+      </div>
+      <div class="office-areas-grid">
+        <a class="office-area-card area-leads" href="{{ url_for('leads') }}">
+          <span>Gestão Comercial</span>
+          <strong>Leads e conversão</strong>
+        </a>
+        <a class="office-area-card area-projects" href="{{ url_for('projects') }}">
+          <span>Gestão de Projetos</span>
+          <strong>Pipeline de entregas</strong>
+        </a>
+        <a class="office-area-card area-team" href="{{ url_for('tasks_page') }}">
+          <span>Gestão de Equipe</span>
+          <strong>Tarefas e responsáveis</strong>
+        </a>
+        <a class="office-area-card area-finance" href="{{ url_for('finance_page') }}">
+          <span>Gestão Financeira</span>
+          <strong>Despesas e caixa</strong>
+        </a>
+        <a class="office-area-card area-agenda" href="{{ url_for('agenda_page') }}">
+          <span>Gestão de Agenda</span>
+          <strong>Reuniões e prazos</strong>
+        </a>
+        <a class="office-area-card area-client" href="{{ url_for('clients') }}">
+          <span>Gestão de Clientes</span>
+          <strong>Relacionamento ativo</strong>
+        </a>
+      </div>
+    </div>
+
     <div class="dashboard-main-grid">
       <div class="desk-priority">
         {% if daily_command.next_action %}
         {% set next = daily_command.next_action %}
         <div class="smart-next tone-{{ next.tone }}">
-          <div class="smart-next-kicker">Proxima melhor acao</div>
+          <div class="smart-next-kicker">Próxima melhor ação</div>
           <div class="smart-next-body">
             <a class="smart-next-main" href="{{ next.url }}">
               <span class="desk-priority-marker"></span>
@@ -202,4 +235,3 @@
   </section>
 </div>
 {% endblock %}
-
