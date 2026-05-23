@@ -416,6 +416,8 @@ def public_lead_hmac_secret():
 def verify_public_lead_signature(raw_body):
     secret = public_lead_hmac_secret()
     if not secret:
+        if CRM_ENV == "production":
+            return False, "Assinatura do envio indisponível. Contate o suporte."
         return True, ""
     timestamp = (request.headers.get("X-Uardon-Timestamp") or "").strip()
     signature = (request.headers.get("X-Uardon-Signature") or "").strip()

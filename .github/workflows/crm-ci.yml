@@ -35,5 +35,37 @@ jobs:
       - name: Install dependencies
         run: pip install -r crm_vitoria_source/requirements.txt
 
+      - name: Fail on mojibake tokens
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          root = Path("crm_vitoria_source")
+          targets = []
+          for base in (root / "templates", root / "static"):
+              if base.exists():
+                  targets.extend(
+                      [p for p in base.rglob("*") if p.is_file() and p.suffix.lower() in {".html", ".css", ".js"}]
+                  )
+
+          pattern = re.compile(r"(Ã.|Â.|�)")
+          failures = []
+          for path in targets:
+              text = path.read_text(encoding="utf-8", errors="replace")
+              for lineno, line in enumerate(text.splitlines(), start=1):
+                  if pattern.search(line):
+                      failures.append(f"{path}:{lineno}: {line.strip()[:180]}")
+
+          if failures:
+              print("Mojibake detectado:")
+              for item in failures:
+                  print(item)
+              sys.exit(1)
+
+          print("OK: sem mojibake em templates/static.")
+          PY
+
       - name: Run tests
         run: python -m unittest crm_vitoria_source.tests.test_critical_routes -v

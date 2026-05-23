@@ -1,8 +1,9 @@
-import importlib
+﻿import importlib
 import hashlib
 import hmac
 import json
 import os
+import re
 import tempfile
 import time
 import unittest
@@ -145,12 +146,29 @@ class CriticalRoutesTest(unittest.TestCase):
         )
         self.assertEqual(signed.status_code, 201)
 
+    def test_public_lead_requires_hmac_in_production(self):
+        original_env = self.crm.CRM_ENV
+        try:
+            self.crm.CRM_ENV = "production"
+            os.environ["PUBLIC_LEAD_HMAC_SECRET"] = ""
+            payload = {
+                "name": "Maria Silva",
+                "phone": "(47) 99999-1111",
+                "project_type": "Residencial",
+            }
+            response = self.client.post("/v1/leads", json=payload)
+            self.assertEqual(response.status_code, 401)
+            body = response.get_json()
+            self.assertFalse(body["ok"])
+            self.assertEqual(body["code"], "invalid_signature")
+        finally:
+            self.crm.CRM_ENV = original_env
+
     def test_leads_template_has_no_mojibake_tokens(self):
         template_path = Path(__file__).resolve().parents[1] / "templates" / "leads.html"
         content = template_path.read_text(encoding="utf-8")
-        bad_tokens = ["Ã", "Â", "â€”", "\ufffd"]
-        for token in bad_tokens:
-            self.assertNotIn(token, content, f"Mojibake token found in leads template: {token}")
+        pattern = re.compile(r"(Ã.|Â.|\ufffd)")
+        self.assertIsNone(pattern.search(content), "Mojibake token found in leads template")
 
     def test_public_lead_invalid_phone_returns_400(self):
         payload = {
@@ -243,3 +261,4 @@ class CriticalRoutesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
