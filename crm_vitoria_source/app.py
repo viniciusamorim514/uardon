@@ -113,6 +113,26 @@ LEAD_OWNER_DEFAULT = "Vitória Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 
 
+def fix_mojibake_text(value):
+    if not isinstance(value, str):
+        return value
+    if "Ã" not in value and "Â" not in value and "â" not in value:
+        return value
+    try:
+        fixed = value.encode("latin-1").decode("utf-8")
+        return fixed if fixed else value
+    except Exception:
+        return value
+
+
+def normalize_text_payload(value):
+    if isinstance(value, dict):
+        return {k: normalize_text_payload(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [normalize_text_payload(v) for v in value]
+    return fix_mojibake_text(value)
+
+
 def ensure_data_file():
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -231,7 +251,7 @@ def load_data_from_file():
     for user in data.get("users", []):
         user.setdefault("email", "")
     data.setdefault("dismissed_notifications", [])
-    return data
+    return normalize_text_payload(data)
 
 
 def load_data():
@@ -252,7 +272,7 @@ def load_data():
     for user in data.get("users", []):
         user.setdefault("email", "")
     data.setdefault("dismissed_notifications", [])
-    return data
+    return normalize_text_payload(data)
 
 
 def save_data(data):
