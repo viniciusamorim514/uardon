@@ -1113,6 +1113,24 @@ def login_required(fn):
     return wrapper
 
 
+def is_admin_user():
+    user = session.get("user") or {}
+    return user.get("id") == 1
+
+
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not session.get("user"):
+            return redirect(url_for("login"))
+        if not is_admin_user():
+            flash("Acesso restrito.")
+            return redirect(url_for("dashboard"))
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
 def current_brand(data):
     config = data.get("config", {})
     return config.get("estudio") or "Studio Arq. & Int."
@@ -3638,6 +3656,7 @@ def inject_globals():
     return {
         "nav_counts": nav_counts(data),
         "open_tasks_count": open_tasks_count(data),
+        "is_admin_user": is_admin_user(),
         "brand_studio": current_brand(data),
         "notifications_menu": notifications,
         "notifications_count": len(notifications),
@@ -3914,7 +3933,6 @@ def dashboard():
     }
     relationship = relationship_data(data)
     weekly_metrics = build_weekly_metrics(data)
-    technical_health = build_technical_health(data, window_hours=24)
     funnel = {"Atração": 0, "Interesse": 0, "Proposta": len(data["leads"]), "Negociação": 0, "Fechamento": 0}
     alerts = [{"title": n["title"], "subtitle": n["subtitle"]} for n in build_notifications(data)[:4]]
     return render_template(
@@ -3935,8 +3953,20 @@ def dashboard():
         automation_actions=build_automation_actions(data, board),
         relationship=relationship,
         weekly_metrics=weekly_metrics,
-        technical_health=technical_health,
         funnel=funnel,
+    )
+
+
+@app.route("/admin/diagnostico")
+@login_required
+@admin_required
+def admin_diagnostics():
+    data = load_data()
+    report = build_technical_health(data, window_hours=24)
+    return render_template(
+        "diagnostics.html",
+        active="diagnostics",
+        technical_health=report,
     )
 
 

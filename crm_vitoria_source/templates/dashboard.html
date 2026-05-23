@@ -1,13 +1,13 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block page_title %}Mesa do dia{% endblock %}
-{% block page_subtitle %}Prioridades reais para a Vitória executar hoje{% endblock %}
+{% block page_subtitle %}Prioridades reais para a VitÃ³ria executar hoje{% endblock %}
 {% block content %}
 <div class="content dashboard-clean">
   <section class="card today-command-card desk-card">
     <div class="section-header">
       <div>
         <div class="section-title">Mesa do dia</div>
-        <div class="section-note">prioridades, execução e resultado em uma visão</div>
+        <div class="section-note">prioridades, execuÃ§Ã£o e resultado em uma visÃ£o</div>
       </div>
       <div class="dashboard-clean-actions">
         <a class="mini-link" href="{{ url_for('tasks_page') }}">Tarefas</a>
@@ -16,11 +16,11 @@
     </div>
 
     <div class="today-command-grid desk-metrics">
-      <a class="today-command-metric tone-payment" href="{{ url_for('receivables_page') }}"><span>Recebíveis</span><strong>{{ daily_command.counts.financeiro }}</strong><em>em atenção</em></a>
+      <a class="today-command-metric tone-payment" href="{{ url_for('receivables_page') }}"><span>RecebÃ­veis</span><strong>{{ daily_command.counts.financeiro }}</strong><em>em atenÃ§Ã£o</em></a>
       <a class="today-command-metric tone-expense" href="{{ url_for('finance_page') }}"><span>Despesas</span><strong>{{ daily_command.counts.despesas }}</strong><em>para pagar</em></a>
       <a class="today-command-metric tone-agenda" href="{{ url_for('agenda_page') }}"><span>Agenda</span><strong>{{ daily_command.counts.agenda }}</strong><em>hoje</em></a>
-      <a class="today-command-metric tone-task" href="{{ url_for('tasks_page') }}"><span>Tarefas</span><strong>{{ daily_command.counts.tarefas }}</strong><em>críticas</em></a>
-      <a class="today-command-metric tone-lead" href="{{ url_for('leads') }}"><span>Leads</span><strong>{{ daily_command.counts.comercial }}</strong><em>sem avanço</em></a>
+      <a class="today-command-metric tone-task" href="{{ url_for('tasks_page') }}"><span>Tarefas</span><strong>{{ daily_command.counts.tarefas }}</strong><em>crÃ­ticas</em></a>
+      <a class="today-command-metric tone-lead" href="{{ url_for('leads') }}"><span>Leads</span><strong>{{ daily_command.counts.comercial }}</strong><em>sem avanÃ§o</em></a>
       <a class="today-command-metric tone-contract" href="{{ url_for('projects') }}"><span>Contratos</span><strong>{{ daily_command.counts.contratos }}</strong><em>pendentes</em></a>
       <a class="today-command-metric tone-relationship" href="{{ url_for('clients') }}"><span>Clientes</span><strong>{{ daily_command.counts.relacionamento }}</strong><em>retomar</em></a>
     </div>
@@ -89,7 +89,7 @@
           {% endfor %}
           {% endfor %}
           {% if not daily_command.grouped_actions %}
-          <div class="empty-state">Nada crítico agora. Bom momento para revisar leads, agenda e relacionamento.</div>
+          <div class="empty-state">Nada crÃ­tico agora. Bom momento para revisar leads, agenda e relacionamento.</div>
           {% endif %}
         </div>
       </div>
@@ -97,7 +97,7 @@
       <aside class="dashboard-result-panel">
         <div class="dashboard-panel-title">Resultado de hoje</div>
         <div class="dashboard-result-list">
-          <div><span>Tarefas concluídas</span><strong>{{ dashboard_results.tasks_done }}</strong></div>
+          <div><span>Tarefas concluÃ­das</span><strong>{{ dashboard_results.tasks_done }}</strong></div>
           <div><span>Leads tratados</span><strong>{{ dashboard_results.lead_done }}</strong></div>
           <div><span>Contratos acompanhados</span><strong>{{ dashboard_results.contracts }}</strong></div>
           <div><span>Clientes retomados</span><strong>{{ dashboard_results.clients }}</strong></div>
@@ -112,14 +112,14 @@
       <div class="section-header">
         <div>
           <div class="section-title">Comercial</div>
-          <div class="section-note">orçamentos e leads que precisam virar conversa</div>
+          <div class="section-note">orÃ§amentos e leads que precisam virar conversa</div>
         </div>
         <a class="mini-link" href="{{ url_for('leads') }}">Abrir leads</a>
       </div>
       <div class="dashboard-inline-metrics">
-        <span><strong>{{ commercial.new_budgets }}</strong> novos orçamentos</span>
+        <span><strong>{{ commercial.new_budgets }}</strong> novos orÃ§amentos</span>
         <span><strong>{{ commercial.open_leads }}</strong> leads abertos</span>
-        <span><strong>{{ commercial.stale_leads }}</strong> sem avanço</span>
+        <span><strong>{{ commercial.stale_leads }}</strong> sem avanÃ§o</span>
         <span><strong>{{ commercial.overdue_sla }}</strong> SLA estourado</span>
       </div>
       <div class="list clean-list">
@@ -127,12 +127,12 @@
         <div class="item compact-item">
           <div class="item-main">
             <div class="item-title">{{ lead.nome }}</div>
-            <div class="item-sub">Instagram · {{ lead.ambiente or 'ambiente não informado' }} · {{ lead.orcamento or 'orçamento a conversar' }}</div>
+            <div class="item-sub">Instagram Â· {{ lead.ambiente or 'ambiente nÃ£o informado' }} Â· {{ lead.orcamento or 'orÃ§amento a conversar' }}</div>
           </div>
-          <a class="mini-btn primary" href="{{ whatsapp_link(lead.tel, 'Olá, ' ~ lead.nome.split(' ')[0] ~ '! Recebi seu pedido de orçamento e vou te chamar para entender melhor.') }}" target="_blank">WhatsApp</a>
+          <a class="mini-btn primary" href="{{ whatsapp_link(lead.tel, 'OlÃ¡, ' ~ lead.nome.split(' ')[0] ~ '! Recebi seu pedido de orÃ§amento e vou te chamar para entender melhor.') }}" target="_blank">WhatsApp</a>
         </div>
         {% else %}
-        <div class="empty-state">Nenhum orçamento novo agora.</div>
+        <div class="empty-state">Nenhum orÃ§amento novo agora.</div>
         {% endfor %}
       </div>
     </div>
@@ -150,7 +150,7 @@
         <a class="project-row link-row compact-project-row" href="{{ url_for('project_detail', project_id=project.id) }}">
           <div>
             <div class="project-title">{{ project.nome }}</div>
-            <div class="project-sub">{{ project.cliente }} · {{ project.status }}</div>
+            <div class="project-sub">{{ project.cliente }} Â· {{ project.status }}</div>
           </div>
           <div class="project-meta">{{ project.progresso }}%</div>
         </a>
@@ -164,46 +164,16 @@
   <section class="card dashboard-clean-card">
     <div class="section-header">
       <div>
-        <div class="section-title">Métrica semanal</div>
+        <div class="section-title">MÃ©trica semanal</div>
         <div class="section-note">{{ weekly_metrics.week_label }}</div>
       </div>
     </div>
     <div class="dashboard-inline-metrics" style="padding:14px 18px 18px">
       <span><strong>{{ weekly_metrics.leads_week }}</strong> leads da semana</span>
-      <span><strong>{{ weekly_metrics.avg_response_minutes }} min</strong> tempo médio de resposta</span>
-      <span><strong>{{ weekly_metrics.proposal_advance_rate }}%</strong> avanço para proposta</span>
+      <span><strong>{{ weekly_metrics.avg_response_minutes }} min</strong> tempo mÃ©dio de resposta</span>
+      <span><strong>{{ weekly_metrics.proposal_advance_rate }}%</strong> avanÃ§o para proposta</span>
     </div>
   </section>
-
-  <section class="card dashboard-clean-card">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Saude tecnica</div>
-        <div class="section-note">ultimas {{ technical_health.window_hours }}h da ingestao da landing</div>
-      </div>
-      <a class="mini-link" href="{{ url_for('health_check') }}" target="_blank">Health</a>
-    </div>
-    <div class="dashboard-inline-metrics" style="padding:14px 18px 14px">
-      <span><strong>{{ technical_health.totals.events }}</strong> eventos</span>
-      <span><strong>{{ technical_health.totals.status_4xx }}</strong> 4xx</span>
-      <span><strong>{{ technical_health.totals.status_5xx }}</strong> 5xx</span>
-      <span><strong>{{ technical_health.totals.turnstile_failed }}</strong> turnstile_fail</span>
-      <span><strong>{{ technical_health.totals.duplicate_replay }}</strong> duplicate_replay</span>
-      <span><strong>{{ technical_health.totals.lead_ingestion_fail }}</strong> lead_ingestion_fail</span>
-      <span><strong>{{ technical_health.totals.avg_latency_seconds if technical_health.totals.avg_latency_seconds is not none else '-' }}</strong> latencia_media_s</span>
-    </div>
-    <div class="dashboard-relationship-strip">
-      {% for alert in technical_health.alerts %}
-      <div class="dashboard-relationship-item">
-        <div><strong>{{ alert.title }}</strong><span>{{ alert.note }}</span></div>
-        <em>{{ alert.level }}</em>
-      </div>
-      {% else %}
-      <div class="empty-state">Sem alertas tecnicos no periodo.</div>
-      {% endfor %}
-    </div>
-  </section>
-
   <section class="card dashboard-clean-card">
     <div class="section-header">
       <div>
@@ -215,13 +185,13 @@
     <div class="dashboard-relationship-strip">
       {% for client in relationship.birthdays_today %}
       <div class="dashboard-relationship-item">
-        <div><strong>Aniversário: {{ client.nome }}</strong><span>Enviar mensagem hoje.</span></div>
-        <a class="mini-btn primary" href="{{ whatsapp_link(client.tel, 'Olá, ' ~ client.nome.split(' ')[0] ~ '! Feliz aniversário! Que seu novo ciclo seja muito especial.') }}" target="_blank">WhatsApp</a>
+        <div><strong>AniversÃ¡rio: {{ client.nome }}</strong><span>Enviar mensagem hoje.</span></div>
+        <a class="mini-btn primary" href="{{ whatsapp_link(client.tel, 'OlÃ¡, ' ~ client.nome.split(' ')[0] ~ '! Feliz aniversÃ¡rio! Que seu novo ciclo seja muito especial.') }}" target="_blank">WhatsApp</a>
       </div>
       {% endfor %}
       {% for client in relationship.no_contact[:3] %}
       <a class="dashboard-relationship-item" href="{{ url_for('client_detail', client_id=client.id) }}">
-        <div><strong>{{ client.nome }}</strong><span>{{ client.dias_sem_contato_label }} sem interação registrada.</span></div>
+        <div><strong>{{ client.nome }}</strong><span>{{ client.dias_sem_contato_label }} sem interaÃ§Ã£o registrada.</span></div>
         <em>Abrir</em>
       </a>
       {% endfor %}
@@ -232,3 +202,4 @@
   </section>
 </div>
 {% endblock %}
+

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block page_title %}Diagnostico{% endblock %}
+{% block page_subtitle %}Saude tecnica da ingestao da landing{% endblock %}
+{% block content %}
+<div class="content dashboard-clean">
+  <section class="card dashboard-clean-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Saude tecnica</div>
+        <div class="section-note">ultimas {{ technical_health.window_hours }}h da ingestao da landing</div>
+      </div>
+      <a class="mini-link" href="{{ url_for('health_check') }}" target="_blank">Health</a>
+    </div>
+    <div class="dashboard-inline-metrics" style="padding:14px 18px 14px">
+      <span><strong>{{ technical_health.totals.events }}</strong> eventos</span>
+      <span><strong>{{ technical_health.totals.status_4xx }}</strong> 4xx</span>
+      <span><strong>{{ technical_health.totals.status_5xx }}</strong> 5xx</span>
+      <span><strong>{{ technical_health.totals.turnstile_failed }}</strong> turnstile_fail</span>
+      <span><strong>{{ technical_health.totals.duplicate_replay }}</strong> duplicate_replay</span>
+      <span><strong>{{ technical_health.totals.lead_ingestion_fail }}</strong> lead_ingestion_fail</span>
+      <span><strong>{{ technical_health.totals.avg_latency_seconds if technical_health.totals.avg_latency_seconds is not none else '-' }}</strong> latencia_media_s</span>
+    </div>
+    <div class="dashboard-relationship-strip">
+      {% for alert in technical_health.alerts %}
+      <div class="dashboard-relationship-item">
+        <div><strong>{{ alert.title }}</strong><span>{{ alert.note }}</span></div>
+        <em>{{ alert.level }}</em>
+      </div>
+      {% else %}
+      <div class="empty-state">Sem alertas tecnicos no periodo.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
