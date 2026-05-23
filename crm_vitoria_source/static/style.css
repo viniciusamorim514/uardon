@@ -27,7 +27,7 @@ a{text-decoration:none;color:inherit}
 .sidebar-logo{padding:22px 22px 20px;border-bottom:1px solid rgba(233,223,204,.1)}
 .logo-mark{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:400;color:var(--bege);line-height:1.2;text-transform:uppercase}
 .logo-sub{font-size:9px;color:rgba(233,223,204,.45);text-transform:uppercase;letter-spacing:2.5px;margin-top:6px;font-weight:300}
-.sidebar-nav{flex:1;padding:14px 12px 64px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.sidebar-nav{flex:1;padding:14px 12px 24px;display:flex;flex-direction:column;gap:2px;overflow:visible}
 .nav-section{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:rgba(233,223,204,.3);padding:14px 10px 5px;font-weight:300}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);color:rgba(233,223,204,.55);transition:all .15s;font-size:13px;font-weight:300}
 .nav-item:hover{background:rgba(233,223,204,.07);color:var(--bege)}
@@ -36,7 +36,7 @@ a{text-decoration:none;color:inherit}
 .sidebar-footer{padding:12px 20px;border-top:1px solid rgba(233,223,204,.1)}
 .small-label{font-size:10px;color:rgba(233,223,204,.45);text-transform:uppercase;display:block;margin-bottom:6px;letter-spacing:1px}
 .file-input{width:100%;font-size:12px;color:rgba(233,223,204,.7);margin-bottom:8px}
-.sidebar-user{padding:12px 20px 20px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(233,223,204,.1);background:var(--preto);position:sticky;bottom:0;z-index:2}
+.sidebar-user{padding:12px 20px 14px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(233,223,204,.1)}
 .user-avatar{width:34px;height:34px;border-radius:50%;background:var(--terra);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:14px;color:white}
 .user-name{font-size:13px;color:var(--bege)}.user-role{font-size:11px;color:rgba(233,223,204,.4)}
 .main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
