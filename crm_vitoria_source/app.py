@@ -36,6 +36,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -74,6 +75,7 @@ DEFAULT_DATA = {
     "feedbacks": [],
     "dismissed_notifications": [],
     "audit_logs": [],
+    "password_reset_tokens": [],
 }
 
 PROJECT_STAGES = [
@@ -366,6 +368,7 @@ def load_data_from_file():
         data = deepcopy(DEFAULT_DATA)
     for key, value in DEFAULT_DATA.items():
         data.setdefault(key, deepcopy(value))
+    data.setdefault("password_reset_tokens", [])
     for user in data.get("users", []):
         user.setdefault("email", "")
         user.setdefault("role", "operacao")
@@ -4104,6 +4107,40 @@ def find_by_id(items, item_id):
     return None
 
 
+def is_password_hash_value(value):
+    text = str(value or "")
+    return text.startswith("scrypt:") or text.startswith("pbkdf2:")
+
+
+def password_matches(user, raw_password):
+    stored = str(user.get("password") or "")
+    if is_password_hash_value(stored):
+        try:
+            return check_password_hash(stored, raw_password)
+        except Exception:
+            return False
+    return stored == raw_password
+
+
+def set_user_password(user, raw_password):
+    user["password"] = generate_password_hash(raw_password)
+
+
+def find_user_by_login(data, login_value):
+    key = (login_value or "").strip().lower()
+    for user in data.get("users", []):
+        valid_ids = [str(user.get("username", "")).strip().lower(), str(user.get("email", "")).strip().lower()]
+        if key and key in valid_ids:
+            return user
+    return None
+
+
+def normalize_username_from_name(name):
+    base = "".join(ch for ch in unicodedata.normalize("NFD", name or "") if unicodedata.category(ch) != "Mn")
+    slug = re.sub(r"[^a-z0-9]+", ".", base.lower()).strip(".")
+    return slug or f"user.{int(time.time())}"
+
+
 @app.context_processor
 def inject_globals():
     data = load_data()
@@ -4130,15 +4167,17 @@ def login():
     if request.method == "POST":
         login_value = (request.form.get("username") or "").strip().lower()
         password = request.form.get("password") or ""
-        for user in data.get("users", []):
-            valid_ids = [str(user.get("username", "")).lower(), str(user.get("email", "")).lower()]
-            if login_value in valid_ids and password == str(user.get("password", "")):
-                session["user"] = {
-                    "id": user["id"],
-                    "name": user.get("name") or user.get("username"),
-                    "role": (user.get("role") or "operacao").lower(),
-                }
-                return redirect(url_for("dashboard"))
+        user = find_user_by_login(data, login_value)
+        if user and password_matches(user, password):
+            if not is_password_hash_value(user.get("password")):
+                set_user_password(user, password)
+                save_data(data)
+            session["user"] = {
+                "id": user["id"],
+                "name": user.get("name") or user.get("username"),
+                "role": (user.get("role") or "operacao").lower(),
+            }
+            return redirect(url_for("dashboard"))
         flash("Login inválido.")
     return render_template("login.html")
 
@@ -4147,6 +4186,111 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        data = load_data()
+        name = (request.form.get("name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+        password_confirm = request.form.get("password_confirm") or ""
+        if len(name) < 3:
+            flash("Informe um nome completo.")
+            return render_template("signup.html")
+        if "@" not in email or "." not in email.split("@")[-1]:
+            flash("Informe um e-mail válido.")
+            return render_template("signup.html")
+        if len(password) < 8:
+            flash("A senha precisa ter ao menos 8 caracteres.")
+            return render_template("signup.html")
+        if password != password_confirm:
+            flash("A confirmação de senha não confere.")
+            return render_template("signup.html")
+        if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
+            flash("Esse e-mail já está em uso.")
+            return render_template("signup.html")
+        username_base = normalize_username_from_name(name)
+        username = username_base
+        i = 2
+        existing_usernames = {str(u.get("username", "")).strip().lower() for u in data.get("users", [])}
+        while username.lower() in existing_usernames:
+            username = f"{username_base}{i}"
+            i += 1
+        new_user = {
+            "id": next_id(data.get("users", [])),
+            "username": username,
+            "email": email,
+            "name": name,
+            "role": "operacao",
+            "password": generate_password_hash(password),
+        }
+        data["users"].append(new_user)
+        save_data(data)
+        flash("Conta criada. Faça login para continuar.")
+        return redirect(url_for("login"))
+    return render_template("signup.html")
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        data = load_data()
+        email = (request.form.get("email") or "").strip().lower()
+        user = next((u for u in data.get("users", []) if str(u.get("email", "")).strip().lower() == email), None)
+        if user:
+            token = uuid.uuid4().hex
+            expires_at = (datetime.now() + timedelta(minutes=30)).isoformat(timespec="seconds")
+            data.setdefault("password_reset_tokens", []).append(
+                {"token": token, "user_id": user.get("id"), "expires_at": expires_at, "used": False}
+            )
+            save_data(data)
+            reset_link = url_for("reset_password", token=token, _external=True)
+            print(f"[PASSWORD_RESET] {email}: {reset_link}")
+        flash("Se o e-mail existir, enviamos um link de recuperação.")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    data = load_data()
+    token_item = next((t for t in data.get("password_reset_tokens", []) if t.get("token") == token), None)
+    now = datetime.now()
+    if not token_item:
+        flash("Link inválido.")
+        return redirect(url_for("forgot_password"))
+    if token_item.get("used"):
+        flash("Esse link já foi utilizado.")
+        return redirect(url_for("forgot_password"))
+    try:
+        expires_at = datetime.fromisoformat(str(token_item.get("expires_at") or ""))
+    except Exception:
+        expires_at = now - timedelta(seconds=1)
+    if expires_at <= now:
+        flash("Esse link expirou. Solicite um novo.")
+        return redirect(url_for("forgot_password"))
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        password_confirm = request.form.get("password_confirm") or ""
+        if len(password) < 8:
+            flash("A nova senha precisa ter ao menos 8 caracteres.")
+            return render_template("reset_password.html", token=token)
+        if password != password_confirm:
+            flash("A confirmação de senha não confere.")
+            return render_template("reset_password.html", token=token)
+        user = find_by_id(data.get("users", []), token_item.get("user_id"))
+        if not user:
+            flash("Usuário não encontrado.")
+            return redirect(url_for("forgot_password"))
+        set_user_password(user, password)
+        token_item["used"] = True
+        token_item["used_at"] = now.isoformat(timespec="seconds")
+        save_data(data)
+        flash("Senha atualizada. Faça login.")
+        return redirect(url_for("login"))
+    return render_template("reset_password.html", token=token)
 
 
 @app.route("/notificacoes/<path:key>/dispensar", methods=["POST"])

@@ -32,6 +32,7 @@ BASE_DATA = {
     "feedbacks": [],
     "dismissed_notifications": [],
     "audit_logs": [],
+    "password_reset_tokens": [],
 }
 
 
@@ -325,6 +326,54 @@ class CriticalRoutesTest(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         state = self._load_state()
         self.assertEqual(len(state["despesas"]), 0)
+
+    def test_signup_creates_user_with_hashed_password(self):
+        response = self.client.post(
+            "/signup",
+            data={
+                "name": "Usuaria Teste",
+                "email": "teste@example.com",
+                "password": "senha1234",
+                "password_confirm": "senha1234",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        state = self._load_state()
+        created = next((u for u in state["users"] if u.get("email") == "teste@example.com"), None)
+        self.assertIsNotNone(created)
+        self.assertNotEqual(created.get("password"), "senha1234")
+        self.assertTrue(str(created.get("password", "")).startswith(("scrypt:", "pbkdf2:")))
+
+    def test_forgot_and_reset_password_flow(self):
+        self.client.post(
+            "/forgot-password",
+            data={"email": "vit.cs99@gmail.com"},
+            follow_redirects=False,
+        )
+        state = self._load_state()
+        token_item = state["password_reset_tokens"][-1]
+        token = token_item["token"]
+
+        response = self.client.post(
+            f"/reset-password/{token}",
+            data={"password": "novaSenha123", "password_confirm": "novaSenha123"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+
+        state = self._load_state()
+        user = state["users"][0]
+        self.assertTrue(str(user.get("password", "")).startswith(("scrypt:", "pbkdf2:")))
+        updated_token = next(t for t in state["password_reset_tokens"] if t["token"] == token)
+        self.assertTrue(updated_token.get("used"))
+
+        login_response = self.client.post(
+            "/login",
+            data={"username": "vitoria", "password": "novaSenha123"},
+            follow_redirects=False,
+        )
+        self.assertEqual(login_response.status_code, 302)
 
 
 if __name__ == "__main__":

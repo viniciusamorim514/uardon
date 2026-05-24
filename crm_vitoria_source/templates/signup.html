@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Criar Conta - Vitória Uardon CRM{% endblock %}
+{% block content %}
+<div class="login-shell">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-eyebrow">Primeiro acesso</div>
+      <h1>Criar conta</h1>
+    </div>
+    <form method="post" class="login-form">
+      <div class="login-field">
+        <label class="form-label">Nome completo</label>
+        <input class="form-input" name="name" required>
+      </div>
+      <div class="login-field">
+        <label class="form-label">E-mail</label>
+        <input class="form-input" name="email" type="email" required>
+      </div>
+      <div class="login-field">
+        <label class="form-label">Senha</label>
+        <input class="form-input" name="password" type="password" minlength="8" required>
+      </div>
+      <div class="login-field">
+        <label class="form-label">Confirmar senha</label>
+        <input class="form-input" name="password_confirm" type="password" minlength="8" required>
+      </div>
+      <button class="btn btn-primary full login-submit" type="submit">Criar conta</button>
+    </form>
+    <div class="stack-sm" style="margin-top:10px; text-align:center;">
+      <a class="mini-link" href="{{ url_for('login') }}">Voltar para login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
