@@ -2831,10 +2831,8 @@ def lead_priority_score(lead):
 
 
 def lead_priority_heat(score):
-    if score >= 65:
+    if score >= 55:
         return "hot", "Quente"
-    if score >= 40:
-        return "warm", "Morno"
     return "cold", "Frio"
 
 
