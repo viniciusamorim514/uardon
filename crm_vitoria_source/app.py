@@ -4158,10 +4158,67 @@ def smtp_settings():
     return {"host": host, "port": port, "user": user, "password": password, "sender": sender, "use_tls": use_tls}
 
 
+def resend_settings():
+    api_key = (os.environ.get("RESEND_API_KEY") or "").strip()
+    sender = (os.environ.get("RESEND_FROM") or "").strip()
+    audience = (os.environ.get("RESEND_AUDIENCE") or "Uardon CRM").strip() or "Uardon CRM"
+    if not api_key or not sender:
+        return None
+    return {"api_key": api_key, "sender": sender, "audience": audience}
+
+
+def send_password_reset_email_resend(recipient_email, reset_link):
+    settings = resend_settings()
+    if not settings:
+        return False, "resend_not_configured"
+    payload = {
+        "from": settings["sender"],
+        "to": [recipient_email],
+        "subject": "Uardon CRM | Redefinicao de senha",
+        "text": (
+            "Recebemos uma solicitacao para redefinir sua senha no Uardon CRM.\n\n"
+            f"Use este link (valido por 30 minutos):\n{reset_link}\n\n"
+            "Se voce nao fez essa solicitacao, ignore este e-mail."
+        ),
+        "tags": [{"name": "app", "value": settings["audience"]}, {"name": "flow", "value": "password_reset"}],
+    }
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {settings['api_key']}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as response:
+            status = int(getattr(response, "status", 0) or 0)
+            if status < 200 or status >= 300:
+                return False, f"resend_http_{status}"
+    except urllib.error.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", errors="ignore")
+        except Exception:
+            detail = ""
+        print(f"[PASSWORD_RESET_ERROR] {recipient_email}: resend_http_error status={exc.code} detail={detail}")
+        return False, f"resend_http_{exc.code}"
+    except Exception as exc:
+        print(f"[PASSWORD_RESET_ERROR] {recipient_email}: resend_exception {exc}")
+        return False, "resend_send_failed"
+    return True, "sent_resend"
+
+
 def send_password_reset_email(recipient_email, reset_link):
+    sent, reason = send_password_reset_email_resend(recipient_email, reset_link)
+    if sent:
+        return True, reason
     settings = smtp_settings()
     if not settings:
-        return False, "smtp_not_configured"
+        return False, "no_provider_configured"
     msg = EmailMessage()
     msg["Subject"] = "Uardon CRM | Redefinição de senha"
     msg["From"] = settings["sender"]
