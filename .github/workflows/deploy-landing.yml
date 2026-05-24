@@ -27,6 +27,52 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate landing encoding and assets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import sys
+
+          targets = [Path("web/index.html"), Path("web/vittoria-uardon-landing.html")]
+          missing = []
+          mojibake = []
+          src_href = re.compile(r'(?:src|href)="([^"]+)"')
+          bad_tokens = ("Ã", "Â", "\ufffd", "ï¿½", "â€", "â€”")
+
+          for html in targets:
+              try:
+                  text = html.read_text(encoding="utf-8")
+              except UnicodeDecodeError as exc:
+                  print(f"Encoding inválido em {html}: {exc}")
+                  sys.exit(1)
+
+              for i, line in enumerate(text.splitlines(), start=1):
+                  if any(tok in line for tok in bad_tokens):
+                      mojibake.append(f"{html}:{i}: {line.strip()[:180]}")
+
+              for ref in src_href.findall(text):
+                  if ref.startswith(("http://", "https://", "data:", "#", "mailto:", "tel:", "javascript:")):
+                      continue
+                  local = (html.parent / ref.split("?")[0]).resolve()
+                  if not local.exists():
+                      missing.append(f"{html}: {ref}")
+
+          if mojibake:
+              print("Mojibake detectado na landing:")
+              for item in mojibake:
+                  print(item)
+              sys.exit(1)
+
+          if missing:
+              print("Assets faltando na landing:")
+              for item in missing:
+                  print(item)
+              sys.exit(1)
+
+          print("OK: landing com UTF-8 e assets válidos.")
+          PY
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
