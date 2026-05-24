@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import smtplib
 import sys
 import time
 import unicodedata
@@ -15,6 +16,7 @@ import urllib.request
 import uuid
 from copy import deepcopy
 from datetime import date, datetime, timedelta
+from email.message import EmailMessage
 from functools import wraps
 from pathlib import Path
 
@@ -4141,6 +4143,117 @@ def normalize_username_from_name(name):
     return slug or f"user.{int(time.time())}"
 
 
+def smtp_settings():
+    host = (os.environ.get("SMTP_HOST") or "").strip()
+    user = (os.environ.get("SMTP_USER") or "").strip()
+    password = (os.environ.get("SMTP_PASSWORD") or "").strip()
+    sender = (os.environ.get("SMTP_FROM") or user).strip()
+    if not host or not sender:
+        return None
+    try:
+        port = int((os.environ.get("SMTP_PORT") or "587").strip() or "587")
+    except Exception:
+        port = 587
+    use_tls = (os.environ.get("SMTP_USE_TLS") or "1").strip().lower() in {"1", "true", "yes", "on"}
+    return {"host": host, "port": port, "user": user, "password": password, "sender": sender, "use_tls": use_tls}
+
+
+def send_password_reset_email(recipient_email, reset_link):
+    settings = smtp_settings()
+    if not settings:
+        return False, "smtp_not_configured"
+    msg = EmailMessage()
+    msg["Subject"] = "Uardon CRM | Redefinição de senha"
+    msg["From"] = settings["sender"]
+    msg["To"] = recipient_email
+    msg.set_content(
+        "Recebemos uma solicitação para redefinir sua senha no Uardon CRM.\n\n"
+        f"Use este link (válido por 30 minutos):\n{reset_link}\n\n"
+        "Se você não fez essa solicitação, ignore este e-mail."
+    )
+    try:
+        with smtplib.SMTP(settings["host"], settings["port"], timeout=20) as smtp:
+            if settings["use_tls"]:
+                smtp.starttls()
+            if settings["user"] and settings["password"]:
+                smtp.login(settings["user"], settings["password"])
+            smtp.send_message(msg)
+    except Exception as exc:
+        print(f"[PASSWORD_RESET_ERROR] {recipient_email}: {exc}")
+        return False, "smtp_send_failed"
+    return True, "sent"
+
+
+def google_login_config():
+    client_id = (os.environ.get("GOOGLE_LOGIN_CLIENT_ID") or "").strip()
+    client_secret = (os.environ.get("GOOGLE_LOGIN_CLIENT_SECRET") or "").strip()
+    if client_id and client_secret:
+        return {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "userinfo_uri": "https://openidconnect.googleapis.com/v1/userinfo",
+        }
+    return None
+
+
+def google_login_enabled():
+    return bool(google_login_config())
+
+
+def create_google_oauth_flow(state=None):
+    cfg = google_login_config()
+    if not cfg:
+        raise RuntimeError("Login com Google não está configurado.")
+    try:
+        from google_auth_oauthlib.flow import Flow
+    except Exception as exc:
+        raise RuntimeError(f"Dependências Google OAuth ausentes: {exc}") from exc
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": cfg["client_id"],
+                "client_secret": cfg["client_secret"],
+                "auth_uri": cfg["auth_uri"],
+                "token_uri": cfg["token_uri"],
+            }
+        },
+        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
+        state=state,
+    )
+    flow.redirect_uri = url_for("google_auth_callback", _external=True)
+    return flow
+
+
+def upsert_google_user_and_login(email, name):
+    data = load_data()
+    user = find_user_by_login(data, email)
+    if not user:
+        username_base = normalize_username_from_name(name or email.split("@")[0])
+        username = username_base
+        existing_usernames = {str(u.get("username", "")).strip().lower() for u in data.get("users", [])}
+        i = 2
+        while username.lower() in existing_usernames:
+            username = f"{username_base}{i}"
+            i += 1
+        user = {
+            "id": next_id(data.get("users", [])),
+            "username": username,
+            "email": email,
+            "name": name or email.split("@")[0],
+            "role": "operacao",
+            "password": "",
+        }
+        data.setdefault("users", []).append(user)
+        save_data(data)
+    session["user"] = {
+        "id": user["id"],
+        "name": user.get("name") or user.get("username"),
+        "role": (user.get("role") or "operacao").lower(),
+    }
+
+
 @app.context_processor
 def inject_globals():
     data = load_data()
@@ -4179,7 +4292,7 @@ def login():
             }
             return redirect(url_for("dashboard"))
         flash("Login inválido.")
-    return render_template("login.html")
+    return render_template("login.html", google_login_enabled=google_login_enabled())
 
 
 @app.route("/logout")
@@ -4198,19 +4311,19 @@ def signup():
         password_confirm = request.form.get("password_confirm") or ""
         if len(name) < 3:
             flash("Informe um nome completo.")
-            return render_template("signup.html")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
         if "@" not in email or "." not in email.split("@")[-1]:
             flash("Informe um e-mail válido.")
-            return render_template("signup.html")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
-            return render_template("signup.html")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
         if password != password_confirm:
             flash("A confirmação de senha não confere.")
-            return render_template("signup.html")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
             flash("Esse e-mail já está em uso.")
-            return render_template("signup.html")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
         username_base = normalize_username_from_name(name)
         username = username_base
         i = 2
@@ -4230,7 +4343,7 @@ def signup():
         save_data(data)
         flash("Conta criada. Faça login para continuar.")
         return redirect(url_for("login"))
-    return render_template("signup.html")
+    return render_template("signup.html", google_login_enabled=google_login_enabled())
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -4247,10 +4360,63 @@ def forgot_password():
             )
             save_data(data)
             reset_link = url_for("reset_password", token=token, _external=True)
-            print(f"[PASSWORD_RESET] {email}: {reset_link}")
+            sent, reason = send_password_reset_email(email, reset_link)
+            if not sent:
+                print(f"[PASSWORD_RESET] {email}: {reset_link}")
+                print(f"[PASSWORD_RESET_WARN] mail_not_sent reason={reason}")
         flash("Se o e-mail existir, enviamos um link de recuperação.")
         return redirect(url_for("login"))
     return render_template("forgot_password.html")
+
+
+@app.route("/auth/google/login")
+def google_auth_login():
+    if not google_login_enabled():
+        flash("Login com Google nÃ£o estÃ¡ disponÃ­vel no momento.")
+        return redirect(url_for("login"))
+    try:
+        flow = create_google_oauth_flow()
+        authorization_url, state = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="select_account",
+        )
+    except Exception as exc:
+        flash(f"NÃ£o foi possÃ­vel iniciar login com Google: {exc}")
+        return redirect(url_for("login"))
+    session["google_login_state"] = state
+    return redirect(authorization_url)
+
+
+@app.route("/auth/google/callback")
+def google_auth_callback():
+    expected_state = session.get("google_login_state")
+    if not expected_state:
+        flash("SessÃ£o de login com Google expirada. Tente novamente.")
+        return redirect(url_for("login"))
+    try:
+        flow = create_google_oauth_flow(state=expected_state)
+        flow.fetch_token(authorization_response=request.url)
+        session.pop("google_login_state", None)
+        credentials = flow.credentials
+        token = credentials.token
+        req = urllib.request.Request(
+            "https://openidconnect.googleapis.com/v1/userinfo",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            userinfo = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        flash(f"Falha no login com Google: {exc}")
+        return redirect(url_for("login"))
+    email = str(userinfo.get("email") or "").strip().lower()
+    name = str(userinfo.get("name") or "").strip()
+    email_verified = bool(userinfo.get("email_verified"))
+    if not email or not email_verified:
+        flash("Conta Google sem e-mail verificado.")
+        return redirect(url_for("login"))
+    upsert_google_user_and_login(email, name)
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])

@@ -25,6 +25,9 @@
         <input class="form-input" name="password_confirm" type="password" minlength="8" required>
       </div>
       <button class="btn btn-primary full login-submit" type="submit">Criar conta</button>
+      {% if google_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}" style="margin-top:10px;">Cadastrar com Google</a>
+      {% endif %}
     </form>
     <div class="stack-sm" style="margin-top:10px; text-align:center;">
       <a class="mini-link" href="{{ url_for('login') }}">Voltar para login</a>

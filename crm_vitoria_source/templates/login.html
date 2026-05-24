@@ -20,6 +20,9 @@
         <input class="form-input" name="password" type="password" placeholder="Digite sua senha" required>
       </div>
       <button class="btn btn-primary full login-submit" type="submit">Entrar</button>
+      {% if google_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}" style="margin-top:10px;">Continuar com Google</a>
+      {% endif %}
     </form>
     <div class="stack-sm login-links" style="margin-top:10px; text-align:center;">
       <a class="mini-link" href="{{ url_for('forgot_password') }}">Esqueci minha senha</a>
