@@ -27,7 +27,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate landing encoding and assets
+      - name: Validate landing UTF-8 and assets
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -35,10 +35,9 @@ jobs:
           import sys
 
           targets = [Path("web/index.html"), Path("web/vittoria-uardon-landing.html")]
-          missing = []
-          mojibake = []
           src_href = re.compile(r'(?:src|href)="([^"]+)"')
-          bad_tokens = ("Ã", "Â", "\ufffd", "ï¿½", "â€", "â€”")
+          missing = []
+          invalid_images = []
 
           for html in targets:
               try:
@@ -47,22 +46,25 @@ jobs:
                   print(f"Encoding inválido em {html}: {exc}")
                   sys.exit(1)
 
-              for i, line in enumerate(text.splitlines(), start=1):
-                  if any(tok in line for tok in bad_tokens):
-                      mojibake.append(f"{html}:{i}: {line.strip()[:180]}")
-
               for ref in src_href.findall(text):
                   if ref.startswith(("http://", "https://", "data:", "#", "mailto:", "tel:", "javascript:")):
                       continue
                   local = (html.parent / ref.split("?")[0]).resolve()
                   if not local.exists():
                       missing.append(f"{html}: {ref}")
-
-          if mojibake:
-              print("Mojibake detectado na landing:")
-              for item in mojibake:
-                  print(item)
-              sys.exit(1)
+                      continue
+                  if local.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}:
+                      raw = local.read_bytes()
+                      if local.suffix.lower() == ".svg":
+                          if b"<svg" not in raw[:600].lower():
+                              invalid_images.append(f"{local}: SVG inválido")
+                      else:
+                          is_jpeg = raw.startswith(b"\xff\xd8\xff")
+                          is_png = raw.startswith(b"\x89PNG\r\n\x1a\n")
+                          is_webp = len(raw) > 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
+                          is_gif = raw.startswith(b"GIF87a") or raw.startswith(b"GIF89a")
+                          if not (is_jpeg or is_png or is_webp or is_gif):
+                              invalid_images.append(f"{local}: assinatura inválida")
 
           if missing:
               print("Assets faltando na landing:")
@@ -70,7 +72,13 @@ jobs:
                   print(item)
               sys.exit(1)
 
-          print("OK: landing com UTF-8 e assets válidos.")
+          if invalid_images:
+              print("Imagens inválidas na landing:")
+              for item in invalid_images:
+                  print(item)
+              sys.exit(1)
+
+          print("OK: landing validada (UTF-8 + assets).")
           PY
 
       - name: Deploy to Cloudflare Pages
