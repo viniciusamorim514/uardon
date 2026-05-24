@@ -163,6 +163,8 @@ ROLE_PERMISSIONS = {
         "activities:view",
         "feedbacks:view",
         "feedbacks:manage",
+        "models:view",
+        "import:manage",
     },
     "comercial": {
         "dashboard:view",
@@ -176,6 +178,8 @@ ROLE_PERMISSIONS = {
         "tasks:manage",
         "feedbacks:view",
         "feedbacks:manage",
+        "models:view",
+        "import:manage",
     },
     "financeiro": {
         "dashboard:view",
@@ -188,6 +192,8 @@ ROLE_PERMISSIONS = {
         "clients:view",
         "feedbacks:view",
         "feedbacks:manage",
+        "models:view",
+        "import:manage",
     },
     "leitura": {
         "dashboard:view",
@@ -201,6 +207,7 @@ ROLE_PERMISSIONS = {
         "finance:view",
         "receivables:view",
         "feedbacks:view",
+        "models:view",
     },
 }
 
@@ -4432,6 +4439,7 @@ def admin_run_smoke_check():
 
 @app.route("/atividades")
 @login_required
+@permission_required("activities:view")
 def activities_page():
     data = load_data()
     filters = {
@@ -4443,6 +4451,7 @@ def activities_page():
 
 @app.route("/agenda")
 @login_required
+@permission_required("agenda:view")
 def agenda_page():
     data = load_data()
     agenda = build_agenda_board(data)
@@ -4466,6 +4475,7 @@ def agenda_page():
 
 @app.route("/agenda/novo", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def create_event():
     data = load_data()
     client = find_by_id(data["clientes"], request.form.get("cliente_id"))
@@ -4502,6 +4512,7 @@ def create_event():
 
 @app.route("/agenda/<int:event_id>/editar", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def edit_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4557,6 +4568,7 @@ def edit_event(event_id):
 
 @app.route("/agenda/<int:event_id>/acao", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def create_event_action(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4580,6 +4592,7 @@ def create_event_action(event_id):
 
 @app.route("/agenda/google/conectar")
 @login_required
+@permission_required("agenda:manage")
 def connect_google_calendar():
     try:
         flow = google_oauth_flow()
@@ -4597,6 +4610,7 @@ def connect_google_calendar():
 
 @app.route("/agenda/google/callback")
 @login_required
+@permission_required("agenda:manage")
 def google_calendar_callback():
     try:
         flow = google_oauth_flow()
@@ -4615,6 +4629,7 @@ def google_calendar_callback():
 
 @app.route("/agenda/<int:event_id>/google/sincronizar", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def sync_google_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4634,6 +4649,7 @@ def sync_google_event(event_id):
 
 @app.route("/agenda/<int:event_id>/vincular", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def link_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4650,6 +4666,7 @@ def link_event(event_id):
 
 @app.route("/agenda/<int:event_id>/confirmar-vinculo", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def confirm_event_link_suggestion(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4676,6 +4693,7 @@ def confirm_event_link_suggestion(event_id):
 
 @app.route("/agenda/google/importar", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def import_google_calendar():
     data = load_data()
     try:
@@ -4689,6 +4707,7 @@ def import_google_calendar():
 
 @app.route("/agenda/<int:event_id>/abrir")
 @login_required
+@permission_required("agenda:view")
 def open_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4701,6 +4720,7 @@ def open_event(event_id):
 
 @app.route("/agenda/<int:event_id>/concluir", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def complete_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4719,6 +4739,7 @@ def complete_event(event_id):
 
 @app.route("/agenda/<int:event_id>/reabrir", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def reopen_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
@@ -4732,6 +4753,7 @@ def reopen_event(event_id):
 
 @app.route("/agenda/<int:event_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("agenda:manage")
 def delete_event(event_id):
     data = load_data()
     data["eventos"] = [e for e in data["eventos"] if int(e.get("id", 0)) != event_id]
@@ -4742,6 +4764,7 @@ def delete_event(event_id):
 
 @app.route("/modelos")
 @login_required
+@permission_required("models:view")
 def models_page():
     message_models = [
         {
@@ -4802,6 +4825,7 @@ def models_page():
 
 @app.route("/clientes")
 @login_required
+@permission_required("clients:view")
 def clients():
     data = load_data()
     return render_template("clients.html", active="clientes", clients=enrich_clients(data), relationship=relationship_data(data))
@@ -4809,6 +4833,7 @@ def clients():
 
 @app.route("/clientes/novo", methods=["POST"])
 @login_required
+@permission_required("clients:manage")
 def create_client():
     data = load_data()
     client = {
@@ -4831,6 +4856,7 @@ def create_client():
 
 @app.route("/clientes/<int:client_id>")
 @login_required
+@permission_required("clients:view")
 def client_detail(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
@@ -4862,6 +4888,7 @@ def client_detail(client_id):
 
 @app.route("/clientes/<int:client_id>/atualizar", methods=["POST"])
 @login_required
+@permission_required("clients:manage")
 def update_client(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
@@ -4875,6 +4902,7 @@ def update_client(client_id):
 
 @app.route("/clientes/<int:client_id>/interacao", methods=["POST"])
 @login_required
+@permission_required("clients:manage")
 def register_client_interaction(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
@@ -4887,6 +4915,7 @@ def register_client_interaction(client_id):
 
 @app.route("/clientes/<int:client_id>/contato-rapido", methods=["POST"])
 @login_required
+@permission_required("clients:manage")
 def quick_client_contact(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
@@ -5013,6 +5042,7 @@ def project_detail(project_id):
 
 @app.route("/projetos/<int:project_id>/notas", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def update_notes(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5029,6 +5059,7 @@ def update_notes(project_id):
 @app.route("/projetos/<int:project_id>/etapas/<int:stage_index>", methods=["POST"])
 @app.route("/projetos/<int:project_id>/etapas/<int:index>", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def toggle_stage(project_id, stage_index=None, index=None):
     stage_index = stage_index if stage_index is not None else index
     data = load_data()
@@ -5044,6 +5075,7 @@ def toggle_stage(project_id, stage_index=None, index=None):
 
 @app.route("/tarefas")
 @login_required
+@permission_required("tasks:view")
 def tasks_page():
     data = load_data()
     if ensure_daily_automation_tasks(data):
@@ -5053,6 +5085,7 @@ def tasks_page():
 
 @app.route("/tarefas/nova", methods=["POST"])
 @login_required
+@permission_required("tasks:manage")
 def create_task():
     data = load_data()
     client = find_by_id(data["clientes"], request.form.get("cliente_id"))
@@ -5086,6 +5119,7 @@ def create_task():
 
 @app.route("/tarefas/<int:task_id>/concluir", methods=["POST"])
 @login_required
+@permission_required("tasks:manage")
 def complete_task(task_id):
     data = load_data()
     task = find_by_id(data["tarefas"], task_id)
@@ -5100,6 +5134,7 @@ def complete_task(task_id):
 
 @app.route("/tarefas/<int:task_id>/reabrir", methods=["POST"])
 @login_required
+@permission_required("tasks:manage")
 def reopen_task(task_id):
     data = load_data()
     task = find_by_id(data["tarefas"], task_id)
@@ -5125,6 +5160,7 @@ def reopen_task(task_id):
 
 @app.route("/tarefas/<int:task_id>/adiar/<int:days>", methods=["POST"])
 @login_required
+@permission_required("tasks:manage")
 def postpone_task(task_id, days):
     data = load_data()
     task = find_by_id(data["tarefas"], task_id)
@@ -5137,6 +5173,7 @@ def postpone_task(task_id, days):
 
 @app.route("/tarefas/<int:task_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("tasks:manage")
 def delete_task(task_id):
     data = load_data()
     data["tarefas"] = [t for t in data["tarefas"] if int(t.get("id", 0)) != task_id]
@@ -5406,6 +5443,7 @@ def mark_lead_future(lead_id):
 
 @app.route("/feedbacks")
 @login_required
+@permission_required("feedbacks:view")
 def feedbacks_page():
     data = load_data()
     return render_template("feedbacks.html", active="feedbacks", feedbacks=split_feedbacks(data), report=feedback_report(data["feedbacks"]))
@@ -5413,6 +5451,7 @@ def feedbacks_page():
 
 @app.route("/feedbacks/novo", methods=["POST"])
 @login_required
+@permission_required("feedbacks:manage")
 def create_feedback():
     data = load_data()
     data["feedbacks"].append({"id": next_id(data["feedbacks"]), "tipo": request.form.get("tipo") or "melhoria", "tela": request.form.get("tela") or "", "descricao": request.form.get("descricao") or "", "urgencia": request.form.get("urgencia") or "media", "status": "novo", "data": today_br(), "created_at": datetime.now().isoformat(timespec="seconds")})
@@ -5422,6 +5461,7 @@ def create_feedback():
 
 @app.route("/feedbacks/<int:feedback_id>/status", methods=["POST"])
 @login_required
+@permission_required("feedbacks:manage")
 def update_feedback_status(feedback_id):
     data = load_data()
     item = find_by_id(data["feedbacks"], feedback_id)
@@ -5435,6 +5475,7 @@ def update_feedback_status(feedback_id):
 
 @app.route("/feedbacks/<int:feedback_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("feedbacks:manage")
 def delete_feedback(feedback_id):
     data = load_data()
     data["feedbacks"] = [f for f in data["feedbacks"] if int(f.get("id", 0)) != feedback_id]
@@ -5444,6 +5485,7 @@ def delete_feedback(feedback_id):
 
 @app.route("/feedbacks/resolver-todos", methods=["POST"])
 @login_required
+@permission_required("feedbacks:manage")
 def resolve_all_feedbacks():
     data = load_data()
     for item in data["feedbacks"]:
@@ -5456,6 +5498,7 @@ def resolve_all_feedbacks():
 
 @app.route("/feedbacks/limpar-resolvidos", methods=["POST"])
 @login_required
+@permission_required("feedbacks:manage")
 def clear_resolved_feedbacks():
     data = load_data()
     data["feedbacks"] = [f for f in data["feedbacks"] if f.get("status") != "resolvido"]
@@ -5465,18 +5508,21 @@ def clear_resolved_feedbacks():
 
 @app.route("/importar/<kind>")
 @login_required
+@permission_required("import:manage")
 def import_csv_page(kind):
     return render_template("import_csv.html", active=kind, kind=kind, label="clientes" if kind == "clientes" else "leads", preview=None)
 
 
 @app.route("/importar/<kind>", methods=["POST"])
 @login_required
+@permission_required("import:manage")
 def confirm_import_csv(kind):
     return redirect(url_for("import_csv_page", kind=kind))
 
 
 @app.route("/importar/modelo/<kind>.csv")
 @login_required
+@permission_required("import:manage")
 def download_import_model(kind):
     headers = ["nome", "telefone", "e-mail", "profissão", "aniversário", "cidade", "origem", "observações"]
     if kind == "leads":
@@ -5487,6 +5533,7 @@ def download_import_model(kind):
 
 @app.route("/projetos/<int:project_id>/pagamentos/novo", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def add_project_payment(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5553,6 +5600,7 @@ def mark_payment_pending(project_id, payment_id):
 
 @app.route("/projetos/<int:project_id>/pagamentos/<int:payment_id>/lembrado", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def mark_payment_reminded(project_id, payment_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5577,6 +5625,7 @@ def mark_payment_reminded(project_id, payment_id):
 
 @app.route("/projetos/<int:project_id>/pagamentos/<int:payment_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def delete_payment(project_id, payment_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5701,6 +5750,7 @@ def create_receivable_payment():
 
 @app.route("/projetos/<int:project_id>/contrato", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def update_contract(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5739,6 +5789,7 @@ def update_contract(project_id):
 
 @app.route("/projetos/<int:project_id>/contrato/followup", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def contract_followup(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5762,18 +5813,21 @@ def contract_followup(project_id):
 
 @app.route("/projetos/<int:project_id>/arquivos/<path:filename>")
 @login_required
+@permission_required("projects:view")
 def serve_project_file(project_id, filename):
     return send_file(UPLOAD_DIR / f"projeto_{project_id}" / filename)
 
 
 @app.route("/projetos/<int:project_id>/contrato/arquivo/<path:filename>")
 @login_required
+@permission_required("projects:view")
 def serve_contract_file(project_id, filename):
     return send_file(UPLOAD_DIR / f"projeto_{project_id}" / filename)
 
 
 @app.route("/projetos/<int:project_id>/arquivos", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def upload_project_file(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5789,6 +5843,7 @@ def upload_project_file(project_id):
 
 @app.route("/projetos/<int:project_id>/arquivos/<int:file_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def delete_project_file(project_id, file_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)

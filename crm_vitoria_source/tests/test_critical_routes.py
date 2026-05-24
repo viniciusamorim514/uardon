@@ -74,6 +74,10 @@ class CriticalRoutesTest(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess["user"] = {"id": 1, "name": "Vitoria Uardon", "role": "admin"}
 
+    def _login_as(self, role):
+        with self.client.session_transaction() as sess:
+            sess["user"] = {"id": 2, "name": "Teste", "role": role}
+
     def test_public_lead_creation_creates_lead_and_task(self):
         payload = {
             "name": "Maria Silva",
@@ -165,13 +169,12 @@ class CriticalRoutesTest(unittest.TestCase):
         finally:
             self.crm.CRM_ENV = original_env
 
-    def test_core_templates_have_no_mojibake_tokens(self):
+    def test_all_templates_have_no_mojibake_tokens(self):
         templates_dir = Path(__file__).resolve().parents[1] / "templates"
         pattern = re.compile(r"(Ã.|Â.|\ufffd)")
-        targets = ["base.html", "dashboard.html", "leads.html", "goals.html"]
-        for name in targets:
-            content = (templates_dir / name).read_text(encoding="utf-8")
-            self.assertIsNone(pattern.search(content), f"Mojibake token found in template: {name}")
+        for template_path in templates_dir.rglob("*.html"):
+            content = template_path.read_text(encoding="utf-8")
+            self.assertIsNone(pattern.search(content), f"Mojibake token found in template: {template_path.name}")
 
     def test_dashboard_response_has_no_mojibake_tokens(self):
         self._login_session()
@@ -289,6 +292,34 @@ class CriticalRoutesTest(unittest.TestCase):
         payment = updated["projetos"][0]["pagamentos"][0]
         self.assertEqual(payment["status"], "Pago")
         self.assertTrue(payment["pago"])
+
+    def test_leitura_cannot_create_lead(self):
+        self._login_as("leitura")
+        response = self.client.post(
+            "/leads/novo",
+            data={"nome": "Lead Teste", "tel": "47999990000", "etapa": "Novo"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/", response.headers.get("Location", ""))
+        state = self._load_state()
+        self.assertEqual(len(state["leads"]), 0)
+
+    def test_comercial_cannot_edit_finance(self):
+        self._login_as("comercial")
+        response = self.client.post(
+            "/financeiro/despesas/novo",
+            data={
+                "descricao": "Teste bloqueio",
+                "categoria": "Software",
+                "valor": "10",
+                "vencimento": "2026-05-31",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        state = self._load_state()
+        self.assertEqual(len(state["despesas"]), 0)
 
 
 if __name__ == "__main__":
