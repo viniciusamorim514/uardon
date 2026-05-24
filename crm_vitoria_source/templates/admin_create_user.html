@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Novo Usuário - Uardon CRM{% endblock %}
+{% block page_title %}Usuários{% endblock %}
+{% block page_subtitle %}Criação de acesso por administrador{% endblock %}
+{% block content %}
+<section class="card">
+  <h3>Novo usuário</h3>
+  <p class="project-clean-sub">Cadastro público desativado. Somente admin cria novos acessos.</p>
+  <form method="post" class="stack-md" style="margin-top:16px; max-width:720px;">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input class="form-input" name="name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input class="form-input" name="email" type="email" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Perfil</label>
+        <select class="form-select" name="role" required>
+          {% for role in role_options %}
+          <option value="{{ role }}">{{ role }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha inicial</label>
+        <input class="form-input" name="password" type="password" minlength="8" required>
+      </div>
+    </div>
+    <div>
+      <button class="btn btn-primary" type="submit">Criar usuário</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

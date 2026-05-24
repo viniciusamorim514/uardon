@@ -62,6 +62,9 @@
       <span class="nav-section">Controle</span>
       <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
       {% endif %}
+      {% if is_admin_user %}
+      <a class="nav-item {% if active=='usuarios' %}active{% endif %}" href="{{ url_for('admin_create_user') }}"><span class="nav-icon">U</span> Usuários</a>
+      {% endif %}
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">{{ session['user']['name'][0] }}</div>

@@ -123,6 +123,7 @@ PUBLIC_LEAD_ALLOWED_ORIGINS = {
 LEAD_OWNER_DEFAULT = "Vitória Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
+PUBLIC_SIGNUP_ENABLED = (os.environ.get("CRM_PUBLIC_SIGNUP") or "0").strip().lower() in {"1", "true", "yes", "on"}
 
 # Calibracao operacional (ajustavel sem mexer na logica)
 LEAD_SCORE_WEIGHTS = {
@@ -4287,7 +4288,7 @@ def create_google_oauth_flow(state=None):
 def upsert_google_user_and_login(email, name):
     data = load_data()
     user = find_user_by_login(data, email)
-    if not user:
+    if not user and PUBLIC_SIGNUP_ENABLED:
         username_base = normalize_username_from_name(name or email.split("@")[0])
         username = username_base
         existing_usernames = {str(u.get("username", "")).strip().lower() for u in data.get("users", [])}
@@ -4305,11 +4306,14 @@ def upsert_google_user_and_login(email, name):
         }
         data.setdefault("users", []).append(user)
         save_data(data)
+    if not user:
+        return False
     session["user"] = {
         "id": user["id"],
         "name": user.get("name") or user.get("username"),
         "role": (user.get("role") or "operacao").lower(),
     }
+    return True
 
 
 @app.context_processor
@@ -4361,6 +4365,9 @@ def logout():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    if not PUBLIC_SIGNUP_ENABLED:
+        flash("Cadastro público desativado. Solicite acesso ao administrador.")
+        return redirect(url_for("login"))
     if request.method == "POST":
         data = load_data()
         name = (request.form.get("name") or "").strip()
@@ -4402,6 +4409,53 @@ def signup():
         flash("Conta criada. Faça login para continuar.")
         return redirect(url_for("login"))
     return render_template("signup.html", google_login_enabled=google_login_enabled())
+
+
+@app.route("/admin/usuarios/novo", methods=["GET", "POST"])
+@admin_required
+def admin_create_user():
+    role_options = [item for item in ROLE_PERMISSIONS.keys()]
+    if request.method == "POST":
+        data = load_data()
+        name = (request.form.get("name") or "").strip()
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+        role = (request.form.get("role") or "operacao").strip().lower()
+        if len(name) < 3:
+            flash("Informe um nome completo.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+        if "@" not in email or "." not in email.split("@")[-1]:
+            flash("Informe um e-mail válido.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+        if len(password) < 8:
+            flash("A senha precisa ter ao menos 8 caracteres.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+        if role not in ROLE_PERMISSIONS:
+            flash("Perfil inválido.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+        if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
+            flash("Esse e-mail já está em uso.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+        username_base = normalize_username_from_name(name)
+        username = username_base
+        i = 2
+        existing_usernames = {str(u.get("username", "")).strip().lower() for u in data.get("users", [])}
+        while username.lower() in existing_usernames:
+            username = f"{username_base}{i}"
+            i += 1
+        new_user = {
+            "id": next_id(data.get("users", [])),
+            "username": username,
+            "email": email,
+            "name": name,
+            "role": role,
+            "password": generate_password_hash(password),
+        }
+        data.setdefault("users", []).append(new_user)
+        save_data(data)
+        flash("Usuário criado com sucesso.")
+        return redirect(url_for("admin_create_user"))
+    return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -4473,7 +4527,9 @@ def google_auth_callback():
     if not email or not email_verified:
         flash("Conta Google sem e-mail verificado.")
         return redirect(url_for("login"))
-    upsert_google_user_and_login(email, name)
+    if not upsert_google_user_and_login(email, name):
+        flash("Sua conta ainda não foi autorizada. Solicite acesso ao administrador.")
+        return redirect(url_for("login"))
     return redirect(url_for("dashboard"))
 
 
