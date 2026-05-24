@@ -25,19 +25,43 @@
     </div>
     <nav class="sidebar-nav">
       <span class="nav-section">Principal</span>
-        <a class="nav-item {% if active=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">D</span> Dashboard</a>
-        <a class="nav-item {% if active=='metas' %}active{% endif %}" href="{{ url_for('goals_page') }}"><span class="nav-icon">M</span> Metas</a>
-        <a class="nav-item {% if active=='leads' %}active{% endif %}" href="{{ url_for('leads') }}"><span class="nav-icon">L</span> Leads <span class="nav-badge">{{ nav_counts.propostas }}</span></a>
+      {% if can_access('dashboard:view') %}
+      <a class="nav-item {% if active=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><span class="nav-icon">D</span> Dashboard</a>
+      {% endif %}
+      {% if can_access('metas:view') %}
+      <a class="nav-item {% if active=='metas' %}active{% endif %}" href="{{ url_for('goals_page') }}"><span class="nav-icon">M</span> Metas</a>
+      {% endif %}
+      {% if can_access('leads:view') %}
+      <a class="nav-item {% if active=='leads' %}active{% endif %}" href="{{ url_for('leads') }}"><span class="nav-icon">L</span> Leads <span class="nav-badge">{{ nav_counts.propostas }}</span></a>
+      {% endif %}
+
       <span class="nav-section">Gestão</span>
-        <a class="nav-item {% if active=='clientes' %}active{% endif %}" href="{{ url_for('clients') }}"><span class="nav-icon">C</span> Clientes <span class="nav-badge">{{ nav_counts.clientes }}</span></a>
-        <a class="nav-item {% if active=='projetos' %}active{% endif %}" href="{{ url_for('projects') }}"><span class="nav-icon">P</span> Projetos <span class="nav-badge">{{ nav_counts.projetos }}</span></a>
-        <a class="nav-item {% if active=='agenda' %}active{% endif %}" href="{{ url_for('agenda_page') }}"><span class="nav-icon">A</span> Agenda</a>
-        <a class="nav-item {% if active=='tarefas' %}active{% endif %}" href="{{ url_for('tasks_page') }}"><span class="nav-icon">T</span> Tarefas {% if open_tasks_count %}<span class="nav-badge">{{ open_tasks_count }}</span>{% endif %}</a>
-        <a class="nav-item {% if active=='atividades' %}active{% endif %}" href="{{ url_for('activities_page') }}"><span class="nav-icon">H</span> Atividades</a>
+      {% if can_access('clients:view') %}
+      <a class="nav-item {% if active=='clientes' %}active{% endif %}" href="{{ url_for('clients') }}"><span class="nav-icon">C</span> Clientes <span class="nav-badge">{{ nav_counts.clientes }}</span></a>
+      {% endif %}
+      {% if can_access('projects:view') %}
+      <a class="nav-item {% if active=='projetos' %}active{% endif %}" href="{{ url_for('projects') }}"><span class="nav-icon">P</span> Projetos <span class="nav-badge">{{ nav_counts.projetos }}</span></a>
+      {% endif %}
+      {% if can_access('agenda:view') %}
+      <a class="nav-item {% if active=='agenda' %}active{% endif %}" href="{{ url_for('agenda_page') }}"><span class="nav-icon">A</span> Agenda</a>
+      {% endif %}
+      {% if can_access('tasks:view') %}
+      <a class="nav-item {% if active=='tarefas' %}active{% endif %}" href="{{ url_for('tasks_page') }}"><span class="nav-icon">T</span> Tarefas {% if open_tasks_count %}<span class="nav-badge">{{ open_tasks_count }}</span>{% endif %}</a>
+      {% endif %}
+      {% if can_access('activities:view') %}
+      <a class="nav-item {% if active=='atividades' %}active{% endif %}" href="{{ url_for('activities_page') }}"><span class="nav-icon">H</span> Atividades</a>
+      {% endif %}
+      {% if can_access('finance:view') %}
       <a class="nav-item {% if active=='financeiro' %}active{% endif %}" href="{{ url_for('finance_page') }}"><span class="nav-icon">R$</span> Financeiro</a>
+      {% endif %}
+      {% if can_access('receivables:view') or can_access('finance:view') %}
       <a class="nav-item {% if active=='recebiveis' %}active{% endif %}" href="{{ url_for('receivables_page') }}"><span class="nav-icon">R$</span> Recebíveis</a>
+      {% endif %}
+
+      {% if can_access('feedbacks:view') %}
       <span class="nav-section">Controle</span>
-        <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
+      <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
+      {% endif %}
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar">{{ session['user']['name'][0] }}</div>
@@ -169,6 +193,3 @@
   </script>
 </body>
 </html>
-
-
-

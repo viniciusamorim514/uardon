@@ -28,6 +28,7 @@ from flask import (
     Response,
     flash,
     g,
+    has_request_context,
     redirect,
     render_template,
     request,
@@ -60,6 +61,7 @@ DEFAULT_DATA = {
             "email": "",
             "password": "123456",
             "name": "Vitória Uardon",
+            "role": "admin",
         }
     ],
     "config": {"nomeArquiteta": "Vitória Uardon", "estudio": "Studio Arq. & Int."},
@@ -141,6 +143,65 @@ WEEKLY_GOALS_TARGETS = {
     "financeiro_receive_on_time": 85,
     "financeiro_delinquency": 12,
     "financeiro_margin": 28,
+}
+
+ROLE_PERMISSIONS = {
+    "admin": {"*"},
+    "operacao": {
+        "dashboard:view",
+        "metas:view",
+        "leads:view",
+        "leads:manage",
+        "projects:view",
+        "projects:manage",
+        "tasks:view",
+        "tasks:manage",
+        "agenda:view",
+        "agenda:manage",
+        "clients:view",
+        "clients:manage",
+        "activities:view",
+        "feedbacks:view",
+        "feedbacks:manage",
+    },
+    "comercial": {
+        "dashboard:view",
+        "metas:view",
+        "leads:view",
+        "leads:manage",
+        "clients:view",
+        "clients:manage",
+        "agenda:view",
+        "tasks:view",
+        "tasks:manage",
+        "feedbacks:view",
+        "feedbacks:manage",
+    },
+    "financeiro": {
+        "dashboard:view",
+        "metas:view",
+        "finance:view",
+        "finance:manage",
+        "receivables:view",
+        "receivables:manage",
+        "projects:view",
+        "clients:view",
+        "feedbacks:view",
+        "feedbacks:manage",
+    },
+    "leitura": {
+        "dashboard:view",
+        "metas:view",
+        "leads:view",
+        "projects:view",
+        "clients:view",
+        "agenda:view",
+        "tasks:view",
+        "activities:view",
+        "finance:view",
+        "receivables:view",
+        "feedbacks:view",
+    },
 }
 
 
@@ -281,6 +342,7 @@ def load_data_from_file():
         data.setdefault(key, deepcopy(value))
     for user in data.get("users", []):
         user.setdefault("email", "")
+        user.setdefault("role", "operacao")
     data.setdefault("dismissed_notifications", [])
     return normalize_text_payload(data)
 
@@ -1012,35 +1074,47 @@ def apply_event_link(data, event, client=None, project=None):
     return event
 
 
-def add_history_entry(target, title, description, origin="sistema", source_key=""):
+def current_actor_snapshot():
+    if not has_request_context():
+        return {"ator_nome": "Sistema", "ator_perfil": "sistema"}
+    user = session.get("user") or {}
+    actor_name = (user.get("name") or "Sistema").strip() or "Sistema"
+    actor_role = str(user.get("role") or "sistema").strip().lower() or "sistema"
+    return {"ator_nome": actor_name, "ator_perfil": actor_role}
+
+
+def add_history_entry(target, title, description, origin="sistema", source_key="", actor=None):
     if not target:
         return False
     history = target.setdefault("historico", [])
     if source_key and any(item.get("source_key") == source_key for item in history):
         return False
-    history.append(
-        {
-            "data": today_br(),
-            "titulo": title,
-            "descricao": description,
-            "origem": origin,
-            "source_key": source_key,
-        }
-    )
+    entry = {
+        "data": today_br(),
+        "titulo": title,
+        "descricao": description,
+        "origem": origin,
+        "source_key": source_key,
+    }
+    if actor:
+        entry["ator_nome"] = actor.get("ator_nome", "Sistema")
+        entry["ator_perfil"] = actor.get("ator_perfil", "sistema")
+    history.append(entry)
     return True
 
 
 def register_operation_history(data, title, description, origin="sistema", source_key="", client=None, project=None, lead=None, update_client=True):
+    actor = current_actor_snapshot()
     if project:
-        add_history_entry(project, title, description, origin, source_key)
+        add_history_entry(project, title, description, origin, source_key, actor=actor)
         if not client:
             client = find_by_id(data.get("clientes", []), project.get("cliente_id"))
     if client:
-        add_history_entry(client, title, description, origin, source_key)
+        add_history_entry(client, title, description, origin, source_key, actor=actor)
         if update_client:
             client["ultima_interacao"] = today_br()
     if lead:
-        add_history_entry(lead, title, description, origin, source_key)
+        add_history_entry(lead, title, description, origin, source_key, actor=actor)
 
 
 def task_history_targets(data, task):
@@ -1212,9 +1286,37 @@ def login_required(fn):
     return wrapper
 
 
+def current_user_role():
+    user = session.get("user") or {}
+    role = str(user.get("role") or "").strip().lower()
+    return role or "operacao"
+
+
+def has_permission(permission):
+    role = current_user_role()
+    granted = ROLE_PERMISSIONS.get(role, set())
+    return "*" in granted or permission in granted
+
+
+def permission_required(*permissions):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if not session.get("user"):
+                return redirect(url_for("login"))
+            if not any(has_permission(item) for item in permissions):
+                flash("Acesso restrito para o seu perfil.")
+                return redirect(url_for("dashboard"))
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def is_admin_user():
     user = session.get("user") or {}
-    return user.get("id") == 1
+    return user.get("id") == 1 or current_user_role() == "admin"
 
 
 def admin_required(fn):
@@ -3984,6 +4086,8 @@ def inject_globals():
         "nav_counts": nav_counts(data),
         "open_tasks_count": open_tasks_count(data),
         "is_admin_user": is_admin_user(),
+        "user_role": current_user_role(),
+        "can_access": has_permission,
         "brand_studio": current_brand(data),
         "notifications_menu": notifications,
         "notifications_count": len(notifications),
@@ -4003,7 +4107,11 @@ def login():
         for user in data.get("users", []):
             valid_ids = [str(user.get("username", "")).lower(), str(user.get("email", "")).lower()]
             if login_value in valid_ids and password == str(user.get("password", "")):
-                session["user"] = {"id": user["id"], "name": user.get("name") or user.get("username")}
+                session["user"] = {
+                    "id": user["id"],
+                    "name": user.get("name") or user.get("username"),
+                    "role": (user.get("role") or "operacao").lower(),
+                }
                 return redirect(url_for("dashboard"))
         flash("Login inválido.")
     return render_template("login.html")
@@ -4235,6 +4343,7 @@ def public_create_lead():
 
 @app.route("/")
 @login_required
+@permission_required("dashboard:view")
 def dashboard():
     data = load_data()
     ensure_recent_smoke_check(data, reason="dashboard_auto")
@@ -4287,6 +4396,7 @@ def dashboard():
 
 @app.route("/metas")
 @login_required
+@permission_required("metas:view")
 def goals_page():
     data = load_data()
     goals = build_week_goals(data)
@@ -4789,6 +4899,7 @@ def quick_client_contact(client_id):
 
 @app.route("/projetos")
 @login_required
+@permission_required("projects:view")
 def projects():
     data = load_data()
     return render_template("projects.html", active="projetos", projects=[enrich_project(p) for p in data["projetos"]])
@@ -4796,6 +4907,7 @@ def projects():
 
 @app.route("/projetos/novo", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def create_project():
     data = load_data()
     client = find_by_id(data["clientes"], request.form.get("cliente_id"))
@@ -4822,6 +4934,7 @@ def create_project():
 
 @app.route("/clientes/<int:client_id>/projetos/novo", methods=["POST"])
 @login_required
+@permission_required("projects:manage")
 def create_project_for_client(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
@@ -4851,6 +4964,7 @@ def create_project_for_client(client_id):
 
 @app.route("/projetos/<int:project_id>")
 @login_required
+@permission_required("projects:view")
 def project_detail(project_id):
     data = load_data()
     if ensure_payment_ids(data):
@@ -5032,6 +5146,7 @@ def delete_task(task_id):
 
 @app.route("/leads")
 @login_required
+@permission_required("leads:view")
 def leads():
     data = load_data()
     if ensure_daily_automation_tasks(data):
@@ -5048,6 +5163,7 @@ def leads():
 
 @app.route("/leads/novo", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def create_lead():
     data = load_data()
     lead = {
@@ -5075,6 +5191,7 @@ def create_lead():
 
 @app.route("/leads/<int:lead_id>/contato", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def mark_lead_contacted(lead_id):
     data = load_data()
     lead = find_by_id(data["leads"], lead_id)
@@ -5097,6 +5214,7 @@ def mark_lead_contacted(lead_id):
 
 @app.route("/leads/<int:lead_id>/etapa/<stage>", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def update_lead_stage(lead_id, stage):
     stages = {
         "novo": ("Novo", "Orçamento recebido"),
@@ -5132,6 +5250,7 @@ def update_lead_stage(lead_id, stage):
 
 @app.route("/leads/<int:lead_id>/converter", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def convert_lead(lead_id):
     data = load_data()
     lead = find_by_id(data["leads"], lead_id)
@@ -5190,6 +5309,7 @@ def convert_lead(lead_id):
 
 @app.route("/leads/<int:lead_id>/reativar", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def reactivate_lead(lead_id):
     data = load_data()
     lead = find_by_id(data["leads"], lead_id)
@@ -5213,6 +5333,7 @@ def reactivate_lead(lead_id):
 
 @app.route("/leads/<int:lead_id>/perdido", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def mark_lead_lost(lead_id):
     data = load_data()
     lead = find_by_id(data["leads"], lead_id)
@@ -5248,6 +5369,7 @@ def mark_lead_lost(lead_id):
 
 @app.route("/leads/<int:lead_id>/futuro", methods=["POST"])
 @login_required
+@permission_required("leads:manage")
 def mark_lead_future(lead_id):
     data = load_data()
     lead = find_by_id(data["leads"], lead_id)
@@ -5377,6 +5499,7 @@ def add_project_payment(project_id):
 
 @app.route("/projetos/<int:project_id>/pagamentos/<int:payment_id>/pago", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def mark_payment_paid(project_id, payment_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5403,6 +5526,7 @@ def mark_payment_paid(project_id, payment_id):
 
 @app.route("/projetos/<int:project_id>/pagamentos/<int:payment_id>/pendente", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def mark_payment_pending(project_id, payment_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
@@ -5465,6 +5589,7 @@ def delete_payment(project_id, payment_id):
 
 @app.route("/recebiveis")
 @login_required
+@permission_required("receivables:view", "finance:view")
 def receivables_page():
     data = load_data()
     if ensure_payment_ids(data):
@@ -5480,6 +5605,7 @@ def receivables_page():
 
 @app.route("/financeiro")
 @login_required
+@permission_required("finance:view")
 def finance_page():
     data = load_data()
     if ensure_payment_ids(data):
@@ -5495,6 +5621,7 @@ def finance_page():
 
 @app.route("/financeiro/despesas/novo", methods=["POST"])
 @login_required
+@permission_required("finance:manage")
 def create_expense():
     data = load_data()
     expense = {
@@ -5518,6 +5645,7 @@ def create_expense():
 
 @app.route("/financeiro/despesas/<int:expense_id>/pago", methods=["POST"])
 @login_required
+@permission_required("finance:manage")
 def mark_expense_paid(expense_id):
     data = load_data()
     expense = find_by_id(data.get("despesas", []), expense_id)
@@ -5532,6 +5660,7 @@ def mark_expense_paid(expense_id):
 
 @app.route("/financeiro/despesas/<int:expense_id>/pendente", methods=["POST"])
 @login_required
+@permission_required("finance:manage")
 def mark_expense_pending(expense_id):
     data = load_data()
     expense = find_by_id(data.get("despesas", []), expense_id)
@@ -5546,6 +5675,7 @@ def mark_expense_pending(expense_id):
 
 @app.route("/financeiro/despesas/<int:expense_id>/excluir", methods=["POST"])
 @login_required
+@permission_required("finance:manage")
 def delete_expense(expense_id):
     data = load_data()
     data["despesas"] = [expense for expense in data.get("despesas", []) if int(expense.get("id", 0) or 0) != expense_id]
@@ -5556,6 +5686,7 @@ def delete_expense(expense_id):
 
 @app.route("/recebiveis/parcelas/novo", methods=["POST"])
 @login_required
+@permission_required("receivables:manage", "finance:manage")
 def create_receivable_payment():
     data = load_data()
     project = find_by_id(data["projetos"], request.form.get("project_id"))

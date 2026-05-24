@@ -19,6 +19,7 @@ BASE_DATA = {
             "email": "vit.cs99@gmail.com",
             "password": "123456",
             "name": "Vitoria Uardon",
+            "role": "admin",
         }
     ],
     "config": {"nomeArquiteta": "Vitoria Uardon", "estudio": "Studio Arq. & Int."},
@@ -71,7 +72,7 @@ class CriticalRoutesTest(unittest.TestCase):
 
     def _login_session(self):
         with self.client.session_transaction() as sess:
-            sess["user"] = {"id": 1, "name": "Vitoria Uardon"}
+            sess["user"] = {"id": 1, "name": "Vitoria Uardon", "role": "admin"}
 
     def test_public_lead_creation_creates_lead_and_task(self):
         payload = {
@@ -164,11 +165,21 @@ class CriticalRoutesTest(unittest.TestCase):
         finally:
             self.crm.CRM_ENV = original_env
 
-    def test_leads_template_has_no_mojibake_tokens(self):
-        template_path = Path(__file__).resolve().parents[1] / "templates" / "leads.html"
-        content = template_path.read_text(encoding="utf-8")
+    def test_core_templates_have_no_mojibake_tokens(self):
+        templates_dir = Path(__file__).resolve().parents[1] / "templates"
         pattern = re.compile(r"(Ã.|Â.|\ufffd)")
-        self.assertIsNone(pattern.search(content), "Mojibake token found in leads template")
+        targets = ["base.html", "dashboard.html", "leads.html", "goals.html"]
+        for name in targets:
+            content = (templates_dir / name).read_text(encoding="utf-8")
+            self.assertIsNone(pattern.search(content), f"Mojibake token found in template: {name}")
+
+    def test_dashboard_response_has_no_mojibake_tokens(self):
+        self._login_session()
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        pattern = re.compile(r"(Ã.|Â.|\ufffd)")
+        self.assertIsNone(pattern.search(body), "Mojibake token found in dashboard response")
 
     def test_build_technical_health_aggregates_audit_logs(self):
         sample = {
