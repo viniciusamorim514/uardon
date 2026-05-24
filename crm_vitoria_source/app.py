@@ -118,6 +118,31 @@ LEAD_OWNER_DEFAULT = "Vitória Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
 
+# Calibracao operacional (ajustavel sem mexer na logica)
+LEAD_SCORE_WEIGHTS = {
+    "stage_new": 38,
+    "stage_contacted": 30,
+    "stage_briefing": 22,
+    "stage_proposal": 28,
+    "origin_priority": 12,
+    "sla_overdue": 24,
+    "stale": 20,
+    "days_factor": 2.5,
+    "days_cap": 20,
+}
+
+WEEKLY_GOALS_TARGETS = {
+    "comercial_briefings": 5,
+    "comercial_proposals": 3,
+    "comercial_close_rate": 18,
+    "projetos_on_time": 82,
+    "projetos_rework": 2,
+    "projetos_hour_adherence": 80,
+    "financeiro_receive_on_time": 85,
+    "financeiro_delinquency": 12,
+    "financeiro_margin": 28,
+}
+
 
 def fix_mojibake_text(value):
     if not isinstance(value, str):
@@ -2784,24 +2809,24 @@ def lead_priority_score(lead):
     stage_key = lead_stage_key(lead)
     score = 0
     if stage_key == "new":
-        score += 45
+        score += LEAD_SCORE_WEIGHTS["stage_new"]
     elif stage_key == "contacted":
-        score += 35
+        score += LEAD_SCORE_WEIGHTS["stage_contacted"]
     elif stage_key == "briefing":
-        score += 25
+        score += LEAD_SCORE_WEIGHTS["stage_briefing"]
     elif stage_key == "proposal":
-        score += 30
+        score += LEAD_SCORE_WEIGHTS["stage_proposal"]
 
     if (lead.get("origem") or "").strip().lower() in ("landing page", "instagram"):
-        score += 10
+        score += LEAD_SCORE_WEIGHTS["origin_priority"]
     if lead_sla_minutes_without_action(lead) > LEAD_FIRST_CONTACT_SLA_MINUTES:
-        score += 20
+        score += LEAD_SCORE_WEIGHTS["sla_overdue"]
     if is_stale_lead(lead):
-        score += 20
+        score += LEAD_SCORE_WEIGHTS["stale"]
 
     days = lead_days_since_interaction(lead)
     if days is not None:
-        score += min(days * 3, 18)
+        score += min(days * LEAD_SCORE_WEIGHTS["days_factor"], LEAD_SCORE_WEIGHTS["days_cap"])
     return min(score, 100)
 
 
@@ -2913,10 +2938,10 @@ def goal_metric(name, current, target, mode="max", unit="", note=""):
             progress = 100.0 if current <= target else max(0.0, 100.0 - ((current - target) / target) * 100.0)
     else:
         progress = 0.0 if target <= 0 else min(140.0, (current / target) * 100.0)
-    if progress >= 95:
+    if progress >= 90:
         status = "no ritmo"
         tone = "good"
-    elif progress >= 70:
+    elif progress >= 65:
         status = "atencao"
         tone = "watch"
     else:
@@ -2995,27 +3020,27 @@ def build_week_goals(data):
                 "key": "comercial",
                 "title": "Comercial",
                 "metrics": [
-                    goal_metric("Briefings agendados", briefing_count, 6, "max", "qtd", "Leads que avancaram para conversa estruturada."),
-                    goal_metric("Propostas enviadas", proposal_count, 4, "max", "qtd", "Leads com proposta em andamento na semana."),
-                    goal_metric("Taxa de fechamento", close_rate, 20, "max", "%", "Fechamento semanal sobre leads novos da semana."),
+                    goal_metric("Briefings agendados", briefing_count, WEEKLY_GOALS_TARGETS["comercial_briefings"], "max", "qtd", "Leads que avancaram para conversa estruturada."),
+                    goal_metric("Propostas enviadas", proposal_count, WEEKLY_GOALS_TARGETS["comercial_proposals"], "max", "qtd", "Leads com proposta em andamento na semana."),
+                    goal_metric("Taxa de fechamento", close_rate, WEEKLY_GOALS_TARGETS["comercial_close_rate"], "max", "%", "Fechamento semanal sobre leads novos da semana."),
                 ],
             },
             {
                 "key": "projetos",
                 "title": "Projetos",
                 "metrics": [
-                    goal_metric("Etapas no prazo", stage_on_time_rate, 80, "max", "%", "Percentual de etapas concluidas no fluxo ativo."),
-                    goal_metric("Retrabalho", rework_count, 2, "min", "qtd", "Quantidade de tarefas com retrabalho na semana."),
-                    goal_metric("Horas previstas x realizadas", hour_adherence, 85, "max", "%", "Aderencia baseada em tarefas planejadas e concluidas na semana."),
+                    goal_metric("Etapas no prazo", stage_on_time_rate, WEEKLY_GOALS_TARGETS["projetos_on_time"], "max", "%", "Percentual de etapas concluidas no fluxo ativo."),
+                    goal_metric("Retrabalho", rework_count, WEEKLY_GOALS_TARGETS["projetos_rework"], "min", "qtd", "Quantidade de tarefas com retrabalho na semana."),
+                    goal_metric("Horas previstas x realizadas", hour_adherence, WEEKLY_GOALS_TARGETS["projetos_hour_adherence"], "max", "%", "Aderencia baseada em tarefas planejadas e concluidas na semana."),
                 ],
             },
             {
                 "key": "financeiro",
                 "title": "Financeiro",
                 "metrics": [
-                    goal_metric("Recebimento no prazo", receive_on_time_rate, 80, "max", "%", "Parcelas pagas no prazo dentro do mes atual."),
-                    goal_metric("Inadimplencia", delinquency_rate, 15, "min", "%", "Percentual de valor atrasado sobre o total previsto do mes."),
-                    goal_metric("Margem do mes", margin_rate, 30, "max", "%", "Recebido pago menos despesas pagas no mes."),
+                    goal_metric("Recebimento no prazo", receive_on_time_rate, WEEKLY_GOALS_TARGETS["financeiro_receive_on_time"], "max", "%", "Parcelas pagas no prazo dentro do mes atual."),
+                    goal_metric("Inadimplencia", delinquency_rate, WEEKLY_GOALS_TARGETS["financeiro_delinquency"], "min", "%", "Percentual de valor atrasado sobre o total previsto do mes."),
+                    goal_metric("Margem do mes", margin_rate, WEEKLY_GOALS_TARGETS["financeiro_margin"], "max", "%", "Recebido pago menos despesas pagas no mes."),
                 ],
             },
         ],
