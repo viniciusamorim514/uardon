@@ -7,6 +7,7 @@ on:
     paths:
       - "web/**"
       - ".github/workflows/deploy-landing.yml"
+      - "LANDING_RELEASE_CHECKLIST.md"
   workflow_dispatch:
 
 concurrency:
@@ -27,10 +28,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate landing UTF-8 and assets
+      - name: Validate landing UTF-8, assets, and lock file
         run: |
           python - <<'PY'
           from pathlib import Path
+          import hashlib
+          import json
           import re
           import sys
 
@@ -38,18 +41,35 @@ jobs:
           src_href = re.compile(r'(?:src|href)="([^"]+)"')
           missing = []
           invalid_images = []
+          hash_mismatch = []
+          missing_required_refs = []
+          resolved_refs = set()
+
+          required_refs = [
+              "assets/generated/asset-002-bea613bdb145.png",
+              "assets/generated/hero-vitoria-sala-jantar.jpeg",
+              "assets/generated/asset-004-vitoria.jpg",
+              "assets/generated/asset-005-vitoria.jpg",
+              "assets/generated/asset-006-vitoria.jpg",
+              "assets/generated/asset-007-vitoria.jpg",
+              "assets/generated/asset-008-vitoria.jpg",
+              "assets/generated/asset-009-vitoria.jpg",
+              "assets/generated/asset-010-vitoria.jpg",
+          ]
 
           for html in targets:
               try:
                   text = html.read_text(encoding="utf-8")
               except UnicodeDecodeError as exc:
-                  print(f"Encoding inválido em {html}: {exc}")
+                  print(f"Invalid UTF-8 in {html}: {exc}")
                   sys.exit(1)
 
               for ref in src_href.findall(text):
                   if ref.startswith(("http://", "https://", "data:", "#", "mailto:", "tel:", "javascript:")):
                       continue
-                  local = (html.parent / ref.split("?")[0]).resolve()
+                  clean_ref = ref.split("?")[0]
+                  resolved_refs.add(clean_ref.replace("\\", "/"))
+                  local = (html.parent / clean_ref).resolve()
                   if not local.exists():
                       missing.append(f"{html}: {ref}")
                       continue
@@ -57,28 +77,62 @@ jobs:
                       raw = local.read_bytes()
                       if local.suffix.lower() == ".svg":
                           if b"<svg" not in raw[:600].lower():
-                              invalid_images.append(f"{local}: SVG inválido")
+                              invalid_images.append(f"{local}: invalid SVG signature")
                       else:
                           is_jpeg = raw.startswith(b"\xff\xd8\xff")
                           is_png = raw.startswith(b"\x89PNG\r\n\x1a\n")
                           is_webp = len(raw) > 12 and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
                           is_gif = raw.startswith(b"GIF87a") or raw.startswith(b"GIF89a")
                           if not (is_jpeg or is_png or is_webp or is_gif):
-                              invalid_images.append(f"{local}: assinatura inválida")
+                              invalid_images.append(f"{local}: invalid binary signature")
+
+          for req in required_refs:
+              if req not in resolved_refs:
+                  missing_required_refs.append(req)
+
+          lock_path = Path("web/assets/official-assets-lock.json")
+          try:
+              lock_data = json.loads(lock_path.read_text(encoding="utf-8"))
+          except Exception as exc:
+              print(f"Cannot read lock file {lock_path}: {exc}")
+              sys.exit(1)
+
+          for rel_path, expected_hash in lock_data.get("files", {}).items():
+              fpath = Path(rel_path)
+              if not fpath.exists():
+                  hash_mismatch.append(f"{rel_path}: missing file")
+                  continue
+              current_hash = hashlib.sha256(fpath.read_bytes()).hexdigest().lower()
+              if current_hash != str(expected_hash).lower():
+                  hash_mismatch.append(
+                      f"{rel_path}: hash mismatch (current={current_hash}, expected={expected_hash})"
+                  )
 
           if missing:
-              print("Assets faltando na landing:")
+              print("Missing local asset references:")
               for item in missing:
                   print(item)
               sys.exit(1)
 
           if invalid_images:
-              print("Imagens inválidas na landing:")
+              print("Invalid image files:")
               for item in invalid_images:
                   print(item)
               sys.exit(1)
 
-          print("OK: landing validada (UTF-8 + assets).")
+          if missing_required_refs:
+              print("Missing required visual references:")
+              for item in missing_required_refs:
+                  print(item)
+              sys.exit(1)
+
+          if hash_mismatch:
+              print("Official asset lock mismatch:")
+              for item in hash_mismatch:
+                  print(item)
+              sys.exit(1)
+
+          print("OK: landing checks passed (UTF-8 + refs + signatures + lock).")
           PY
 
       - name: Deploy to Cloudflare Pages

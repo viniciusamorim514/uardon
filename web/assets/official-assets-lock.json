@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "description": "Locked hashes for official landing assets. Update only with explicit visual approval.",
+  "files": {
+    "web/assets/generated/asset-001-7cd039fdf24b.svg": "894ec66c8f2de9fadb583a989b8129cd9466ff1b728583928b8b411cb0e7eb41",
+    "web/assets/generated/asset-002-bea613bdb145.png": "7fba9907aa999d6ee4070ff527751d2085e2650ab9c4dfe3c152d69537c0a061",
+    "web/assets/generated/asset-003-9d8ec7ed1e84.svg": "d5b6577a1682f78942541aef11e1ed7526613e0bd1ffd5ddb654b2df86bb9d70",
+    "web/assets/generated/hero-vitoria-sala-jantar.jpeg": "b37d6e72b099fe57be32e4e944d27318d10dc55f52c7dd611cf24b4acc5ce893",
+    "web/assets/generated/asset-004-vitoria.jpg": "6f672aba975f174c653a50d8298a24e1f318806504e45ee240250e06c903bdd6",
+    "web/assets/generated/asset-005-vitoria.jpg": "fd66511205de998a6db91aa7a11b2061ac0d7b8dca9fdc29d5e8138e95ca9e96",
+    "web/assets/generated/asset-006-vitoria.jpg": "ab2eaf06c810f2674c56bb019036a36912693249b063fe85c4f32af3883a359b",
+    "web/assets/generated/asset-007-vitoria.jpg": "169eb30cb956b30d426ff7dfd8a78e583b31b464662de55c376668bd7b067431",
+    "web/assets/generated/asset-008-vitoria.jpg": "8e201930cb5bcbaf899c58fdbc7538e20bf0cbdda2c48d0f0a4e2e17f6a1d1f7",
+    "web/assets/generated/asset-009-vitoria.jpg": "2d61e5e57ef13591aa2d988e14753f9061952397c8d7ece127dd2f00d7183c6f",
+    "web/assets/generated/asset-010-vitoria.jpg": "c0a7ad6546cd0cd91020f24a08249ce6849daf25aec9033703f8ace9372539cf"
+  }
+}
