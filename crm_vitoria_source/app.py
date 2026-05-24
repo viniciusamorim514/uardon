@@ -4191,6 +4191,7 @@ def send_password_reset_email_resend(recipient_email, reset_link):
             "Authorization": f"Bearer {settings['api_key']}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "UardonCRM/1.0 (+https://app.uardon.com.br)",
         },
     )
     try:
