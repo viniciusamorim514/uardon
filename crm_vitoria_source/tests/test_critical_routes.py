@@ -184,6 +184,11 @@ class CriticalRoutesTest(unittest.TestCase):
         pattern = re.compile(r"(Ã.|Â.|\ufffd)")
         self.assertIsNone(pattern.search(body), "Mojibake token found in dashboard response")
 
+    def test_fix_mojibake_text_normalizes_common_broken_tokens(self):
+        self.assertEqual(self.crm.fix_mojibake_text("Ol, Maria! Tudo bem por a?"), "Olá, Maria! Tudo bem por aí?")
+        self.assertEqual(self.crm.fix_mojibake_text("vocę e duas opçőes"), "você e duas opções")
+        self.assertEqual(self.crm.fix_mojibake_text("Fico ŕ disposiçăo"), "Fico à disposição")
+
     def test_build_technical_health_aggregates_audit_logs(self):
         sample = {
             "audit_logs": [

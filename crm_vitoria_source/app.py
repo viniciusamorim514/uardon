@@ -215,13 +215,32 @@ ROLE_PERMISSIONS = {
 def fix_mojibake_text(value):
     if not isinstance(value, str):
         return value
-    if "" not in value and "" not in value and "" not in value:
-        return value
-    try:
-        fixed = value.encode("latin-1").decode("utf-8")
-        return fixed if fixed else value
-    except Exception:
-        return value
+    suspicious_tokens = ("Ã", "Â", "â", "ï¿½", "\ufffd", "ę", "ő", "ŕ", "çăo")
+    fixed = value
+    if any(token in value for token in suspicious_tokens):
+        try:
+            decoded = value.encode("latin-1").decode("utf-8")
+            if decoded:
+                fixed = decoded
+        except Exception:
+            fixed = value
+
+    corrections = {
+        "vocę": "você",
+        "opçőes": "opções",
+        "disposiçăo": "disposição",
+        "ŕ ": "à ",
+        "oramento": "orçamento",
+        "prximos": "próximos",
+        "segurana": "segurança",
+        "dvida": "dúvida",
+        "por a?": "por aí?",
+    }
+    for bad, good in corrections.items():
+        fixed = fixed.replace(bad, good)
+    if fixed.startswith("Ol, "):
+        fixed = "Olá, " + fixed[4:]
+    return fixed
 
 
 def normalize_text_payload(value):
@@ -2696,14 +2715,14 @@ def build_lead_whatsapp_message(lead):
     first = str(lead.get("nome") or "").split(" ")[0] or "tudo bem"
     stage_key = lead_stage_key(lead)
     if stage_key == "new":
-        return f"Ol, {first}! Recebi seu pedido de oramento e vou te chamar para entender melhor seu projeto."
+        return f"Olá, {first}! Recebi seu pedido de orçamento e vou te chamar para entender melhor seu projeto."
     if stage_key == "contacted":
-        return f"Ol, {first}! Passando para alinhar os prximos passos do seu projeto."
+        return f"Olá, {first}! Passando para alinhar os próximos passos do seu projeto."
     if stage_key == "briefing":
-        return f"Ol, {first}! Vamos confirmar os pontos do briefing para avanarmos com segurana."
+        return f"Olá, {first}! Vamos confirmar os pontos do briefing para avançarmos com segurança."
     if stage_key == "proposal":
-        return f"Ol, {first}! Queria te ajudar com qualquer dvida para avanarmos com a proposta."
-    return f"Ol, {first}! Tudo bem por a?"
+        return f"Olá, {first}! Queria te ajudar com qualquer dúvida para avançarmos com a proposta."
+    return f"Olá, {first}! Tudo bem por aí?"
 
 
 def build_lead_ai_insight(lead):
