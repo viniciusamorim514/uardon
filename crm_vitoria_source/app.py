@@ -130,6 +130,9 @@ PASSWORD_RESET_TOKEN_TTL_MINUTES = int((os.environ.get("PASSWORD_RESET_TOKEN_TTL
 PASSWORD_RESET_DAILY_LIMIT = int((os.environ.get("PASSWORD_RESET_DAILY_LIMIT") or "8").strip() or "8")
 AUTH_LOGIN_WINDOW_SECONDS = int((os.environ.get("AUTH_LOGIN_WINDOW_SECONDS") or "900").strip() or "900")
 AUTH_LOGIN_BASE_MAX_ATTEMPTS = int((os.environ.get("AUTH_LOGIN_BASE_MAX_ATTEMPTS") or "5").strip() or "5")
+PASSWORD_MAX_AGE_DAYS = int((os.environ.get("PASSWORD_MAX_AGE_DAYS") or "90").strip() or "90")
+ALERT_EMAIL_TO = (os.environ.get("AUTH_ALERT_EMAIL_TO") or "").strip().lower()
+ALERT_WHATSAPP_TO = (os.environ.get("AUTH_ALERT_WHATSAPP_TO") or "").strip()
 
 # Calibracao operacional (ajustavel sem mexer na logica)
 LEAD_SCORE_WEIGHTS = {
@@ -430,6 +433,7 @@ def load_data_from_file():
         user.setdefault("email", "")
         user["role"] = canonical_role_name(user.get("role"))
         user.setdefault("active", True)
+        user.setdefault("password_changed_at", "")
     data.setdefault("dismissed_notifications", [])
     return normalize_text_payload(data)
 
@@ -453,6 +457,7 @@ def load_data():
         user.setdefault("email", "")
         user["role"] = canonical_role_name(user.get("role"))
         user.setdefault("active", True)
+        user.setdefault("password_changed_at", "")
     data.setdefault("auth_audit_logs", [])
     data.setdefault("dismissed_notifications", [])
     return normalize_text_payload(data)
@@ -696,6 +701,76 @@ def append_auth_audit_log(data, event, status="ok", code="", email="", details=N
     logs = data.setdefault("auth_audit_logs", [])
     logs.append(entry)
     del logs[:-1000]
+    maybe_emit_auth_incident_alert(data, entry)
+
+
+def maybe_emit_auth_incident_alert(data, entry):
+    code = str(entry.get("code") or "")
+    status = str(entry.get("status") or "")
+    severe = status == "failed" or code in {"provider_error", "lock_active"}
+    if not severe:
+        return
+    state = data.setdefault("auth_alert_state", {})
+    key = f"{code}:{entry.get('email') or entry.get('ip')}"
+    now = datetime.now()
+    last_raw = str(state.get(key) or "").strip()
+    if last_raw:
+        try:
+            last = datetime.fromisoformat(last_raw)
+            if (now - last).total_seconds() < 1800:
+                return
+        except ValueError:
+            pass
+    state[key] = now.isoformat(timespec="seconds")
+    subject = f"Uardon CRM | Alerta de autenticacao ({code})"
+    body = (
+        "Alerta de autenticacao detectado.\n\n"
+        f"Evento: {entry.get('event')}\n"
+        f"Status: {entry.get('status')}\n"
+        f"Codigo: {entry.get('code')}\n"
+        f"Email: {entry.get('email')}\n"
+        f"IP: {entry.get('ip')}\n"
+        f"Horario: {entry.get('created_at')}\n"
+    )
+    if ALERT_EMAIL_TO:
+        send_text_email(ALERT_EMAIL_TO, subject, body, flow_tag="auth_alert")
+    wa_digits = normalize_brazil_phone(ALERT_WHATSAPP_TO)
+    if wa_digits:
+        print(f"[AUTH_ALERT_WHATSAPP] {whatsapp_link(wa_digits, body[:400])}")
+
+
+def request_admin_two_step_approval(data, action_key, action_label):
+    approvals = session.setdefault("admin_approvals", {})
+    now = datetime.now()
+    pending = approvals.get(action_key) or {}
+    pending_raw = str(pending.get("expires_at") or "").strip()
+    if pending_raw:
+        try:
+            pending_exp = datetime.fromisoformat(pending_raw)
+        except ValueError:
+            pending_exp = now - timedelta(seconds=1)
+    else:
+        pending_exp = now - timedelta(seconds=1)
+    typed_code = (request.form.get("approval_code") or "").strip()
+    if pending and pending_exp > now and typed_code and typed_code == str(pending.get("code") or ""):
+        approvals.pop(action_key, None)
+        session["admin_approvals"] = approvals
+        return True
+    code = str(uuid.uuid4().hex[:6]).upper()
+    expires_at = (now + timedelta(minutes=5)).isoformat(timespec="seconds")
+    approvals[action_key] = {"code": code, "expires_at": expires_at, "label": action_label}
+    session["admin_approvals"] = approvals
+    admin_email = str((session.get("user") or {}).get("email") or "").strip().lower()
+    if admin_email:
+        subject = f"Uardon CRM | Codigo de aprovacao ({action_label})"
+        body = f"Codigo: {code}\nValidade: 5 minutos.\nAcao: {action_label}\n"
+        send_text_email(admin_email, subject, body, flow_tag="admin_approval")
+        flash("Codigo de aprovacao enviado ao email do admin. Digite o codigo para confirmar.", "warning")
+    else:
+        flash("Defina email no usuario admin para habilitar aprovacao em duas etapas.", "error")
+    append_auth_audit_log(data, "admin_approval_requested", "ok", code="approval_challenge", email=admin_email, details={"action_key": action_key, "action_label": action_label})
+    save_data(data)
+    return False
 
 
 def recent_auth_events_for_email(data, email, event_name, seconds_window):
@@ -4287,6 +4362,33 @@ def password_matches(user, raw_password):
 
 def set_user_password(user, raw_password):
     user["password"] = generate_password_hash(raw_password)
+    user["password_changed_at"] = datetime.now().isoformat(timespec="seconds")
+
+
+def validate_password_policy(raw_password):
+    password = str(raw_password or "")
+    if len(password) < 10:
+        return False, "A senha precisa ter no minimo 10 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return False, "A senha precisa ter pelo menos uma letra maiuscula."
+    if not re.search(r"[a-z]", password):
+        return False, "A senha precisa ter pelo menos uma letra minuscula."
+    if not re.search(r"[0-9]", password):
+        return False, "A senha precisa ter pelo menos um numero."
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False, "A senha precisa ter pelo menos um simbolo."
+    return True, ""
+
+
+def is_password_rotation_expired(user):
+    raw = str(user.get("password_changed_at") or "").strip()
+    if not raw:
+        return True
+    try:
+        changed = datetime.fromisoformat(raw)
+    except ValueError:
+        return True
+    return (datetime.now() - changed).days >= PASSWORD_MAX_AGE_DAYS
 
 
 def find_user_by_login(data, login_value):
@@ -4326,6 +4428,56 @@ def resend_settings():
     if not api_key or not sender:
         return None
     return {"api_key": api_key, "sender": sender, "audience": audience}
+
+
+def send_text_email(recipient_email, subject, text_body, flow_tag="general"):
+    settings = resend_settings()
+    if settings:
+        payload = {
+            "from": settings["sender"],
+            "to": [recipient_email],
+            "subject": subject,
+            "text": text_body,
+            "tags": [{"name": "app", "value": settings["audience"]}, {"name": "flow", "value": flow_tag}],
+        }
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=body,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {settings['api_key']}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "UardonCRM/1.0 (+https://app.uardon.com.br)",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=20) as response:
+                status = int(getattr(response, "status", 0) or 0)
+                if 200 <= status < 300:
+                    return True, "sent_resend"
+                return False, f"resend_http_{status}"
+        except Exception:
+            pass
+    smtp = smtp_settings()
+    if not smtp:
+        return False, "no_provider_configured"
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = smtp["sender"]
+    msg["To"] = recipient_email
+    msg.set_content(text_body)
+    try:
+        with smtplib.SMTP(smtp["host"], smtp["port"], timeout=20) as client:
+            if smtp["use_tls"]:
+                client.starttls()
+            if smtp["user"] and smtp["password"]:
+                client.login(smtp["user"], smtp["password"])
+            client.send_message(msg)
+        return True, "sent_smtp"
+    except Exception:
+        return False, "smtp_send_failed"
 
 
 def send_password_reset_email_resend(recipient_email, reset_link):
@@ -4536,6 +4688,11 @@ def login():
             if not is_password_hash_value(user.get("password")):
                 set_user_password(user, password)
                 save_data(data)
+            if is_password_rotation_expired(user):
+                append_auth_audit_log(data, "login", "blocked", code="password_rotation_due", email=user.get("email") or login_value)
+                save_data(data)
+                flash("Sua senha expirou por politica de seguranca. Use 'Esqueci minha senha'.", "warning")
+                return render_template("login.html", google_login_enabled=google_login_enabled())
             session["user"] = {
                 "id": user["id"],
                 "name": user.get("name") or user.get("username"),
@@ -4580,6 +4737,10 @@ def signup():
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
+            return render_template("signup.html", google_login_enabled=google_login_enabled())
+        password_ok, password_reason = validate_password_policy(password)
+        if not password_ok:
+            flash(password_reason, "warning")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if password != password_confirm:
             flash("A confirmação de senha não confere.")
@@ -4627,6 +4788,10 @@ def admin_create_user():
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
+        password_ok, password_reason = validate_password_policy(password)
+        if not password_ok:
+            flash(password_reason, "warning")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if role not in ROLE_PERMISSIONS:
             flash("Perfil inválido.")
@@ -4741,6 +4906,8 @@ def admin_users():
 @admin_required
 def admin_user_toggle_status(user_id):
     data = load_data()
+    if not request_admin_two_step_approval(data, f"user_status:{user_id}", "Alterar status de usuario"):
+        return redirect(url_for("admin_users"))
     target = find_by_id(data.get("users", []), user_id)
     if not target:
         flash("Usuario nao encontrado.", "error")
@@ -4767,6 +4934,8 @@ def admin_user_toggle_status(user_id):
 @admin_required
 def admin_user_change_role(user_id):
     data = load_data()
+    if not request_admin_two_step_approval(data, f"user_role:{user_id}", "Alterar perfil de usuario"):
+        return redirect(url_for("admin_users"))
     target = find_by_id(data.get("users", []), user_id)
     if not target:
         flash("Usuario nao encontrado.", "error")
@@ -4795,6 +4964,8 @@ def admin_user_change_role(user_id):
 @admin_required
 def admin_user_reset_password(user_id):
     data = load_data()
+    if not request_admin_two_step_approval(data, f"user_reset:{user_id}", "Enviar reset de senha admin"):
+        return redirect(url_for("admin_users"))
     target = find_by_id(data.get("users", []), user_id)
     if not target:
         flash("Usuario nao encontrado.", "error")
@@ -4923,6 +5094,10 @@ def reset_password(token):
         password_confirm = request.form.get("password_confirm") or ""
         if len(password) < 8:
             flash("A nova senha precisa ter ao menos 8 caracteres.")
+            return render_template("reset_password.html", token=token)
+        password_ok, password_reason = validate_password_policy(password)
+        if not password_ok:
+            flash(password_reason, "warning")
             return render_template("reset_password.html", token=token)
         if password != password_confirm:
             flash("A confirmação de senha não confere.")

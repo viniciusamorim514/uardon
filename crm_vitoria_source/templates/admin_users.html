@@ -33,9 +33,11 @@
       </div>
       <div class="lead-actions-inline">
         <form method="post" action="{{ url_for('admin_user_toggle_status', user_id=user.id) }}">
+          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-ghost tiny-btn" type="submit">{{ 'Desativar' if user.active else 'Ativar' }}</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_change_role', user_id=user.id) }}" style="display:flex; gap:6px;">
+          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px;">
           <select class="form-select" name="role" style="min-width:170px;">
             {% for role in role_options %}
             <option value="{{ role }}" {% if role==user.role %}selected{% endif %}>{{ role_labels.get(role, role) }}</option>
@@ -44,6 +46,7 @@
           <button class="btn btn-ghost tiny-btn" type="submit">Salvar</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_reset_password', user_id=user.id) }}">
+          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-primary tiny-btn" type="submit">Enviar reset</button>
         </form>
       </div>
