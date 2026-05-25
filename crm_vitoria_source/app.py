@@ -167,9 +167,9 @@ ROLE_ALIASES = {
 }
 
 ROLE_LABELS = {
-    "admin": "Arquiteta responsÃ¡vel (admin)",
+    "admin": "Arquiteta responsável (admin)",
     "arquiteta": "Arquiteta de projetos/interiores",
-    "assistente": "Assistente/estagiÃ¡ria",
+    "assistente": "Assistente/estagiária",
     "comercial": "Comercial",
     "financeiro": "Financeiro",
     "parceiro": "Parceiro externo (limitado)",
@@ -5083,6 +5083,48 @@ def admin_user_reset_password(user_id):
     return redirect(url_for("admin_users"))
 
 
+@app.route("/admin/usuarios/<int:user_id>/excluir", methods=["POST"])
+@login_required
+@admin_required
+def admin_user_delete(user_id):
+    data = load_data()
+    if not request_admin_two_step_approval(data, f"user_delete:{user_id}", "Excluir usuario"):
+        return redirect(url_for("admin_users"))
+    target = next((u for u in data.get("users", []) if int(u.get("id", 0) or 0) == user_id), None)
+    if not target:
+        flash("Usuario nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    if int(target.get("id", 0) or 0) == 1:
+        flash("Nao e permitido excluir o usuario raiz.", "error")
+        return redirect(url_for("admin_users"))
+    current_user_id = int((session.get("user") or {}).get("id") or 0)
+    if current_user_id and int(target.get("id", 0) or 0) == current_user_id:
+        flash("Nao e permitido excluir seu proprio usuario.", "error")
+        return redirect(url_for("admin_users"))
+    admins_remaining = [
+        u
+        for u in data.get("users", [])
+        if int(u.get("id", 0) or 0) != int(target.get("id", 0) or 0)
+        and bool(u.get("active", True))
+        and canonical_role_name(u.get("role")) == "admin"
+    ]
+    if not admins_remaining:
+        flash("Mantenha ao menos 1 admin ativo antes de excluir este usuario.", "error")
+        return redirect(url_for("admin_users"))
+    data["users"] = [u for u in data.get("users", []) if int(u.get("id", 0) or 0) != int(target.get("id", 0) or 0)]
+    append_auth_audit_log(
+        data,
+        "admin_user_delete",
+        "ok",
+        code="user_deleted",
+        email=str(target.get("email") or "").strip().lower(),
+        details={"target_user_id": target.get("id"), "target_username": target.get("username")},
+    )
+    save_data(data)
+    flash("Usuario excluido com sucesso.", "success")
+    return redirect(url_for("admin_users"))
+
+
 @app.route("/auth/google/login")
 def google_auth_login():
     if not google_login_enabled():
@@ -6591,6 +6633,35 @@ def mark_lead_future(lead_id):
                 task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
         save_data(data)
+    return redirect(url_for("leads"))
+
+
+@app.route("/leads/<int:lead_id>/excluir", methods=["POST"])
+@login_required
+@permission_required("leads:manage")
+def delete_lead(lead_id):
+    data = load_data()
+    lead = find_by_id(data.get("leads", []), lead_id)
+    if not lead:
+        flash("Lead nao encontrado.", "error")
+        return redirect(url_for("leads"))
+    lead_name = lead.get("nome") or f"Lead {lead_id}"
+    data["leads"] = [item for item in data.get("leads", []) if int(item.get("id", 0) or 0) != int(lead_id)]
+    for task in data.get("tarefas", []):
+        key = str(task.get("automation_key") or "")
+        if key in {f"lead_response:{lead_id}", f"lead_followup:{lead_id}"} and not task.get("done"):
+            task["done"] = True
+            task["status"] = "Concluida"
+            task["done_at"] = today_br()
+    register_operation_history(
+        data,
+        "Lead excluido",
+        f"{lead_name} foi removido da base de leads.",
+        "lead",
+        f"lead_deleted:{lead_id}:{today_br()}",
+    )
+    save_data(data)
+    flash("Lead excluido com sucesso.", "success")
     return redirect(url_for("leads"))
 
 

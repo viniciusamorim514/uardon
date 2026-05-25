@@ -140,6 +140,17 @@ a{text-decoration:none;color:inherit}
 .notif-link.primary{color:var(--terra);font-weight:600}
 .lead-row-extended{grid-template-columns:1.4fr .55fr .6fr .45fr 1.2fr}
 .lead-actions-inline{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.users-clean-row{grid-template-columns:1.2fr 1fr .95fr .7fr 1.55fr;gap:14px;padding:14px 16px;border-radius:10px;margin-bottom:10px;border:1px solid #efe8dc;background:#fff}
+.users-clean-list{gap:10px}
+.users-clean-list .project-clean-row{border-bottom:none}
+.users-clean-list .project-clean-row:hover{background:#fffaf6}
+.users-clean-list .lead-actions-inline{align-items:flex-end}
+.users-clean-list .lead-actions-inline form{display:flex;flex-direction:column;gap:6px}
+.users-clean-list .lead-actions-inline .form-input{height:42px}
+.users-clean-list .lead-actions-inline .form-select{height:42px}
+.users-clean-list .lead-actions-inline .tiny-btn{height:36px}
+.lead-action-menu form{margin:0}
+.lead-action-menu form button{width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:9px 12px;font-size:12px;color:var(--alert)}
 .tiny-btn{padding:6px 9px;font-size:11px}
 .danger-btn{color:var(--alert);border-color:#f0c5b8}
 .compact-list .compact-row{grid-template-columns:1.05fr .8fr .8fr}

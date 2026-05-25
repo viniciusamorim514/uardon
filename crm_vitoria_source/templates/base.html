@@ -63,7 +63,7 @@
       <a class="nav-item {% if active=='feedbacks' %}active{% endif %}" href="{{ url_for('feedbacks_page') }}"><span class="nav-icon">F</span> Feedbacks</a>
       {% endif %}
       {% if is_admin_user %}
-      <a class="nav-item {% if active=='usuarios' %}active{% endif %}" href="{{ url_for('admin_users') }}"><span class="nav-icon">U</span> Usuarios</a>
+      <a class="nav-item {% if active=='usuarios' %}active{% endif %}" href="{{ url_for('admin_users') }}"><span class="nav-icon">U</span> Usuários</a>
       <a class="nav-item {% if active=='auditoria_auth' %}active{% endif %}" href="{{ url_for('admin_auth_audit') }}"><span class="nav-icon">A</span> Auditoria Auth</a>
       <a class="nav-item {% if active=='diagnostics' %}active{% endif %}" href="{{ url_for('admin_diagnostics') }}"><span class="nav-icon">T</span> Diagnostico</a>
       {% endif %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Gestao de Usuarios - Uardon CRM{% endblock %}
-{% block page_title %}Gestao de Usuarios{% endblock %}
+{% block title %}Gestão de Usuários - Uardon CRM{% endblock %}
+{% block page_title %}Gestão de Usuários{% endblock %}
 {% block page_subtitle %}Ativar, desativar, trocar perfil e resetar senha{% endblock %}
 {% block content %}
 <section class="card" style="padding:16px;">
@@ -9,12 +9,12 @@
       <input class="form-input" type="text" name="q" placeholder="Buscar por nome ou e-mail" value="{{ q }}">
       <button class="btn btn-ghost" type="submit">Filtrar</button>
     </form>
-    <a class="btn btn-primary" href="{{ url_for('admin_create_user') }}">Novo usuario</a>
+    <a class="btn btn-primary" href="{{ url_for('admin_create_user') }}">Novo usuário</a>
   </div>
 
-  <div class="projects-clean-list">
+  <div class="projects-clean-list users-clean-list">
     {% for user in users %}
-    <div class="project-clean-row" style="grid-template-columns:1.2fr 1fr .9fr .8fr 1.5fr;">
+    <div class="project-clean-row users-clean-row">
       <div class="project-clean-col">
         <span class="project-clean-label">Nome</span>
         <strong>{{ user.name }}</strong>
@@ -33,11 +33,11 @@
       </div>
       <div class="lead-actions-inline">
         <form method="post" action="{{ url_for('admin_user_toggle_status', user_id=user.id) }}">
-          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px; margin-bottom:6px;">
+          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-ghost tiny-btn" type="submit">{{ 'Desativar' if user.active else 'Ativar' }}</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_change_role', user_id=user.id) }}" style="display:flex; gap:6px;">
-          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px;">
+          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px;">
           <select class="form-select" name="role" style="min-width:170px;">
             {% for role in role_options %}
             <option value="{{ role }}" {% if role==user.role %}selected{% endif %}>{{ role_labels.get(role, role) }}</option>
@@ -46,13 +46,19 @@
           <button class="btn btn-ghost tiny-btn" type="submit">Salvar</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_reset_password', user_id=user.id) }}">
-          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px; margin-bottom:6px;">
+          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-primary tiny-btn" type="submit">Enviar reset</button>
         </form>
+        {% if user.id != 1 %}
+        <form method="post" action="{{ url_for('admin_user_delete', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
+          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
+          <button class="btn btn-ghost tiny-btn danger-btn" type="submit">Excluir usuário</button>
+        </form>
+        {% endif %}
       </div>
     </div>
     {% else %}
-    <div class="empty-state">Nenhum usuario encontrado.</div>
+    <div class="empty-state">Nenhum usuário encontrado.</div>
     {% endfor %}
   </div>
 </section>

@@ -76,6 +76,9 @@
                 <div class="lead-action-menu">
                   <button type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','future')">Mover para futuro</button>
                   <button class="danger" type="button" onclick="event.stopPropagation(); openLeadModal('{{ lead.id }}','lost')">Marcar perdido</button>
+                  <form method="post" action="{{ url_for('delete_lead', lead_id=lead.id) }}" onsubmit="event.stopPropagation(); return confirm('Excluir este lead?');">
+                    <button class="danger" type="submit">Excluir lead</button>
+                  </form>
                 </div>
               </div>
               {% endif %}
@@ -98,7 +101,10 @@
         <div class="project-clean-row compact-row">
           <div class="project-clean-main"><div class="project-clean-title" style="font-size:20px">{{ lead.nome }}</div><div class="project-clean-sub">Retomar em {{ lead.futuro_retorno or '—' }}</div></div>
           <div class="project-clean-col"><span class="project-clean-label">Obs.</span><strong>{{ lead.perda_obs or '—' }}</strong></div>
-          <div class="project-clean-col status-align"><form method="post" action="{{ url_for('mark_lead_contacted', lead_id=lead.id) }}"><button class="btn btn-primary tiny-btn" type="submit">Retomar agora</button></form></div>
+          <div class="project-clean-col status-align" style="gap:8px">
+            <form method="post" action="{{ url_for('mark_lead_contacted', lead_id=lead.id) }}"><button class="btn btn-primary tiny-btn" type="submit">Retomar agora</button></form>
+            <form method="post" action="{{ url_for('delete_lead', lead_id=lead.id) }}" onsubmit="return confirm('Excluir este lead?');"><button class="btn btn-ghost tiny-btn danger-btn" type="submit">Excluir</button></form>
+          </div>
         </div>
         {% else %}
         <div class="empty-state">Nenhum lead em futuro / nutrição.</div>
@@ -117,6 +123,9 @@
           <div class="project-clean-col status-align" style="gap:8px">
             <form method="post" action="{{ url_for('reactivate_lead', lead_id=lead.id) }}">
               <button class="btn btn-primary tiny-btn" type="submit">Reativar</button>
+            </form>
+            <form method="post" action="{{ url_for('delete_lead', lead_id=lead.id) }}" onsubmit="return confirm('Excluir este lead?');">
+              <button class="btn btn-ghost tiny-btn danger-btn" type="submit">Excluir</button>
             </form>
           </div>
         </div>
