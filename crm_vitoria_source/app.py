@@ -4464,7 +4464,9 @@ def forgot_password():
         data = load_data()
         email = (request.form.get("email") or "").strip().lower()
         user = next((u for u in data.get("users", []) if str(u.get("email", "")).strip().lower() == email), None)
-        if user:
+        if not user:
+            print(f"[PASSWORD_RESET_USER_NOT_FOUND] {email}")
+        else:
             token = uuid.uuid4().hex
             expires_at = (datetime.now() + timedelta(minutes=30)).isoformat(timespec="seconds")
             data.setdefault("password_reset_tokens", []).append(
@@ -4474,8 +4476,9 @@ def forgot_password():
             reset_link = url_for("reset_password", token=token, _external=True)
             sent, reason = send_password_reset_email(email, reset_link)
             if not sent:
-                print(f"[PASSWORD_RESET] {email}: {reset_link}")
-                print(f"[PASSWORD_RESET_WARN] mail_not_sent reason={reason}")
+                print(f"[PASSWORD_RESET_PROVIDER_ERROR] {email} reason={reason}")
+            else:
+                print(f"[PASSWORD_RESET_SENT] {email} provider={reason}")
         flash("Se o e-mail existir, enviamos um link de recuperação.")
         return redirect(url_for("login"))
     return render_template("forgot_password.html")
