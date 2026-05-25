@@ -736,6 +736,29 @@ def maybe_emit_auth_incident_alert(data, entry):
     )
     if ALERT_EMAIL_TO:
         send_text_email(ALERT_EMAIL_TO, subject, body, flow_tag="auth_alert")
+
+    # Alerta proativo: 2+ falhas consecutivas de entrega de reset.
+    if str(entry.get("event") or "") == "password_reset_sent" and str(entry.get("status") or "") == "failed":
+        recent = []
+        for item in reversed(data.get("auth_audit_logs", []) or []):
+            if str(item.get("event") or "") != "password_reset_sent":
+                continue
+            recent.append(item)
+            if len(recent) >= 2:
+                break
+        if len(recent) >= 2 and all(str(i.get("status") or "") == "failed" for i in recent):
+            fail_subject = "Uardon CRM | Alerta critico: 2 falhas seguidas no reset"
+            fail_body = (
+                "Detectamos 2 falhas consecutivas na entrega de e-mail de reset de senha.\n\n"
+                f"Ultimo email alvo: {entry.get('email')}\n"
+                f"Codigo: {entry.get('code')}\n"
+                f"Horario: {entry.get('created_at')}\n"
+                "Acao recomendada: verificar Resend, DNS e caixa operacional imediatamente.\n"
+            )
+            if ALERT_EMAIL_TO:
+                send_text_email(ALERT_EMAIL_TO, fail_subject, fail_body, flow_tag="auth_alert_critical")
+            if wa_digits:
+                print(f"[AUTH_ALERT_WHATSAPP] {whatsapp_link(wa_digits, fail_body[:400])}")
     wa_digits = normalize_brazil_phone(ALERT_WHATSAPP_TO)
     if wa_digits:
         print(f"[AUTH_ALERT_WHATSAPP] {whatsapp_link(wa_digits, body[:400])}")
@@ -4310,7 +4333,34 @@ def build_auth_audit_panel(data, limit=120):
     provider_fails = [e for e in visible if str(e.get("code")) == "provider_error"]
     if provider_fails:
         alerts.append({"level": "high", "title": "Falha de envio de e-mail", "note": f"{len(provider_fails)} eventos com provider_error no reset de senha."})
-    return {"events": visible, "totals": totals, "buckets": buckets, "alerts": alerts[:4]}
+    if PASSWORD_RESET_DELIVERY_MODE == "support_only":
+        alerts.append(
+            {
+                "level": "medium",
+                "title": "Modo assistido ativo (support_only)",
+                "note": "Reset esta indo para caixa operacional. Voltar para target apos estabilizacao.",
+            }
+        )
+
+    # Resumo diario de reset enviado x falhou.
+    today = datetime.now().date()
+    daily = {"date": today.isoformat(), "reset_sent_ok": 0, "reset_sent_failed": 0}
+    for item in data.get("auth_audit_logs", []) or []:
+        if str(item.get("event") or "") != "password_reset_sent":
+            continue
+        raw = str(item.get("created_at") or "").strip()
+        try:
+            created_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if created_at.date() != today:
+            continue
+        if str(item.get("status") or "") == "ok":
+            daily["reset_sent_ok"] += 1
+        elif str(item.get("status") or "") == "failed":
+            daily["reset_sent_failed"] += 1
+
+    return {"events": visible, "totals": totals, "buckets": buckets, "alerts": alerts[:5], "daily": daily}
 
 
 def split_feedbacks(data):

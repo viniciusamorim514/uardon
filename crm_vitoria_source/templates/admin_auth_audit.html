@@ -46,6 +46,11 @@
     <span>google <strong>{{ panel.buckets.google }}</strong></span>
     <span>usuários <strong>{{ panel.buckets.users }}</strong></span>
   </div>
+  <div class="notif-summary" style="margin-bottom:12px;">
+    <span>Resumo diário ({{ panel.daily.date }}):</span>
+    <span>reset enviado <strong>{{ panel.daily.reset_sent_ok }}</strong></span>
+    <span>reset falhou <strong>{{ panel.daily.reset_sent_failed }}</strong></span>
+  </div>
 
   <div class="projects-clean-list">
     {% for item in panel.events %}
