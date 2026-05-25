@@ -21,6 +21,10 @@
     <button class="btn btn-ghost" type="submit">Aplicar</button>
     <a class="btn btn-primary" href="{{ url_for('admin_auth_audit_export', event=filters.event, status=filters.status, email=filters.email) }}">Exportar CSV</a>
   </form>
+  <div class="notif-summary" style="margin-bottom:12px;">
+    <span><strong>{{ pagination.total_filtered }}</strong> filtrados</span>
+    <span>Página <strong>{{ pagination.page }}</strong> de <strong>{{ pagination.total_pages }}</strong></span>
+  </div>
 
   {% if panel.alerts %}
   <div class="stack-sm" style="margin-bottom:10px;">
@@ -70,6 +74,14 @@
     {% else %}
     <div class="empty-state">Sem eventos de autenticação ainda.</div>
     {% endfor %}
+  </div>
+  <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+    {% if pagination.has_prev %}
+    <a class="btn btn-ghost" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, page=pagination.page-1) }}">Anterior</a>
+    {% endif %}
+    {% if pagination.has_next %}
+    <a class="btn btn-primary" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, page=pagination.page+1) }}">Próxima</a>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

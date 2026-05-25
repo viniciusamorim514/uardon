@@ -5429,6 +5429,8 @@ def admin_run_smoke_check():
 @admin_required
 def admin_auth_audit():
     data = load_data()
+    page = max(1, int((request.args.get("page") or "1").strip() or "1"))
+    per_page = 50
     event_filter = (request.args.get("event") or "todos").strip().lower()
     status_filter = (request.args.get("status") or "todos").strip().lower()
     email_filter = (request.args.get("email") or "").strip().lower()
@@ -5445,7 +5447,14 @@ def admin_auth_audit():
         if email_filter and email_filter not in email_name:
             continue
         filtered.append(item)
-    panel = build_auth_audit_panel({"auth_audit_logs": filtered}, limit=200)
+    total_filtered = len(filtered)
+    total_pages = max(1, (total_filtered + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+    start = (page - 1) * per_page
+    end = start + per_page
+    page_rows = filtered[start:end]
+    panel = build_auth_audit_panel({"auth_audit_logs": page_rows}, limit=per_page)
     event_options = sorted({str(i.get("event") or "").strip() for i in raw_events if i.get("event")})
     return render_template(
         "admin_auth_audit.html",
@@ -5453,6 +5462,14 @@ def admin_auth_audit():
         panel=panel,
         filters={"event": event_filter, "status": status_filter, "email": email_filter},
         event_options=event_options,
+        pagination={
+            "page": page,
+            "per_page": per_page,
+            "total_filtered": total_filtered,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+        },
     )
 
 
