@@ -1,4 +1,4 @@
-import csv
+﻿import csv
 import calendar
 import hashlib
 import hmac
@@ -51,7 +51,7 @@ SEED_DATA_FILE = BASE_DIR / "data.json"
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 WRITE_LOCK_KEY = 761451
 
-# Em produção com volume novo, restaura o snapshot local para não iniciar zerado.
+# Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(SEED_DATA_FILE, DATA_FILE)
@@ -63,11 +63,11 @@ DEFAULT_DATA = {
             "username": "vitoria",
             "email": "",
             "password": "123456",
-            "name": "Vitória Uardon",
+            "name": "VitÃ³ria Uardon",
             "role": "admin",
         }
     ],
-    "config": {"nomeArquiteta": "Vitória Uardon", "estudio": "Studio Arq. & Int."},
+    "config": {"nomeArquiteta": "VitÃ³ria Uardon", "estudio": "Studio Arq. & Int."},
     "leads": [],
     "clientes": [],
     "projetos": [],
@@ -82,23 +82,23 @@ DEFAULT_DATA = {
 }
 
 PROJECT_STAGES = [
-    "Briefing e medição",
-    "Reunião de layout",
-    "Apresentação do 3D",
+    "Briefing e mediÃ§Ã£o",
+    "ReuniÃ£o de layout",
+    "ApresentaÃ§Ã£o do 3D",
     "Detalhamento de marcenaria",
     "Entrega do caderno final",
 ]
 
-TASK_TYPES = ["Follow-up", "Cobrança", "Projeto", "Comercial", "Interno"]
-EVENT_TYPES = ["Reunião", "Medição", "Apresentação", "Follow-up", "Cobrança", "Outro"]
+TASK_TYPES = ["Follow-up", "CobranÃ§a", "Projeto", "Comercial", "Interno"]
+EVENT_TYPES = ["ReuniÃ£o", "MediÃ§Ã£o", "ApresentaÃ§Ã£o", "Follow-up", "CobranÃ§a", "Outro"]
 MEETING_TYPES = ["Presencial", "Google Meet", "Teams", "Zoom", "Outro"]
-EXPENSE_CATEGORIES = ["Fixo", "Software", "Equipe", "Marketing", "Fornecedor", "Imposto", "Escritório", "Outro"]
+EXPENSE_CATEGORIES = ["Fixo", "Software", "Equipe", "Marketing", "Fornecedor", "Imposto", "EscritÃ³rio", "Outro"]
 GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 LEAD_LOSS_REASONS = [
-    "Orçamento acima do previsto",
+    "OrÃ§amento acima do previsto",
     "Cliente sem retorno",
-    "Prazo incompatível",
-    "Escopo não aderente",
+    "Prazo incompatÃ­vel",
+    "Escopo nÃ£o aderente",
     "Fechou com outro profissional",
     "Projeto adiado",
     "Outro",
@@ -112,7 +112,7 @@ app = Flask(
 CRM_ENV = (os.environ.get("CRM_ENV") or "development").strip().lower()
 CRM_SECRET = os.environ.get("CRM_SECRET_KEY")
 if CRM_ENV == "production" and not CRM_SECRET:
-    raise RuntimeError("CRM_SECRET_KEY não configurada para produção.")
+    raise RuntimeError("CRM_SECRET_KEY nÃ£o configurada para produÃ§Ã£o.")
 app.secret_key = CRM_SECRET or "crm-vitoria-local-dev-only"
 
 PUBLIC_LEAD_RATE_LIMIT = {}
@@ -121,7 +121,7 @@ PUBLIC_LEAD_ALLOWED_ORIGINS = {
     "https://uardon.com.br",
     "https://www.uardon.com.br",
 }
-LEAD_OWNER_DEFAULT = "Vitória Uardon"
+LEAD_OWNER_DEFAULT = "VitÃ³ria Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
 PUBLIC_SIGNUP_ENABLED = (os.environ.get("CRM_PUBLIC_SIGNUP") or "0").strip().lower() in {"1", "true", "yes", "on"}
@@ -133,6 +133,8 @@ AUTH_LOGIN_BASE_MAX_ATTEMPTS = int((os.environ.get("AUTH_LOGIN_BASE_MAX_ATTEMPTS
 PASSWORD_MAX_AGE_DAYS = int((os.environ.get("PASSWORD_MAX_AGE_DAYS") or "90").strip() or "90")
 ALERT_EMAIL_TO = (os.environ.get("AUTH_ALERT_EMAIL_TO") or "").strip().lower()
 ALERT_WHATSAPP_TO = (os.environ.get("AUTH_ALERT_WHATSAPP_TO") or "").strip()
+OPERATIONS_INBOX_EMAIL = (os.environ.get("OPERATIONS_INBOX_EMAIL") or "suporte@uardon.com.br").strip().lower()
+PASSWORD_RESET_DELIVERY_MODE = (os.environ.get("PASSWORD_RESET_DELIVERY_MODE") or "target").strip().lower()
 
 # Calibracao operacional (ajustavel sem mexer na logica)
 LEAD_SCORE_WEIGHTS = {
@@ -165,9 +167,9 @@ ROLE_ALIASES = {
 }
 
 ROLE_LABELS = {
-    "admin": "Arquiteta responsável (admin)",
+    "admin": "Arquiteta responsÃ¡vel (admin)",
     "arquiteta": "Arquiteta de projetos/interiores",
-    "assistente": "Assistente/estagiária",
+    "assistente": "Assistente/estagiÃ¡ria",
     "comercial": "Comercial",
     "financeiro": "Financeiro",
     "parceiro": "Parceiro externo (limitado)",
@@ -276,7 +278,7 @@ def role_label(role):
 def fix_mojibake_text(value):
     if not isinstance(value, str):
         return value
-    suspicious_tokens = ("Ã", "Â", "â", "ï¿½", "\ufffd", "ę", "ő", "ŕ", "çăo")
+    suspicious_tokens = ("Ãƒ", "Ã‚", "Ã¢", "Ã¯Â¿Â½", "\ufffd", "Ä™", "Å‘", "Å•", "Ã§Äƒo")
     fixed = value
     if any(token in value for token in suspicious_tokens):
         try:
@@ -287,20 +289,20 @@ def fix_mojibake_text(value):
             fixed = value
 
     corrections = {
-        "vocę": "você",
-        "opçőes": "opções",
-        "disposiçăo": "disposição",
-        "ŕ ": "à ",
-        "oramento": "orçamento",
-        "prximos": "próximos",
-        "segurana": "segurança",
-        "dvida": "dúvida",
-        "por a?": "por aí?",
+        "vocÄ™": "vocÃª",
+        "opÃ§Å‘es": "opÃ§Ãµes",
+        "disposiÃ§Äƒo": "disposiÃ§Ã£o",
+        "Å• ": "Ã  ",
+        "oramento": "orÃ§amento",
+        "prximos": "prÃ³ximos",
+        "segurana": "seguranÃ§a",
+        "dvida": "dÃºvida",
+        "por a?": "por aÃ­?",
     }
     for bad, good in corrections.items():
         fixed = fixed.replace(bad, good)
     if fixed.startswith("Ol, "):
-        fixed = "Olá, " + fixed[4:]
+        fixed = "OlÃ¡, " + fixed[4:]
     return fixed
 
 
@@ -600,7 +602,7 @@ def verify_public_lead_signature(raw_body):
     secret = public_lead_hmac_secret()
     if not secret:
         if CRM_ENV == "production":
-            return False, "Assinatura do envio indisponível. Contate o suporte."
+            return False, "Assinatura do envio indisponÃ­vel. Contate o suporte."
         return True, ""
     timestamp = (request.headers.get("X-Uardon-Timestamp") or "").strip()
     signature = (request.headers.get("X-Uardon-Signature") or "").strip()
@@ -609,14 +611,14 @@ def verify_public_lead_signature(raw_body):
     try:
         sent_at = int(timestamp)
     except ValueError:
-        return False, "Assinatura de envio inválida."
+        return False, "Assinatura de envio invÃ¡lida."
     if abs(int(time.time()) - sent_at) > 300:
-        return False, "Envio expirado. Atualize a página e tente novamente."
+        return False, "Envio expirado. Atualize a pÃ¡gina e tente novamente."
     signed_payload = timestamp.encode("utf-8") + b"." + (raw_body or b"")
     expected = hmac.new(secret.encode("utf-8"), signed_payload, hashlib.sha256).hexdigest()
     provided = signature[7:] if signature.startswith("sha256=") else signature
     if not hmac.compare_digest(expected, provided):
-        return False, "Assinatura de envio inválida."
+        return False, "Assinatura de envio invÃ¡lida."
     return True, ""
 
 
@@ -945,7 +947,7 @@ def verify_turnstile_token(token, remote_ip=""):
         with urllib.request.urlopen(req, timeout=8) as result:
             parsed = json.loads(result.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, ValueError):
-        return False, "Não foi possível validar a segurança agora. Tente novamente em alguns instantes.", "siteverify_unavailable"
+        return False, "NÃ£o foi possÃ­vel validar a seguranÃ§a agora. Tente novamente em alguns instantes.", "siteverify_unavailable"
     if not parsed.get("success"):
         errors = parsed.get("error-codes") or []
         error_code = ",".join(str(item) for item in errors) if errors else "invalid"
@@ -1007,13 +1009,13 @@ def google_calendar_status():
 def google_calendar_service(force_auth=False):
     paths = google_calendar_paths()
     if not paths["credentials"].exists():
-        raise RuntimeError("Arquivo google_credentials.json não encontrado na pasta do CRM.")
+        raise RuntimeError("Arquivo google_credentials.json nÃ£o encontrado na pasta do CRM.")
     try:
         from google.auth.transport.requests import Request
         from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
     except Exception as exc:
-        raise RuntimeError("Dependências do Google Calendar não instaladas.") from exc
+        raise RuntimeError("DependÃªncias do Google Calendar nÃ£o instaladas.") from exc
 
     creds = None
     if paths["token"].exists():
@@ -1021,7 +1023,7 @@ def google_calendar_service(force_auth=False):
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
     if force_auth or not creds or not creds.valid:
-        raise RuntimeError("Google Agenda ainda não foi autorizado. Clique em Conectar na Agenda.")
+        raise RuntimeError("Google Agenda ainda nÃ£o foi autorizado. Clique em Conectar na Agenda.")
     paths["token"].write_text(creds.to_json(), encoding="utf-8")
     return build("calendar", "v3", credentials=creds)
 
@@ -1029,11 +1031,11 @@ def google_calendar_service(force_auth=False):
 def google_oauth_flow():
     paths = google_calendar_paths()
     if not paths["credentials"].exists():
-        raise RuntimeError("Arquivo google_credentials.json não encontrado na pasta do CRM.")
+        raise RuntimeError("Arquivo google_credentials.json nÃ£o encontrado na pasta do CRM.")
     try:
         from google_auth_oauthlib.flow import Flow
     except Exception as exc:
-        raise RuntimeError("Dependências do Google Calendar não instaladas.") from exc
+        raise RuntimeError("DependÃªncias do Google Calendar nÃ£o instaladas.") from exc
     os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
     redirect_uri = url_for("google_calendar_callback", _external=True)
     return Flow.from_client_secrets_file(
@@ -1167,7 +1169,7 @@ def import_google_events_to_crm(data, days_ahead=90):
         event = {
             "id": next_id(data["eventos"]),
             "titulo": google_event.get("summary") or "Compromisso Google",
-            "tipo": "Reunião",
+            "tipo": "ReuniÃ£o",
             "data": event_date,
             "hora": start_time,
             "hora_fim": end_time,
@@ -1377,10 +1379,10 @@ def register_completed_event_history(data, event):
     history_key = f"agenda:{event.get('id')}"
     title = event.get("titulo") or "Compromisso"
     event_date = format_date_br(event.get("data")) or today_br()
-    event_time = event.get("hora") or "sem horário"
-    description = f"Compromisso concluído pela Agenda: {title} em {event_date} às {event_time}."
+    event_time = event.get("hora") or "sem horÃ¡rio"
+    description = f"Compromisso concluÃ­do pela Agenda: {title} em {event_date} Ã s {event_time}."
     if event.get("observacoes"):
-        description += f" Observações: {event.get('observacoes')}"
+        description += f" ObservaÃ§Ãµes: {event.get('observacoes')}"
     project = find_by_id(data.get("projetos", []), event.get("projeto_id"))
     client = find_by_id(data.get("clientes", []), event.get("cliente_id"))
     register_operation_history(data, f"Agenda: {title}", description, "agenda", history_key, client=client, project=project)
@@ -1401,11 +1403,11 @@ def event_next_action_rule(event):
         )
     )
     rules = [
-        (("briefing", "medicao"), "Registrar decisões do briefing", "Consolidar decisões, pendências e próximo passo do briefing.", "Projeto", "Média"),
-        (("3d", "apresentacao"), "Consolidar ajustes da apresentação", "Registrar ajustes solicitados e atualizar o próximo passo do projeto.", "Projeto", "Média"),
-        (("layout",), "Registrar ajustes de layout", "Organizar ajustes combinados e definir o próximo passo do projeto.", "Projeto", "Média"),
-        (("proposta", "orcamento"), "Fazer follow-up da proposta", "Chamar o cliente, confirmar dúvidas e conduzir a decisão.", "Comercial", "Alta"),
-        (("reuniao", "meet", "teams", "zoom"), "Registrar decisões da reunião", "Anotar decisões, pendências e próximo passo combinado.", "Projeto", "Média"),
+        (("briefing", "medicao"), "Registrar decisÃµes do briefing", "Consolidar decisÃµes, pendÃªncias e prÃ³ximo passo do briefing.", "Projeto", "MÃ©dia"),
+        (("3d", "apresentacao"), "Consolidar ajustes da apresentaÃ§Ã£o", "Registrar ajustes solicitados e atualizar o prÃ³ximo passo do projeto.", "Projeto", "MÃ©dia"),
+        (("layout",), "Registrar ajustes de layout", "Organizar ajustes combinados e definir o prÃ³ximo passo do projeto.", "Projeto", "MÃ©dia"),
+        (("proposta", "orcamento"), "Fazer follow-up da proposta", "Chamar o cliente, confirmar dÃºvidas e conduzir a decisÃ£o.", "Comercial", "Alta"),
+        (("reuniao", "meet", "teams", "zoom"), "Registrar decisÃµes da reuniÃ£o", "Anotar decisÃµes, pendÃªncias e prÃ³ximo passo combinado.", "Projeto", "MÃ©dia"),
     ]
     for keywords, title, description, task_type, priority in rules:
         if any(f" {keyword} " in text for keyword in keywords):
@@ -1441,7 +1443,7 @@ def create_event_next_action_task(data, event):
         "prazo": (date.today() + timedelta(days=1)).isoformat(),
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": vinculo_tipo,
         "vinculo_id": vinculo_id,
         "vinculo_nome": vinculo_nome,
@@ -1468,13 +1470,13 @@ def create_manual_event_action_task(data, event, title, task_type, priority, due
         "id": next_id(data["tarefas"]),
         "titulo": title,
         "text": title,
-        "descricao": f"{description or 'Próxima ação criada a partir da Agenda.'} Origem: compromisso '{event.get('titulo') or 'Agenda'}'.",
+        "descricao": f"{description or 'PrÃ³xima aÃ§Ã£o criada a partir da Agenda.'} Origem: compromisso '{event.get('titulo') or 'Agenda'}'.",
         "tipo": task_type or "Projeto",
-        "pri": priority or "Média",
+        "pri": priority or "MÃ©dia",
         "prazo": due_date or (date.today() + timedelta(days=1)).isoformat(),
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": vinculo_tipo,
         "vinculo_id": vinculo_id,
         "vinculo_nome": vinculo_nome,
@@ -1488,7 +1490,7 @@ def create_manual_event_action_task(data, event, title, task_type, priority, due
     event["last_action_task_id"] = task["id"]
     entry = {
         "data": today_br(),
-        "titulo": "Próxima ação criada",
+        "titulo": "PrÃ³xima aÃ§Ã£o criada",
         "descricao": f"{title} - {task.get('prazo') or 'sem prazo definido'}",
         "source_key": f"event_manual_action:{event.get('id')}:{task['id']}",
     }
@@ -1499,7 +1501,7 @@ def create_manual_event_action_task(data, event, title, task_type, priority, due
         client["ultima_interacao"] = today_br()
     register_operation_history(
         data,
-        "Próxima ação criada",
+        "PrÃ³xima aÃ§Ã£o criada",
         f"{title} - {task.get('prazo') or 'sem prazo definido'}",
         "agenda",
         f"event_manual_action:{event.get('id')}:{task['id']}",
@@ -1596,7 +1598,7 @@ def task_context(task, data):
         lead = find_by_id(data["leads"], task.get("vinculo_id"))
         if lead:
             return lead.get("nome", "")
-    return task.get("vinculo_nome") or "Sem vínculo"
+    return task.get("vinculo_nome") or "Sem vÃ­nculo"
 
 
 def task_automation_reason(task):
@@ -1604,68 +1606,68 @@ def task_automation_reason(task):
     if key.startswith("lead_response:"):
         return "Criada porque o lead precisa da primeira resposta."
     if key.startswith("lead_followup:"):
-        return "Criada porque o lead ficou sem avanço recente."
+        return "Criada porque o lead ficou sem avanÃ§o recente."
     if key.startswith("contract_signature:"):
-        return "Criada porque há contrato pendente de assinatura."
+        return "Criada porque hÃ¡ contrato pendente de assinatura."
     if key.startswith("relationship_contact:") and ":birthday:" in key:
-        return "Criada porque o cliente faz aniversário hoje."
+        return "Criada porque o cliente faz aniversÃ¡rio hoje."
     if key.startswith("relationship_contact:") and ":no_contact:" in key:
-        return "Criada porque o cliente está sem contato recente."
+        return "Criada porque o cliente estÃ¡ sem contato recente."
     if key.startswith("event_next_action:"):
-        return "Criada a partir de um compromisso concluído na agenda."
+        return "Criada a partir de um compromisso concluÃ­do na agenda."
     return ""
 
 
 def automation_rule_info(task):
     key = task.get("automation_key") or ""
     if key.startswith("lead_response:"):
-        return {"key": "lead_response", "label": "Primeira resposta ao lead", "note": "Lead novo precisa de contato rápido."}
+        return {"key": "lead_response", "label": "Primeira resposta ao lead", "note": "Lead novo precisa de contato rÃ¡pido."}
     if key.startswith("lead_followup:"):
-        return {"key": "lead_followup", "label": "Follow-up de lead", "note": "Lead sem avanço recente volta para a mesa."}
+        return {"key": "lead_followup", "label": "Follow-up de lead", "note": "Lead sem avanÃ§o recente volta para a mesa."}
     if key.startswith("contract_signature:"):
         return {"key": "contract_signature", "label": "Assinatura de contrato", "note": "Contrato enviado ou em assinatura gera acompanhamento."}
     if key.startswith("relationship_contact:") and ":birthday:" in key:
-        return {"key": "birthday", "label": "Aniversário de cliente", "note": "Cliente aniversariante vira lembrete de relacionamento."}
+        return {"key": "birthday", "label": "AniversÃ¡rio de cliente", "note": "Cliente aniversariante vira lembrete de relacionamento."}
     if key.startswith("relationship_contact:") and ":no_contact:" in key:
         return {"key": "no_contact", "label": "Cliente sem contato", "note": "Relacionamento parado volta para acompanhamento."}
     if key.startswith("event_next_action:"):
-        return {"key": "event_next_action", "label": "Próxima ação da agenda", "note": "Reunião concluída pode gerar tarefa de continuidade."}
-    return {"key": "other", "label": "Outras automações", "note": "Tarefas criadas por regra interna do CRM."}
+        return {"key": "event_next_action", "label": "PrÃ³xima aÃ§Ã£o da agenda", "note": "ReuniÃ£o concluÃ­da pode gerar tarefa de continuidade."}
+    return {"key": "other", "label": "Outras automaÃ§Ãµes", "note": "Tarefas criadas por regra interna do CRM."}
 
 
 def complete_task_operational_effects(data, task):
     client, project, lead = task_history_targets(data, task)
     key = task.get("automation_key") or ""
-    title = "Tarefa concluída"
-    description = task.get("titulo") or task.get("text") or "Tarefa concluída"
+    title = "Tarefa concluÃ­da"
+    description = task.get("titulo") or task.get("text") or "Tarefa concluÃ­da"
     origin = "tarefa"
     update_client = True
 
     if key.startswith("lead_response:"):
         title = "Lead respondido"
-        description = f"Primeira resposta registrada pela conclusão da tarefa: {description}."
+        description = f"Primeira resposta registrada pela conclusÃ£o da tarefa: {description}."
         if lead:
             lead["ultima_interacao"] = today_br()
     elif key.startswith("lead_followup:"):
-        title = "Follow-up de lead concluído"
-        description = f"Follow-up tratado pela conclusão da tarefa: {description}."
+        title = "Follow-up de lead concluÃ­do"
+        description = f"Follow-up tratado pela conclusÃ£o da tarefa: {description}."
         if lead:
             lead["ultima_interacao"] = today_br()
     elif key.startswith("contract_signature:"):
         title = "Acompanhamento de contrato"
-        description = f"Acompanhamento de assinatura tratado pela conclusão da tarefa: {description}."
+        description = f"Acompanhamento de assinatura tratado pela conclusÃ£o da tarefa: {description}."
         if project:
             project.setdefault("contrato", {})["ultimo_followup_em"] = today_br()
     elif key.startswith("relationship_contact:"):
         title = "Relacionamento atualizado"
-        description = f"Contato de relacionamento tratado pela conclusão da tarefa: {description}."
+        description = f"Contato de relacionamento tratado pela conclusÃ£o da tarefa: {description}."
     elif key.startswith("event_next_action:"):
-        title = "Próxima ação da agenda concluída"
-        description = f"Próxima ação criada pela agenda foi concluída: {description}."
+        title = "PrÃ³xima aÃ§Ã£o da agenda concluÃ­da"
+        description = f"PrÃ³xima aÃ§Ã£o criada pela agenda foi concluÃ­da: {description}."
         origin = "agenda"
     elif task.get("origem") == "automacao":
-        title = "Automação concluída"
-        description = f"Tarefa automática concluída: {description}."
+        title = "AutomaÃ§Ã£o concluÃ­da"
+        description = f"Tarefa automÃ¡tica concluÃ­da: {description}."
 
     register_operation_history(
         data,
@@ -1684,7 +1686,7 @@ def normalize_task(task, data):
     due = parse_date(task.get("prazo"))
     today = date.today()
     if task.get("done"):
-        label = "Concluída"
+        label = "ConcluÃ­da"
     elif not due:
         label = "Sem data"
     elif due < today:
@@ -1696,7 +1698,7 @@ def normalize_task(task, data):
     task["label"] = label
     task["contexto"] = task_context(task, data)
     task["tone"] = {
-        "Cobrança": "payment",
+        "CobranÃ§a": "payment",
         "Follow-up": "relationship",
         "Projeto": "project",
         "Comercial": "commercial",
@@ -1705,9 +1707,9 @@ def normalize_task(task, data):
     client = find_by_id(data["clientes"], task.get("cliente_id"))
     lead = find_by_id(data["leads"], task.get("vinculo_id")) if task.get("vinculo_tipo") == "lead" else None
     if client:
-        task["whatsapp_url"] = whatsapp_link(client.get("tel"), f"Olá, {client.get('nome', '').split(' ')[0]}!")
+        task["whatsapp_url"] = whatsapp_link(client.get("tel"), f"OlÃ¡, {client.get('nome', '').split(' ')[0]}!")
     elif lead:
-        task["whatsapp_url"] = whatsapp_link(lead.get("tel"), f"Olá, {lead.get('nome', '').split(' ')[0]}! Recebi seu pedido e vou te chamar para entender melhor.")
+        task["whatsapp_url"] = whatsapp_link(lead.get("tel"), f"OlÃ¡, {lead.get('nome', '').split(' ')[0]}! Recebi seu pedido e vou te chamar para entender melhor.")
     else:
         task["whatsapp_url"] = "#"
     if task.get("vinculo_tipo") == "cliente" and task.get("cliente_id"):
@@ -1716,19 +1718,19 @@ def normalize_task(task, data):
         task["link_url"] = url_for("project_detail", project_id=task["vinculo_id"])
     elif task.get("vinculo_tipo") == "lead":
         task["link_url"] = url_for("leads")
-    elif task.get("tipo") == "Cobrança":
+    elif task.get("tipo") == "CobranÃ§a":
         task["link_url"] = url_for("receivables_page")
     else:
         task["link_url"] = ""
     task["open_url"] = task.get("link_url") or url_for("tasks_page")
-    task["origin_label"] = "Automação" if task.get("origem") == "automacao" or task.get("automation_key") else "Manual"
+    task["origin_label"] = "AutomaÃ§Ã£o" if task.get("origem") == "automacao" or task.get("automation_key") else "Manual"
     task["automation_reason"] = task_automation_reason(task)
     task["automation_rule"] = automation_rule_info(task) if task.get("automation_key") else None
     task["source_label"] = {
         "lead": "Lead",
         "cliente": "Cliente",
         "projeto": "Projeto",
-    }.get(task.get("vinculo_tipo"), "Recebível" if task.get("tipo") == "Cobrança" else "Tarefa")
+    }.get(task.get("vinculo_tipo"), "RecebÃ­vel" if task.get("tipo") == "CobranÃ§a" else "Tarefa")
     automation_key = task.get("automation_key") or ""
     if automation_key.startswith("event_next_action:"):
         task["source_key"] = "agenda"
@@ -1739,9 +1741,9 @@ def normalize_task(task, data):
     elif automation_key.startswith("contract_") or task.get("tipo") == "Contrato":
         task["source_key"] = "contrato"
         task["source_label"] = "Contrato"
-    elif task.get("tipo") == "Cobrança":
+    elif task.get("tipo") == "CobranÃ§a":
         task["source_key"] = "cobranca"
-        task["source_label"] = "Cobrança"
+        task["source_label"] = "CobranÃ§a"
     elif task.get("vinculo_tipo") == "projeto":
         task["source_key"] = "projeto"
     elif task.get("vinculo_tipo") == "cliente":
@@ -1776,7 +1778,7 @@ def normalize_event(event, data):
         item["has_link"] = False
     item["is_unlinked"] = not item["has_link"]
     if status == "concluido":
-        item["status_label"] = "Concluído"
+        item["status_label"] = "ConcluÃ­do"
         item["tone"] = "done"
     elif event_date and event_date < today:
         item["status_label"] = "Atrasado"
@@ -1797,7 +1799,7 @@ def normalize_event(event, data):
         item.get("descricao") or item.get("observacoes", ""),
         item.get("local") or item.get("link", ""),
     )
-    item["google_status_label"] = "Sincronizado" if item.get("google_event_id") else "Não sincronizado"
+    item["google_status_label"] = "Sincronizado" if item.get("google_event_id") else "NÃ£o sincronizado"
     item["link_suggestion"] = event_link_suggestion(item, data)
     return item
 
@@ -1851,7 +1853,7 @@ def build_calendar_month(events, year=None, month=None):
     return {
         "year": year,
         "month": month,
-        "label": f"{['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][month]} de {year}",
+        "label": f"{['', 'Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][month]} de {year}",
         "weeks": weeks,
         "prev_url": url_for("agenda_page", ano=prev_month.year, mes=prev_month.month),
         "next_url": url_for("agenda_page", ano=next_month.year, mes=next_month.month),
@@ -1869,7 +1871,7 @@ def build_task_board(data):
     upcoming = [t for t in open_tasks if not parse_date(t.get("prazo")) or parse_date(t.get("prazo")) > today]
     without_deadline = [t for t in upcoming if not parse_date(t.get("prazo"))]
     upcoming_dated = [t for t in upcoming if parse_date(t.get("prazo"))]
-    priority_weight = {"Alta": 0, "Média": 1, "Media": 1, "Baixa": 2}
+    priority_weight = {"Alta": 0, "MÃ©dia": 1, "Media": 1, "Baixa": 2}
 
     def task_sort_key(task):
         due = parse_date(task.get("prazo"))
@@ -1887,13 +1889,13 @@ def build_task_board(data):
     upcoming_dated = sorted(upcoming_dated, key=task_sort_key)
     next_candidates = overdue + today_tasks + upcoming_dated + without_deadline
     source_order = [
-        ("lead", "Leads", "orçamentos e follow-ups comerciais"),
-        ("agenda", "Agenda", "próximas ações criadas após reuniões"),
-        ("cobranca", "Cobrança", "recebíveis e lembretes de pagamento"),
-        ("contrato", "Contratos", "assinaturas e formalização"),
-        ("projeto", "Projetos", "operação e entregas"),
+        ("lead", "Leads", "orÃ§amentos e follow-ups comerciais"),
+        ("agenda", "Agenda", "prÃ³ximas aÃ§Ãµes criadas apÃ³s reuniÃµes"),
+        ("cobranca", "CobranÃ§a", "recebÃ­veis e lembretes de pagamento"),
+        ("contrato", "Contratos", "assinaturas e formalizaÃ§Ã£o"),
+        ("projeto", "Projetos", "operaÃ§Ã£o e entregas"),
         ("cliente", "Clientes", "relacionamento e contato"),
-        ("manual", "Manuais", "tarefas criadas pela Vitória"),
+        ("manual", "Manuais", "tarefas criadas pela VitÃ³ria"),
     ]
     by_source = []
     for key, label, note in source_order:
@@ -1963,14 +1965,14 @@ def build_followups(data):
         items.append(
             {
                 "titulo": f"Retomar contato com {client.get('nome')}",
-                "subtitle": f"{days} dias sem contato." if days is not None else "Cliente sem última interação registrada.",
+                "subtitle": f"{days} dias sem contato." if days is not None else "Cliente sem Ãºltima interaÃ§Ã£o registrada.",
                 "action_label": "WhatsApp",
-                "action_url": whatsapp_link(client.get("tel"), f"Olá, {client.get('nome','').split(' ')[0]}! Passando para saber como você está."),
+                "action_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {client.get('nome','').split(' ')[0]}! Passando para saber como vocÃª estÃ¡."),
                 "action_method": "get",
                 "secondary_label": "Abrir cliente",
                 "secondary_url": url_for("client_detail", client_id=client["id"]),
                 "client_id": client.get("id"),
-                "whatsapp_url": whatsapp_link(client.get("tel"), f"Olá, {client.get('nome','').split(' ')[0]}! Passando para saber como você está."),
+                "whatsapp_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {client.get('nome','').split(' ')[0]}! Passando para saber como vocÃª estÃ¡."),
                 "days": days,
             }
         )
@@ -2004,7 +2006,7 @@ def relationship_data(data):
 
 
 def contract_label(contract):
-    status = (contract or {}).get("status") or "Não iniciado"
+    status = (contract or {}).get("status") or "NÃ£o iniciado"
     tone = "good" if status == "Assinado" else "watch" if status in ("Enviado", "Em assinatura") else "muted"
     return {"label": status, "tone": tone}
 
@@ -2146,22 +2148,22 @@ def build_receivables(data, filters=None):
             first_name = str(client_name).split(" ")[0]
             if calculated == "Atrasado":
                 message = (
-                    f"Olá, {first_name}! Passando para alinhar a parcela {str(payment.get('descricao') or '').lower()} "
+                    f"OlÃ¡, {first_name}! Passando para alinhar a parcela {str(payment.get('descricao') or '').lower()} "
                     f"do projeto {project.get('nome')}, que venceu em {format_date_br(payment.get('vencimento'))}. "
-                    "Pode me confirmar, por favor, se já foi feito por aí?"
+                    "Pode me confirmar, por favor, se jÃ¡ foi feito por aÃ­?"
                 )
             elif calculated == "Vence em breve":
                 message = (
-                    f"Olá, {first_name}! Tudo bem? Passando para lembrar, com carinho, que a parcela "
+                    f"OlÃ¡, {first_name}! Tudo bem? Passando para lembrar, com carinho, que a parcela "
                     f"{str(payment.get('descricao') or '').lower()} do projeto {project.get('nome')} vence em "
-                    f"{format_date_br(payment.get('vencimento'))}. Qualquer dúvida, fico à disposição."
+                    f"{format_date_br(payment.get('vencimento'))}. Qualquer dÃºvida, fico Ã  disposiÃ§Ã£o."
                 )
             else:
                 message = (
-                    f"Olá, {first_name}! Passando para lembrar, com carinho, que o vencimento de "
+                    f"OlÃ¡, {first_name}! Passando para lembrar, com carinho, que o vencimento de "
                     f"{str(payment.get('descricao') or 'uma parcela').lower()} do projeto {project.get('nome')} "
-                    f"está previsto para {format_date_br(payment.get('vencimento')) or 'os próximos dias'}. "
-                    "Qualquer dúvida, fico à disposição."
+                    f"estÃ¡ previsto para {format_date_br(payment.get('vencimento')) or 'os prÃ³ximos dias'}. "
+                    "Qualquer dÃºvida, fico Ã  disposiÃ§Ã£o."
                 )
             item = dict(payment)
             item.update(
@@ -2364,7 +2366,7 @@ def client_snapshot(client, projects):
     deadlines = sorted([(parse_date(p.get("prazo")), p) for p in active if parse_date(p.get("prazo"))], key=lambda x: x[0])
     last = parse_date(client.get("ultima_interacao"))
     days = (date.today() - last).days if last else None
-    badge = {"label": "Contato em dia", "tone": "good"} if days is not None and days <= 30 else {"label": "Retomar", "tone": "watch"} if days else {"label": "Sem classificação", "tone": "neutral"}
+    badge = {"label": "Contato em dia", "tone": "good"} if days is not None and days <= 30 else {"label": "Retomar", "tone": "watch"} if days else {"label": "Sem classificaÃ§Ã£o", "tone": "neutral"}
     return {
         "active_total": len(active),
         "projects_total": len(projects),
@@ -2378,10 +2380,10 @@ def client_snapshot(client, projects):
 
 def contracts_for_client(projects):
     items = []
-    counts = {"Assinado": 0, "Enviado": 0, "Não iniciado": 0}
+    counts = {"Assinado": 0, "Enviado": 0, "NÃ£o iniciado": 0}
     for project in projects:
         contract = project.get("contrato", {}) or {}
-        status = contract.get("status") or "Não iniciado"
+        status = contract.get("status") or "NÃ£o iniciado"
         counts[status] = counts.get(status, 0) + 1
         label = contract_label(contract)
         items.append(
@@ -2391,7 +2393,7 @@ def contracts_for_client(projects):
                 "status": status,
                 "label": label["label"],
                 "tone": label["tone"],
-                "modelo": contract.get("modelo") or "Contrato padrão Vitória",
+                "modelo": contract.get("modelo") or "Contrato padrÃ£o VitÃ³ria",
                 "emitido_em": contract.get("emitido_em") or "",
                 "assinado_em": contract.get("assinado_em") or "",
                 "whatsapp_url": "#",
@@ -2414,8 +2416,8 @@ def build_client_timeline(client, projects, tasks, financeiro, contracts):
             {
                 "date": parse_date(item.get("data")) or date.min,
                 "data": item.get("data") or "",
-                "tipo": "Histórico",
-                "titulo": item.get("titulo") or "Interação",
+                "tipo": "HistÃ³rico",
+                "titulo": item.get("titulo") or "InteraÃ§Ã£o",
                 "descricao": item.get("descricao") or "",
                 "tone": "relationship",
                 "url": "",
@@ -2429,7 +2431,7 @@ def build_client_timeline(client, projects, tasks, financeiro, contracts):
                     "data": format_date_br(project.get("prazo")),
                     "tipo": "Projeto",
                     "titulo": project.get("nome") or "Projeto",
-                    "descricao": f"{project.get('status') or 'Sem status'} · {project.get('progresso') or 0}% concluído",
+                    "descricao": f"{project.get('status') or 'Sem status'} Â· {project.get('progresso') or 0}% concluÃ­do",
                     "tone": "project",
                     "url": url_for("project_detail", project_id=project.get("id")),
                 }
@@ -2441,7 +2443,7 @@ def build_client_timeline(client, projects, tasks, financeiro, contracts):
                     "date": parse_date(task.get("done_at")) or date.min,
                     "data": task.get("done_at") or "",
                     "tipo": "Tarefa",
-                    "titulo": task.get("titulo") or task.get("text") or "Tarefa concluída",
+                    "titulo": task.get("titulo") or task.get("text") or "Tarefa concluÃ­da",
                     "descricao": task.get("descricao") or task.get("tipo") or "",
                     "tone": "task",
                     "url": task.get("open_url") or "",
@@ -2453,9 +2455,9 @@ def build_client_timeline(client, projects, tasks, financeiro, contracts):
                 {
                     "date": parse_date(payment.get("vencimento")) or date.max,
                     "data": format_date_br(payment.get("vencimento")),
-                    "tipo": "Recebível",
+                    "tipo": "RecebÃ­vel",
                     "titulo": payment.get("descricao") or "Parcela pendente",
-                    "descricao": f"{payment.get('project_name')} · {payment.get('valor_fmt')} · {payment.get('status_calculado')}",
+                    "descricao": f"{payment.get('project_name')} Â· {payment.get('valor_fmt')} Â· {payment.get('status_calculado')}",
                     "tone": "payment",
                     "url": url_for("receivables_page"),
                 }
@@ -2468,7 +2470,7 @@ def build_client_timeline(client, projects, tasks, financeiro, contracts):
                     "data": contract.get("emitido_em") or "",
                     "tipo": "Contrato",
                     "titulo": contract.get("project_name") or "Contrato pendente",
-                    "descricao": f"{contract.get('modelo')} · {contract.get('status')}",
+                    "descricao": f"{contract.get('modelo')} Â· {contract.get('status')}",
                     "tone": "contract",
                     "url": url_for("project_detail", project_id=contract.get("project_id")),
                 }
@@ -2485,10 +2487,10 @@ def client_next_action(client, snapshot, financeiro, contracts, tasks):
             "label": "Acompanhar pagamento atrasado",
             "note": f"{financeiro.get('overdue_count')} parcela(s) atrasada(s).",
             "tone": "payment",
-            "primary_label": "Abrir recebíveis",
+            "primary_label": "Abrir recebÃ­veis",
             "primary_url": url_for("receivables_page"),
             "secondary_label": "WhatsApp",
-            "secondary_url": whatsapp_link(client.get("tel"), f"Olá, {first}! Passando para alinhar uma parcela pendente do seu projeto."),
+            "secondary_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Passando para alinhar uma parcela pendente do seu projeto."),
         }
     if contracts.get("pending_total"):
         pending = next((item for item in contracts.get("contract_items", []) if item.get("status") != "Assinado"), None)
@@ -2499,7 +2501,7 @@ def client_next_action(client, snapshot, financeiro, contracts, tasks):
             "primary_label": "Abrir projeto",
             "primary_url": url_for("project_detail", project_id=pending.get("project_id")) if pending else "#",
             "secondary_label": "WhatsApp",
-            "secondary_url": whatsapp_link(client.get("tel"), f"Olá, {first}! Passando para lembrar da assinatura do contrato."),
+            "secondary_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Passando para lembrar da assinatura do contrato."),
         }
     if overdue_tasks:
         task = overdue_tasks[0]
@@ -2518,13 +2520,13 @@ def client_next_action(client, snapshot, financeiro, contracts, tasks):
             "note": "Cliente sem contato recente.",
             "tone": "relationship",
             "primary_label": "WhatsApp",
-            "primary_url": whatsapp_link(client.get("tel"), f"Olá, {first}! Passando para saber como você está e se posso te ajudar em algo por aqui."),
+            "primary_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Passando para saber como vocÃª estÃ¡ e se posso te ajudar em algo por aqui."),
             "secondary_label": "Registrar contato",
             "secondary_url": url_for("quick_client_contact", client_id=client.get("id")),
         }
     return {
         "label": "Relacionamento em dia",
-        "note": "Sem ação crítica agora.",
+        "note": "Sem aÃ§Ã£o crÃ­tica agora.",
         "tone": "good",
         "primary_label": "Registrar contato",
         "primary_url": url_for("quick_client_contact", client_id=client.get("id")),
@@ -2550,7 +2552,7 @@ def project_stage_view(project):
             state_label = "Em andamento"
         else:
             state = "next"
-            state_label = "Próximo"
+            state_label = "PrÃ³ximo"
         items.append({**stage, "index": index, "state": state, "state_label": state_label})
     current = items[next_index] if next_index is not None and items else None
     return {"items": items, "current": current, "completed": len([item for item in items if item.get("done")]), "total": len(items)}
@@ -2560,13 +2562,13 @@ def project_next_action(project, client, payment_data, contract_data, linked_tas
     overdue = [item for item in payment_data.get("items", []) if item.get("status_calculado") == "Atrasado"]
     if overdue:
         return {
-            "label": "Acompanhar recebível atrasado",
-            "note": f"{overdue[0].get('descricao') or 'Parcela'} · {overdue[0].get('valor_fmt')}",
+            "label": "Acompanhar recebÃ­vel atrasado",
+            "note": f"{overdue[0].get('descricao') or 'Parcela'} Â· {overdue[0].get('valor_fmt')}",
             "tone": "payment",
-            "primary_label": "Abrir recebíveis",
+            "primary_label": "Abrir recebÃ­veis",
             "primary_url": url_for("receivables_page"),
         }
-    contract_status = (project.get("contrato") or {}).get("status") or "Não iniciado"
+    contract_status = (project.get("contrato") or {}).get("status") or "NÃ£o iniciado"
     if contract_status in ("Enviado", "Em assinatura"):
         return {
             "label": "Lembrar assinatura do contrato",
@@ -2589,15 +2591,15 @@ def project_next_action(project, client, payment_data, contract_data, linked_tas
     if stage_data.get("current"):
         current = stage_data["current"]
         return {
-            "label": f"Avançar etapa: {current.get('nome')}",
-            "note": "Revisar pendências e marcar como feito quando estiver aprovado.",
+            "label": f"AvanÃ§ar etapa: {current.get('nome')}",
+            "note": "Revisar pendÃªncias e marcar como feito quando estiver aprovado.",
             "tone": "project",
             "primary_label": "Ver etapas",
             "primary_url": f"#etapas",
         }
     return {
-        "label": "Projeto sem pendência crítica",
-        "note": "Boa hora para revisar histórico, arquivos e próximos combinados.",
+        "label": "Projeto sem pendÃªncia crÃ­tica",
+        "note": "Boa hora para revisar histÃ³rico, arquivos e prÃ³ximos combinados.",
         "tone": "good",
         "primary_label": "Abrir cliente",
         "primary_url": url_for("client_detail", client_id=client.get("id")) if client else url_for("projects"),
@@ -2611,7 +2613,7 @@ def build_project_timeline(project, payment_data, linked_tasks):
             {
                 "date": parse_date(item.get("data")) or date.min,
                 "data": item.get("data") or "",
-                "tipo": "Histórico",
+                "tipo": "HistÃ³rico",
                 "titulo": item.get("titulo") or "Registro",
                 "descricao": item.get("descricao") or "",
                 "tone": "relationship",
@@ -2625,7 +2627,7 @@ def build_project_timeline(project, payment_data, linked_tasks):
                     "data": stage.get("data") or "",
                     "tipo": "Etapa",
                     "titulo": stage.get("nome"),
-                    "descricao": "Etapa marcada como concluída.",
+                    "descricao": "Etapa marcada como concluÃ­da.",
                     "tone": "project",
                 }
             )
@@ -2647,21 +2649,21 @@ def build_project_timeline(project, payment_data, linked_tasks):
                 {
                     "date": parse_date(item.get("pago_em")) or date.min,
                     "data": item.get("pago_em") or "",
-                    "tipo": "Recebível",
+                    "tipo": "RecebÃ­vel",
                     "titulo": item.get("descricao") or "Parcela paga",
-                    "descricao": f"{item.get('valor_fmt')} · pago",
+                    "descricao": f"{item.get('valor_fmt')} Â· pago",
                     "tone": "payment",
                 }
             )
     contract = project.get("contrato", {}) or {}
-    if contract.get("status") and contract.get("status") != "Não iniciado":
+    if contract.get("status") and contract.get("status") != "NÃ£o iniciado":
         items.append(
             {
                 "date": parse_date(contract.get("assinado_em") or contract.get("emitido_em")) or date.min,
                 "data": contract.get("assinado_em") or contract.get("emitido_em") or "",
                 "tipo": "Contrato",
                 "titulo": contract.get("status"),
-                "descricao": contract.get("modelo") or "Contrato padrão Vitória",
+                "descricao": contract.get("modelo") or "Contrato padrÃ£o VitÃ³ria",
                 "tone": "contract",
             }
         )
@@ -2670,7 +2672,7 @@ def build_project_timeline(project, payment_data, linked_tasks):
 
 def activity_tone(kind):
     return {
-        "Recebível": "payment",
+        "RecebÃ­vel": "payment",
         "Pagamento": "payment",
         "Despesa": "payment",
         "Contrato": "contract",
@@ -2679,7 +2681,7 @@ def activity_tone(kind):
         "Lead": "lead",
         "Projeto": "project",
         "Cliente": "relationship",
-        "Histórico": "relationship",
+        "HistÃ³rico": "relationship",
     }.get(kind, "relationship")
 
 
@@ -2714,7 +2716,7 @@ def build_activity_center(data, filters=None):
         for entry in client.get("historico", []) or []:
             add_activity(
                 "Cliente",
-                entry.get("titulo") or "Histórico",
+                entry.get("titulo") or "HistÃ³rico",
                 entry.get("descricao") or "",
                 entry.get("data") or "",
                 client_url,
@@ -2731,29 +2733,29 @@ def build_activity_center(data, filters=None):
                 entry.get("descricao") or "",
                 entry.get("data") or "",
                 project_url,
-                f"{project.get('cliente') or ''} · {project.get('nome') or ''}",
+                f"{project.get('cliente') or ''} Â· {project.get('nome') or ''}",
                 f"project:{project.get('id')}:{entry.get('source_key') or entry.get('titulo')}",
             )
         for payment in project.get("pagamentos", []) or []:
             if payment.get("status") == "Pago" or payment.get("pago"):
                 add_activity(
-                    "Recebível",
+                    "RecebÃ­vel",
                     payment.get("descricao") or "Parcela paga",
-                    f"{project.get('nome')} · {format_money(money_to_float(payment.get('valor')))} pago",
+                    f"{project.get('nome')} Â· {format_money(money_to_float(payment.get('valor')))} pago",
                     payment.get("pago_em") or "",
                     url_for("receivables_page"),
                     project.get("cliente") or "",
                     f"payment:{project.get('id')}:{payment.get('id')}",
                 )
         contract = project.get("contrato", {}) or {}
-        if contract.get("status") and contract.get("status") != "Não iniciado":
+        if contract.get("status") and contract.get("status") != "NÃ£o iniciado":
             add_activity(
                 "Contrato",
                 contract.get("status"),
                 contract.get("modelo") or f"Contrato do projeto {project.get('nome')}",
                 contract.get("status_atualizado_em") or contract.get("assinado_em") or contract.get("emitido_em") or "",
                 project_url,
-                f"{project.get('cliente') or ''} · {project.get('nome') or ''}",
+                f"{project.get('cliente') or ''} Â· {project.get('nome') or ''}",
                 f"contract:{project.get('id')}:{contract.get('status')}",
             )
 
@@ -2774,7 +2776,7 @@ def build_activity_center(data, filters=None):
             normalized = normalize_task(dict(task), data)
             add_activity(
                 "Tarefa",
-                task.get("titulo") or task.get("text") or "Tarefa concluída",
+                task.get("titulo") or task.get("text") or "Tarefa concluÃ­da",
                 task.get("descricao") or task.get("tipo") or "",
                 task.get("done_at") or "",
                 normalized.get("open_url") or url_for("tasks_page"),
@@ -2787,8 +2789,8 @@ def build_activity_center(data, filters=None):
         if event.get("status") == "concluido":
             add_activity(
                 "Agenda",
-                event.get("titulo") or "Compromisso concluído",
-                f"{format_date_br(event.get('data')) or ''} · {event.get('hora') or 'sem horário'}",
+                event.get("titulo") or "Compromisso concluÃ­do",
+                f"{format_date_br(event.get('data')) or ''} Â· {event.get('hora') or 'sem horÃ¡rio'}",
                 event.get("concluido_em") or event.get("data") or "",
                 normalized.get("open_url") or url_for("agenda_page"),
                 normalized.get("context_label") or "",
@@ -2805,9 +2807,9 @@ def build_activity_center(data, filters=None):
         "clientes": len([i for i in items if i["kind"] == "Cliente"]),
         "projetos": len([i for i in items if i["kind"] == "Projeto"]),
         "leads": len([i for i in items if i["kind"] == "Lead"]),
-        "financeiro": len([i for i in items if i["kind"] == "Recebível"]),
+        "financeiro": len([i for i in items if i["kind"] == "RecebÃ­vel"]),
     }
-    return {"items": items[:80], "summary": summary, "filters": filters, "types": ["todos", "Cliente", "Projeto", "Lead", "Tarefa", "Agenda", "Recebível", "Contrato"]}
+    return {"items": items[:80], "summary": summary, "filters": filters, "types": ["todos", "Cliente", "Projeto", "Lead", "Tarefa", "Agenda", "RecebÃ­vel", "Contrato"]}
 
 
 def build_contract_actions(data):
@@ -2815,7 +2817,7 @@ def build_contract_actions(data):
     today = date.today()
     for project in data.get("projetos", []):
         contract = project.get("contrato", {}) or {}
-        status = contract.get("status") or "Não iniciado"
+        status = contract.get("status") or "NÃ£o iniciado"
         if status not in ("Enviado", "Em assinatura"):
             continue
         reminder_days = int(contract.get("lembrete_assinatura_dias") or 3)
@@ -2835,7 +2837,7 @@ def build_contract_actions(data):
                 "status": status,
                 "days": (today - base_date).days if base_date else 0,
                 "action_url": url_for("project_detail", project_id=project.get("id")),
-                "whatsapp_url": whatsapp_link(client.get("tel") if client else "", f"Olá, {first_name}! Passando para lembrar da assinatura do contrato do projeto {project.get('nome')}."),
+                "whatsapp_url": whatsapp_link(client.get("tel") if client else "", f"OlÃ¡, {first_name}! Passando para lembrar da assinatura do contrato do projeto {project.get('nome')}."),
             }
         )
     return actions
@@ -2859,11 +2861,11 @@ def complete_lead_automation_tasks(data, lead_id, keys):
     for task in data.get("tarefas", []):
         if task.get("automation_key") in [f"{key}:{lead_id}" for key in keys] and not task.get("done"):
             task["done"] = True
-            task["status"] = "Concluída"
+            task["status"] = "ConcluÃ­da"
             task["done_at"] = today_br()
 
 
-def create_lead_response_task(data, lead, title="Responder orçamento"):
+def create_lead_response_task(data, lead, title="Responder orÃ§amento"):
     key = f"lead_response:{lead.get('id')}"
     if has_open_automation_task(data, key):
         return None
@@ -2871,7 +2873,7 @@ def create_lead_response_task(data, lead, title="Responder orçamento"):
         "id": next_id(data["tarefas"]),
         "titulo": title,
         "text": title,
-        "descricao": f"Entrar em contato com {lead.get('nome')} pelo WhatsApp e dar sequência ao atendimento.",
+        "descricao": f"Entrar em contato com {lead.get('nome')} pelo WhatsApp e dar sequÃªncia ao atendimento.",
         "tipo": "Comercial",
         "pri": "Alta",
         "prazo": date.today().isoformat(),
@@ -2927,14 +2929,14 @@ def build_lead_whatsapp_message(lead):
     first = str(lead.get("nome") or "").split(" ")[0] or "tudo bem"
     stage_key = lead_stage_key(lead)
     if stage_key == "new":
-        return f"Olá, {first}! Recebi seu pedido de orçamento e vou te chamar para entender melhor seu projeto."
+        return f"OlÃ¡, {first}! Recebi seu pedido de orÃ§amento e vou te chamar para entender melhor seu projeto."
     if stage_key == "contacted":
-        return f"Olá, {first}! Passando para alinhar os próximos passos do seu projeto."
+        return f"OlÃ¡, {first}! Passando para alinhar os prÃ³ximos passos do seu projeto."
     if stage_key == "briefing":
-        return f"Olá, {first}! Vamos confirmar os pontos do briefing para avançarmos com segurança."
+        return f"OlÃ¡, {first}! Vamos confirmar os pontos do briefing para avanÃ§armos com seguranÃ§a."
     if stage_key == "proposal":
-        return f"Olá, {first}! Queria te ajudar com qualquer dúvida para avançarmos com a proposta."
-    return f"Olá, {first}! Tudo bem por aí?"
+        return f"OlÃ¡, {first}! Queria te ajudar com qualquer dÃºvida para avanÃ§armos com a proposta."
+    return f"OlÃ¡, {first}! Tudo bem por aÃ­?"
 
 
 def build_lead_ai_insight(lead):
@@ -2949,42 +2951,42 @@ def build_lead_ai_insight(lead):
         return {
             "title": "Retomar follow-up agora",
             "note": f"Lead parado ha {stale_days} dias. Reative com mensagem curta e proposta de proximo passo.",
-            "message": f"Olá, {first}! Passei para retomar seu {ambiente.lower()}. Se fizer sentido, te envio hoje os próximos passos em 2 pontos objetivos.",
+            "message": f"OlÃ¡, {first}! Passei para retomar seu {ambiente.lower()}. Se fizer sentido, te envio hoje os prÃ³ximos passos em 2 pontos objetivos.",
         }
     if stage_key == "new":
         return {
             "title": "Responder em ate 15 min",
             "note": f"Lead novo vindo de {origem}. Velocidade de resposta aumenta a chance de briefing.",
-            "message": f"Olá, {first}! Recebi seu contato sobre {ambiente.lower()} e vou te ajudar com isso. Posso te fazer 3 perguntas rápidas para alinharmos escopo e prazo?",
+            "message": f"OlÃ¡, {first}! Recebi seu contato sobre {ambiente.lower()} e vou te ajudar com isso. Posso te fazer 3 perguntas rÃ¡pidas para alinharmos escopo e prazo?",
         }
     if stage_key == "contacted":
         return {
             "title": "Agendar briefing",
             "note": "Transforme interesse em reuniao com horario fechado.",
-            "message": f"Olá, {first}! Para avançarmos com seu {ambiente.lower()}, vamos agendar um briefing de 20 minutos? Te passo duas opções de horário.",
+            "message": f"OlÃ¡, {first}! Para avanÃ§armos com seu {ambiente.lower()}, vamos agendar um briefing de 20 minutos? Te passo duas opÃ§Ãµes de horÃ¡rio.",
         }
     if stage_key == "briefing":
         return {
             "title": "Consolidar proposta",
             "note": "Briefing feito: alinhe escopo final e data de envio da proposta.",
-            "message": f"Olá, {first}! Finalizei a consolidação do briefing do seu {ambiente.lower()}. Vou te enviar a proposta com escopo e cronograma para avaliarmos juntas(os).",
+            "message": f"OlÃ¡, {first}! Finalizei a consolidaÃ§Ã£o do briefing do seu {ambiente.lower()}. Vou te enviar a proposta com escopo e cronograma para avaliarmos juntas(os).",
         }
     if stage_key == "proposal":
         return {
             "title": "Follow-up da proposta",
             "note": "Conduza decisao com clareza, sem pressao.",
-            "message": f"Olá, {first}! Queria saber como você se sentiu com a proposta do {ambiente.lower()}. Se quiser, te explico em 5 minutos as opções para facilitar a decisão.",
+            "message": f"OlÃ¡, {first}! Queria saber como vocÃª se sentiu com a proposta do {ambiente.lower()}. Se quiser, te explico em 5 minutos as opÃ§Ãµes para facilitar a decisÃ£o.",
         }
     if stage_key == "closed":
         return {
             "title": "Abrir onboarding do projeto",
-            "note": "Lead convertido: inicie etapa de execução.",
-            "message": f"Olá, {first}! Vamos iniciar oficialmente seu {ambiente.lower()}. Te envio agora o plano das primeiras etapas.",
+            "note": "Lead convertido: inicie etapa de execuÃ§Ã£o.",
+            "message": f"OlÃ¡, {first}! Vamos iniciar oficialmente seu {ambiente.lower()}. Te envio agora o plano das primeiras etapas.",
         }
     return {
         "title": "Manter relacionamento ativo",
         "note": "Sem urgencia critica, mantenha contato consultivo.",
-        "message": f"Olá, {first}! Tudo bem? Fico à disposição para te apoiar no próximo passo do seu projeto.",
+        "message": f"OlÃ¡, {first}! Tudo bem? Fico Ã  disposiÃ§Ã£o para te apoiar no prÃ³ximo passo do seu projeto.",
     }
 
 
@@ -3001,7 +3003,7 @@ def create_lead_followup_task(data, lead):
     if response_task:
         response_task["titulo"] = "Fazer follow-up do lead"
         response_task["text"] = "Fazer follow-up do lead"
-        response_task["descricao"] = f"{lead.get('nome')} está sem avanço há {days} dias. Chamar no WhatsApp e definir o próximo passo."
+        response_task["descricao"] = f"{lead.get('nome')} estÃ¡ sem avanÃ§o hÃ¡ {days} dias. Chamar no WhatsApp e definir o prÃ³ximo passo."
         response_task["pri"] = "Alta"
         response_task["prazo"] = date.today().isoformat()
         return response_task
@@ -3011,13 +3013,13 @@ def create_lead_followup_task(data, lead):
         "id": next_id(data["tarefas"]),
         "titulo": "Fazer follow-up do lead",
         "text": "Fazer follow-up do lead",
-        "descricao": f"{lead.get('nome')} está sem avanço há {days} dias. Chamar no WhatsApp e definir o próximo passo.",
+        "descricao": f"{lead.get('nome')} estÃ¡ sem avanÃ§o hÃ¡ {days} dias. Chamar no WhatsApp e definir o prÃ³ximo passo.",
         "tipo": "Comercial",
         "pri": "Alta",
         "prazo": date.today().isoformat(),
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": "lead",
         "vinculo_id": lead.get("id"),
         "vinculo_nome": lead.get("nome"),
@@ -3051,13 +3053,13 @@ def create_contract_signature_task(data, contract_action):
         "id": next_id(data["tarefas"]),
         "titulo": "Acompanhar assinatura do contrato",
         "text": "Acompanhar assinatura do contrato",
-        "descricao": f"Contrato do projeto {project.get('nome')} está como {contract_action.get('status')}. Chamar o cliente e confirmar assinatura.",
+        "descricao": f"Contrato do projeto {project.get('nome')} estÃ¡ como {contract_action.get('status')}. Chamar o cliente e confirmar assinatura.",
         "tipo": "Contrato",
         "pri": "Alta",
         "prazo": date.today().isoformat(),
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": "projeto",
         "vinculo_id": project.get("id"),
         "vinculo_nome": project.get("nome"),
@@ -3078,7 +3080,7 @@ def ensure_contract_signature_tasks(data):
     return created
 
 
-def create_relationship_contact_task(data, client, reason, key_suffix, priority="Média"):
+def create_relationship_contact_task(data, client, reason, key_suffix, priority="MÃ©dia"):
     key = f"relationship_contact:{client.get('id')}:{key_suffix}"
     if has_automation_task(data, key):
         return None
@@ -3086,13 +3088,13 @@ def create_relationship_contact_task(data, client, reason, key_suffix, priority=
         "id": next_id(data["tarefas"]),
         "titulo": reason,
         "text": reason,
-        "descricao": f"Entrar em contato com {client.get('nome')} e registrar a interação no cliente.",
+        "descricao": f"Entrar em contato com {client.get('nome')} e registrar a interaÃ§Ã£o no cliente.",
         "tipo": "Follow-up",
         "pri": priority,
         "prazo": date.today().isoformat(),
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": "cliente",
         "vinculo_id": client.get("id"),
         "vinculo_nome": client.get("nome"),
@@ -3111,7 +3113,7 @@ def ensure_relationship_tasks(data):
     year = date.today().year
     month_key = date.today().strftime("%Y-%m")
     for client in relationship["birthdays_today"][:2]:
-        if create_relationship_contact_task(data, client, "Enviar mensagem de aniversário", f"birthday:{year}", "Média"):
+        if create_relationship_contact_task(data, client, "Enviar mensagem de aniversÃ¡rio", f"birthday:{year}", "MÃ©dia"):
             created += 1
     for client in relationship["no_contact"][:3]:
         if create_relationship_contact_task(data, client, "Retomar relacionamento com cliente", f"no_contact:{month_key}", "Baixa"):
@@ -3192,7 +3194,7 @@ def build_lead_pipeline(leads):
         item["stage_key"] = lead_stage_key(item)
         item["days_since_interaction"] = lead_days_since_interaction(item)
         item["is_stale"] = is_stale_lead(item)
-        item["stale_label"] = f"{item['days_since_interaction']} dias sem avanço" if item["is_stale"] else ""
+        item["stale_label"] = f"{item['days_since_interaction']} dias sem avanÃ§o" if item["is_stale"] else ""
         item["owner_name"] = item.get("responsavel") or LEAD_OWNER_DEFAULT
         item["sla_minutes"] = lead_sla_minutes_without_action(item)
         item["sla_overdue"] = item["sla_minutes"] > LEAD_FIRST_CONTACT_SLA_MINUTES
@@ -3219,7 +3221,7 @@ def build_commercial_metrics(data, board, pipeline):
         lead
         for lead in open_leads
         if (lead.get("origem") or "").lower() == "instagram"
-        and (lead.get("etapa") or "").lower() == "orçamento recebido"
+        and (lead.get("etapa") or "").lower() == "orÃ§amento recebido"
     ]
     lead_tasks = [
         task
@@ -3310,7 +3312,7 @@ def build_week_goals(data):
     close_rate = (closed_count / len(leads_week) * 100.0) if leads_week else 0.0
 
     projects = data.get("projetos", []) or []
-    active_projects = [p for p in projects if (p.get("status") or "").strip().lower() not in ("concluido", "concluído", "entregue")]
+    active_projects = [p for p in projects if (p.get("status") or "").strip().lower() not in ("concluido", "concluÃ­do", "entregue")]
     total_stages = sum(len(p.get("etapas", []) or []) for p in active_projects)
     done_stages = sum(1 for p in active_projects for st in (p.get("etapas", []) or []) if st.get("done"))
     stage_on_time_rate = (done_stages / total_stages * 100.0) if total_stages else 100.0
@@ -3421,7 +3423,7 @@ def build_automation_actions(data, board):
             actions.append(
                 {
                     "title": task.get("titulo"),
-                    "subtitle": f"{task.get('contexto')} · {task.get('label')}",
+                    "subtitle": f"{task.get('contexto')} Â· {task.get('label')}",
                     "tone": "lead" if task.get("vinculo_tipo") == "lead" else "task",
                     "primary_label": "WhatsApp" if has_whatsapp else "Abrir",
                     "primary_url": task.get("whatsapp_url") if has_whatsapp else task.get("link_url") or url_for("tasks_page"),
@@ -3508,10 +3510,10 @@ def build_daily_command(data, board):
             {
                 "client_id": client.get("id"),
                 "client_name": client.get("nome"),
-                "title": f"Aniversário: {client.get('nome')}",
+                "title": f"AniversÃ¡rio: {client.get('nome')}",
                 "subtitle": "Enviar mensagem hoje.",
                 "action_url": url_for("client_detail", client_id=client.get("id")),
-                "whatsapp_url": whatsapp_link(client.get("tel"), f"Olá, {client.get('nome','').split(' ')[0]}! Feliz aniversário! Que seu novo ciclo seja muito especial."),
+                "whatsapp_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {client.get('nome','').split(' ')[0]}! Feliz aniversÃ¡rio! Que seu novo ciclo seja muito especial."),
             }
         )
     for client in relationship["no_contact"][:3]:
@@ -3522,7 +3524,7 @@ def build_daily_command(data, board):
                 "title": f"Retomar contato: {client.get('nome')}",
                 "subtitle": f"{client.get('dias_sem_contato_label')} sem contato.",
                 "action_url": url_for("client_detail", client_id=client.get("id")),
-                "whatsapp_url": whatsapp_link(client.get("tel"), f"Olá, {client.get('nome','').split(' ')[0]}! Passando para saber como você está e se posso te ajudar em algo por aqui."),
+                "whatsapp_url": whatsapp_link(client.get("tel"), f"OlÃ¡, {client.get('nome','').split(' ')[0]}! Passando para saber como vocÃª estÃ¡ e se posso te ajudar em algo por aqui."),
             }
         )
     payment_actions = [
@@ -3564,7 +3566,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": f"Cobrar {payment.get('client_name')}",
-                "subtitle": f"{payment.get('valor_fmt')} · vence {payment.get('vencimento_fmt') or 'sem data'}",
+                "subtitle": f"{payment.get('valor_fmt')} Â· vence {payment.get('vencimento_fmt') or 'sem data'}",
                 "tone": "payment",
                 "label": status,
                 "amount": payment.get("valor_fmt"),
@@ -3580,7 +3582,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": f"Pagar {expense.get('descricao')}",
-                "subtitle": f"{expense.get('categoria') or 'Despesa'} · vence {expense.get('vencimento_fmt') or 'sem data'}",
+                "subtitle": f"{expense.get('categoria') or 'Despesa'} Â· vence {expense.get('vencimento_fmt') or 'sem data'}",
                 "tone": "expense",
                 "label": status,
                 "amount": expense.get("valor_fmt"),
@@ -3596,7 +3598,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": f"Follow-up com {lead.get('nome')}",
-                "subtitle": f"{lead_days} dias sem avanço",
+                "subtitle": f"{lead_days} dias sem avanÃ§o",
                 "tone": "lead",
                 "label": "Comercial",
                 "amount": "",
@@ -3612,7 +3614,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": task.get("titulo") or task.get("text"),
-                "subtitle": f"{task.get('contexto')} · {task.get('label')}",
+                "subtitle": f"{task.get('contexto')} Â· {task.get('label')}",
                 "tone": "task",
                 "label": "Tarefa",
                 "amount": "",
@@ -3634,7 +3636,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": event.get("titulo") or "Compromisso",
-                "subtitle": f"{event.get('hora') or 'sem horário'} · {event.get('context_label')}",
+                "subtitle": f"{event.get('hora') or 'sem horÃ¡rio'} Â· {event.get('context_label')}",
                 "tone": "agenda",
                 "label": "Agenda",
                 "amount": "",
@@ -3649,7 +3651,7 @@ def build_daily_command(data, board):
         priority_actions.append(
             {
                 "title": f"Contrato pendente: {contract.get('client_name')}",
-                "subtitle": f"{contract.get('project_name')} · {contract.get('status')}",
+                "subtitle": f"{contract.get('project_name')} Â· {contract.get('status')}",
                 "tone": "contract",
                 "label": "Contrato",
                 "amount": "",
@@ -3661,7 +3663,7 @@ def build_daily_command(data, board):
             }
         )
     for item in relationship_actions:
-        is_birthday = str(item.get("title") or "").startswith("Aniversário")
+        is_birthday = str(item.get("title") or "").startswith("AniversÃ¡rio")
         priority_actions.append(
             {
                 "title": item.get("title"),
@@ -3747,13 +3749,13 @@ def build_smart_day_plan(data, board):
 
     for lead in new_leads:
         first_name = str(lead.get("nome") or "").split(" ")[0]
-        whatsapp_url = whatsapp_link(lead.get("tel"), f"Olá, {first_name}! Recebi seu pedido e vou te chamar para entender melhor.")
+        whatsapp_url = whatsapp_link(lead.get("tel"), f"OlÃ¡, {first_name}! Recebi seu pedido e vou te chamar para entender melhor.")
         add_action(
             f"lead-new:{lead.get('id')}",
             {
                 "title": f"Responder {lead.get('nome')}",
-                "subtitle": f"{lead.get('origem') or 'Lead'} · {lead.get('ambiente') or 'interesse não informado'}",
-                "reason": "Lead novo precisa virar conversa rápida.",
+                "subtitle": f"{lead.get('origem') or 'Lead'} Â· {lead.get('ambiente') or 'interesse nÃ£o informado'}",
+                "reason": "Lead novo precisa virar conversa rÃ¡pida.",
                 "tone": "lead",
                 "label": "Novo lead",
                 "amount": "",
@@ -3776,8 +3778,8 @@ def build_smart_day_plan(data, board):
             f"payment:{payment.get('project_id')}:{payment.get('id')}",
             {
                 "title": f"Cobrar {payment.get('client_name')}",
-                "subtitle": f"{payment.get('valor_fmt')} · vence {payment.get('vencimento_fmt') or 'sem data'}",
-                "reason": "Recebível precisa de atenção para não escapar do mês.",
+                "subtitle": f"{payment.get('valor_fmt')} Â· vence {payment.get('vencimento_fmt') or 'sem data'}",
+                "reason": "RecebÃ­vel precisa de atenÃ§Ã£o para nÃ£o escapar do mÃªs.",
                 "tone": "payment",
                 "label": status,
                 "amount": payment.get("valor_fmt"),
@@ -3801,7 +3803,7 @@ def build_smart_day_plan(data, board):
             f"expense:{expense.get('id')}",
             {
                 "title": f"Pagar {expense.get('descricao')}",
-                "subtitle": f"{expense.get('categoria') or 'Despesa'} · vence {expense.get('vencimento_fmt') or 'sem data'}",
+                "subtitle": f"{expense.get('categoria') or 'Despesa'} Â· vence {expense.get('vencimento_fmt') or 'sem data'}",
                 "reason": "Despesa aberta para manter o financeiro leve em dia.",
                 "tone": "expense",
                 "label": status,
@@ -3829,8 +3831,8 @@ def build_smart_day_plan(data, board):
             f"event:{event.get('id')}",
             {
                 "title": event.get("titulo") or "Compromisso",
-                "subtitle": f"{event.get('hora') or 'sem horário'} · {event.get('context_label')}",
-                "reason": "Compromisso de hoje precisa estar na operação.",
+                "subtitle": f"{event.get('hora') or 'sem horÃ¡rio'} Â· {event.get('context_label')}",
+                "reason": "Compromisso de hoje precisa estar na operaÃ§Ã£o.",
                 "tone": "agenda",
                 "label": event.get("status_label") or "Agenda",
                 "amount": "",
@@ -3854,7 +3856,7 @@ def build_smart_day_plan(data, board):
         task_actions.extend(
             [
                 quick_action("Concluir", url_for("complete_task", task_id=task.get("id")), "post", "primary" if not task_actions else ""),
-                quick_action("Amanhã", url_for("postpone_task", task_id=task.get("id"), days=1), "post"),
+                quick_action("AmanhÃ£", url_for("postpone_task", task_id=task.get("id"), days=1), "post"),
                 quick_action("Semana", url_for("postpone_task", task_id=task.get("id"), days=7), "post"),
                 quick_action("Abrir", task.get("link_url") or url_for("tasks_page")),
             ]
@@ -3863,7 +3865,7 @@ def build_smart_day_plan(data, board):
             f"task:{task.get('id')}",
             {
                 "title": task.get("titulo") or task.get("text"),
-                "subtitle": f"{task.get('contexto')} · {task.get('label')}",
+                "subtitle": f"{task.get('contexto')} Â· {task.get('label')}",
                 "reason": task.get("automation_reason") or "Tarefa aberta na fila operacional.",
                 "tone": "task",
                 "label": "Tarefa",
@@ -3881,12 +3883,12 @@ def build_smart_day_plan(data, board):
     for lead in stale_leads:
         lead_days = lead_days_since_interaction(lead) or 0
         first_name = str(lead.get("nome") or "").split(" ")[0]
-        whatsapp_url = whatsapp_link(lead.get("tel"), f"Olá, {first_name}! Passando para saber se você conseguiu avançar com calma. Posso te ajudar com o próximo passo?")
+        whatsapp_url = whatsapp_link(lead.get("tel"), f"OlÃ¡, {first_name}! Passando para saber se vocÃª conseguiu avanÃ§ar com calma. Posso te ajudar com o prÃ³ximo passo?")
         add_action(
             f"lead-stale:{lead.get('id')}",
             {
                 "title": f"Follow-up com {lead.get('nome')}",
-                "subtitle": f"{lead_days} dias sem avanço",
+                "subtitle": f"{lead_days} dias sem avanÃ§o",
                 "reason": "Lead parado perde temperatura comercial.",
                 "tone": "lead",
                 "label": "Comercial",
@@ -3909,8 +3911,8 @@ def build_smart_day_plan(data, board):
             f"contract:{contract.get('project_id')}",
             {
                 "title": f"Contrato pendente: {contract.get('client_name')}",
-                "subtitle": f"{contract.get('project_name')} · {contract.get('status')}",
-                "reason": "Formalização parada trava o início ou a segurança do projeto.",
+                "subtitle": f"{contract.get('project_name')} Â· {contract.get('status')}",
+                "reason": "FormalizaÃ§Ã£o parada trava o inÃ­cio ou a seguranÃ§a do projeto.",
                 "tone": "contract",
                 "label": "Contrato",
                 "amount": "",
@@ -3932,14 +3934,14 @@ def build_smart_day_plan(data, board):
     for client, is_birthday in relationship_actions:
         first_name = str(client.get("nome") or "").split(" ")[0]
         if is_birthday:
-            title = f"Aniversário: {client.get('nome')}"
+            title = f"AniversÃ¡rio: {client.get('nome')}"
             subtitle = "Enviar mensagem hoje."
-            message = f"Olá, {first_name}! Feliz aniversário! Que seu novo ciclo seja muito especial."
+            message = f"OlÃ¡, {first_name}! Feliz aniversÃ¡rio! Que seu novo ciclo seja muito especial."
             rank = 60
         else:
             title = f"Retomar contato: {client.get('nome')}"
             subtitle = f"{client.get('dias_sem_contato_label')} sem contato."
-            message = f"Olá, {first_name}! Passando para saber como você está e se posso te ajudar em algo por aqui."
+            message = f"OlÃ¡, {first_name}! Passando para saber como vocÃª estÃ¡ e se posso te ajudar em algo por aqui."
             rank = 82
         whatsapp_url = whatsapp_link(client.get("tel"), message)
         add_action(
@@ -3947,7 +3949,7 @@ def build_smart_day_plan(data, board):
             {
                 "title": title,
                 "subtitle": subtitle,
-                "reason": "Relacionamento ativo mantém o cliente próximo da marca.",
+                "reason": "Relacionamento ativo mantÃ©m o cliente prÃ³ximo da marca.",
                 "tone": "relationship",
                 "label": "Cliente",
                 "amount": "",
@@ -4008,7 +4010,7 @@ def build_notifications(data):
         lead
         for lead in data.get("leads", [])
         if (lead.get("origem") or "").lower() == "instagram"
-        and (lead.get("etapa") or "").lower() == "orçamento recebido"
+        and (lead.get("etapa") or "").lower() == "orÃ§amento recebido"
         and (lead.get("status") or "novo").lower() in ("novo", "ativo")
         and not has_open_automation_task(data, f"lead_response:{lead.get('id')}")
     ]
@@ -4018,13 +4020,13 @@ def build_notifications(data):
                 "key": f"lead:{lead.get('id')}",
                 "category": "Lead",
                 "priority": 1,
-                "title": f"Novo orçamento: {lead.get('nome')}",
+                "title": f"Novo orÃ§amento: {lead.get('nome')}",
                 "subtitle": lead.get("ambiente") or "Pedido vindo do Instagram",
                 "action_label": "Abrir leads",
                 "action_url": url_for("leads"),
                 "action_method": "get",
                 "secondary_label": "WhatsApp",
-                "secondary_url": whatsapp_link(lead.get("tel"), f"Olá, {str(lead.get('nome','')).split(' ')[0]}! Recebi seu pedido de orçamento e vou te chamar para entender melhor."),
+                "secondary_url": whatsapp_link(lead.get("tel"), f"OlÃ¡, {str(lead.get('nome','')).split(' ')[0]}! Recebi seu pedido de orÃ§amento e vou te chamar para entender melhor."),
             }
         )
     for task in board["overdue"][:4]:
@@ -4064,7 +4066,7 @@ def build_notifications(data):
                 "category": "Agenda",
                 "priority": 2 if event.get("tone") == "overdue" else 3,
                 "title": event.get("titulo") or "Compromisso",
-                "subtitle": f"{event.get('status_label')} · {event.get('hora') or 'sem horário'} · {event.get('context_label')}",
+                "subtitle": f"{event.get('status_label')} Â· {event.get('hora') or 'sem horÃ¡rio'} Â· {event.get('context_label')}",
                 "action_label": "Abrir compromisso",
                 "action_url": url_for("open_event", event_id=event.get("id")),
                 "action_method": "get",
@@ -4081,8 +4083,8 @@ def build_notifications(data):
                 "category": "Pagamento",
                 "priority": 1 if payment.get("status_calculado") == "Atrasado" else 2,
                 "title": f"{payment.get('status_calculado')}: {payment.get('client_name')}",
-                "subtitle": f"{payment.get('project_name')} · {payment.get('valor_fmt')} · {payment.get('vencimento_fmt') or 'sem vencimento'}",
-                "action_label": "Abrir recebíveis",
+                "subtitle": f"{payment.get('project_name')} Â· {payment.get('valor_fmt')} Â· {payment.get('vencimento_fmt') or 'sem vencimento'}",
+                "action_label": "Abrir recebÃ­veis",
                 "action_url": url_for("receivables_page"),
                 "action_method": "get",
                 "secondary_label": "WhatsApp",
@@ -4100,7 +4102,7 @@ def build_notifications(data):
                 "category": "Despesa",
                 "priority": 1 if expense.get("status_calculado") == "Atrasado" else 2,
                 "title": f"{expense.get('status_calculado')}: {expense.get('descricao')}",
-                "subtitle": f"{expense.get('categoria') or 'Despesa'} · {expense.get('valor_fmt')} · {expense.get('vencimento_fmt') or 'sem vencimento'}",
+                "subtitle": f"{expense.get('categoria') or 'Despesa'} Â· {expense.get('valor_fmt')} Â· {expense.get('vencimento_fmt') or 'sem vencimento'}",
                 "action_label": "Abrir financeiro",
                 "action_url": url_for("finance_page", status=expense.get("status_calculado")),
                 "action_method": "get",
@@ -4117,7 +4119,7 @@ def build_notifications(data):
                 "category": "Contrato",
                 "priority": 2,
                 "title": f"Contrato pendente: {contract.get('client_name')}",
-                "subtitle": f"{contract.get('project_name')} · {contract.get('status')}",
+                "subtitle": f"{contract.get('project_name')} Â· {contract.get('status')}",
                 "action_label": "Abrir projeto",
                 "action_url": contract.get("action_url"),
                 "action_method": "get",
@@ -4131,7 +4133,7 @@ def build_notifications(data):
                 "key": f"birthday:{client.get('id')}:{date.today().year}",
                 "category": "Relacionamento",
                 "priority": 3,
-                "title": f"Aniversário: {client.get('nome')}",
+                "title": f"AniversÃ¡rio: {client.get('nome')}",
                 "subtitle": "Enviar uma mensagem hoje.",
                 "action_label": "Abrir cliente",
                 "action_url": url_for("client_detail", client_id=client.get("id")),
@@ -4527,16 +4529,22 @@ def send_password_reset_email_resend(recipient_email, reset_link):
 
 
 def send_password_reset_email(recipient_email, reset_link):
-    sent, reason = send_password_reset_email_resend(recipient_email, reset_link)
+    delivery_email = str(recipient_email or "").strip().lower()
+    if PASSWORD_RESET_DELIVERY_MODE == "support_only" and OPERATIONS_INBOX_EMAIL:
+        delivery_email = OPERATIONS_INBOX_EMAIL
+
+    sent, reason = send_password_reset_email_resend(delivery_email, reset_link)
     if sent:
-        return True, reason
+        return True, reason, delivery_email
+
     settings = smtp_settings()
     if not settings:
-        return False, "no_provider_configured"
+        return False, "no_provider_configured", delivery_email
+
     msg = EmailMessage()
     msg["Subject"] = "Uardon CRM | Redefinição de senha"
     msg["From"] = settings["sender"]
-    msg["To"] = recipient_email
+    msg["To"] = delivery_email
     msg.set_content(
         "Recebemos uma solicitação para redefinir sua senha no Uardon CRM.\n\n"
         f"Use este link (válido por 30 minutos):\n{reset_link}\n\n"
@@ -4550,9 +4558,10 @@ def send_password_reset_email(recipient_email, reset_link):
                 smtp.login(settings["user"], settings["password"])
             smtp.send_message(msg)
     except Exception as exc:
-        print(f"[PASSWORD_RESET_ERROR] {recipient_email}: {exc}")
-        return False, "smtp_send_failed"
-    return True, "sent"
+        print(f"[PASSWORD_RESET_ERROR] {delivery_email}: {exc}")
+        return False, "smtp_send_failed", delivery_email
+
+    return True, "sent", delivery_email
 
 
 def google_login_config():
@@ -4576,11 +4585,11 @@ def google_login_enabled():
 def create_google_oauth_flow(state=None):
     cfg = google_login_config()
     if not cfg:
-        raise RuntimeError("Login com Google não está configurado.")
+        raise RuntimeError("Login com Google nÃ£o estÃ¡ configurado.")
     try:
         from google_auth_oauthlib.flow import Flow
     except Exception as exc:
-        raise RuntimeError(f"Dependências Google OAuth ausentes: {exc}") from exc
+        raise RuntimeError(f"DependÃªncias Google OAuth ausentes: {exc}") from exc
     flow = Flow.from_client_config(
         {
             "web": {
@@ -4721,7 +4730,7 @@ def logout():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if not PUBLIC_SIGNUP_ENABLED:
-        flash("Cadastro público desativado. Solicite acesso ao administrador.")
+        flash("Cadastro pÃºblico desativado. Solicite acesso ao administrador.")
         return redirect(url_for("login"))
     if request.method == "POST":
         data = load_data()
@@ -4733,7 +4742,7 @@ def signup():
             flash("Informe um nome completo.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if "@" not in email or "." not in email.split("@")[-1]:
-            flash("Informe um e-mail válido.")
+            flash("Informe um e-mail vÃ¡lido.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
@@ -4743,10 +4752,10 @@ def signup():
             flash(password_reason, "warning")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if password != password_confirm:
-            flash("A confirmação de senha não confere.")
+            flash("A confirmaÃ§Ã£o de senha nÃ£o confere.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
-            flash("Esse e-mail já está em uso.")
+            flash("Esse e-mail jÃ¡ estÃ¡ em uso.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         username_base = normalize_username_from_name(name)
         username = username_base
@@ -4765,7 +4774,7 @@ def signup():
         }
         data["users"].append(new_user)
         save_data(data)
-        flash("Conta criada. Faça login para continuar.")
+        flash("Conta criada. FaÃ§a login para continuar.")
         return redirect(url_for("login"))
     return render_template("signup.html", google_login_enabled=google_login_enabled())
 
@@ -4784,7 +4793,7 @@ def admin_create_user():
             flash("Informe um nome completo.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if "@" not in email or "." not in email.split("@")[-1]:
-            flash("Informe um e-mail válido.")
+            flash("Informe um e-mail vÃ¡lido.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
@@ -4794,10 +4803,10 @@ def admin_create_user():
             flash(password_reason, "warning")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if role not in ROLE_PERMISSIONS:
-            flash("Perfil inválido.")
+            flash("Perfil invÃ¡lido.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
-            flash("Esse e-mail já está em uso.")
+            flash("Esse e-mail jÃ¡ estÃ¡ em uso.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         username_base = normalize_username_from_name(name)
         username = username_base
@@ -4816,7 +4825,7 @@ def admin_create_user():
         }
         data.setdefault("users", []).append(new_user)
         save_data(data)
-        flash("Usuário criado com sucesso.")
+        flash("UsuÃ¡rio criado com sucesso.")
         return redirect(url_for("admin_create_user"))
     return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
 
@@ -4867,13 +4876,27 @@ def forgot_password():
                     item["revoked_reason"] = "superseded_by_new_request"
             tokens.append({"token": token, "user_id": user.get("id"), "expires_at": expires_at, "created_at": now.isoformat(timespec="seconds"), "used": False})
             reset_link = url_for("reset_password", token=token, _external=True)
-            sent, reason = send_password_reset_email(email, reset_link)
+            sent, reason, delivery_email = send_password_reset_email(email, reset_link)
             if not sent:
                 print(f"[PASSWORD_RESET_PROVIDER_ERROR] {email} reason={reason}")
-                append_auth_audit_log(data, "password_reset_sent", "failed", code="provider_error", email=email, details={"provider_reason": reason})
+                append_auth_audit_log(
+                    data,
+                    "password_reset_sent",
+                    "failed",
+                    code="provider_error",
+                    email=email,
+                    details={"provider_reason": reason, "delivered_to": delivery_email},
+                )
             else:
-                print(f"[PASSWORD_RESET_SENT] {email} provider={reason}")
-                append_auth_audit_log(data, "password_reset_sent", "ok", code="sent", email=email, details={"provider": reason})
+                print(f"[PASSWORD_RESET_SENT] {email} delivered_to={delivery_email} provider={reason}")
+                append_auth_audit_log(
+                    data,
+                    "password_reset_sent",
+                    "ok",
+                    code="sent",
+                    email=email,
+                    details={"provider": reason, "delivered_to": delivery_email},
+                )
             save_data(data)
         flash("Se o email existir, enviamos um link de recuperacao.", "info")
         return redirect(url_for("login"))
@@ -4993,14 +5016,14 @@ def admin_user_reset_password(user_id):
         }
     )
     reset_link = url_for("reset_password", token=token, _external=True)
-    sent, reason = send_password_reset_email(email, reset_link)
+    sent, reason, delivery_email = send_password_reset_email(email, reset_link)
     append_auth_audit_log(
         data,
         "admin_password_reset",
         "ok" if sent else "failed",
         code="sent" if sent else "provider_error",
         email=email,
-        details={"target_user_id": target.get("id"), "provider": reason},
+        details={"target_user_id": target.get("id"), "provider": reason, "delivered_to": delivery_email},
     )
     save_data(data)
     flash("Link de redefinicao enviado para o usuario." if sent else "Falha ao enviar o link de redefinicao.", "success" if sent else "error")
@@ -5010,7 +5033,7 @@ def admin_user_reset_password(user_id):
 @app.route("/auth/google/login")
 def google_auth_login():
     if not google_login_enabled():
-        flash("Login com Google nÃ£o estÃ¡ disponÃ­vel no momento.")
+        flash("Login com Google nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel no momento.")
         return redirect(url_for("login"))
     try:
         flow = create_google_oauth_flow()
@@ -5020,7 +5043,7 @@ def google_auth_login():
             prompt="select_account",
         )
     except Exception as exc:
-        flash(f"NÃ£o foi possÃ­vel iniciar login com Google: {exc}")
+        flash(f"NÃƒÂ£o foi possÃƒÂ­vel iniciar login com Google: {exc}")
         return redirect(url_for("login"))
     session["google_login_state"] = state
     return redirect(authorization_url)
@@ -5077,10 +5100,10 @@ def reset_password(token):
     token_item = next((t for t in data.get("password_reset_tokens", []) if t.get("token") == token), None)
     now = datetime.now()
     if not token_item:
-        flash("Link inválido.")
+        flash("Link invÃ¡lido.")
         return redirect(url_for("forgot_password"))
     if token_item.get("used"):
-        flash("Esse link já foi utilizado.")
+        flash("Esse link jÃ¡ foi utilizado.")
         return redirect(url_for("forgot_password"))
     try:
         expires_at = datetime.fromisoformat(str(token_item.get("expires_at") or ""))
@@ -5100,17 +5123,17 @@ def reset_password(token):
             flash(password_reason, "warning")
             return render_template("reset_password.html", token=token)
         if password != password_confirm:
-            flash("A confirmação de senha não confere.")
+            flash("A confirmaÃ§Ã£o de senha nÃ£o confere.")
             return render_template("reset_password.html", token=token)
         user = find_by_id(data.get("users", []), token_item.get("user_id"))
         if not user:
-            flash("Usuário não encontrado.")
+            flash("UsuÃ¡rio nÃ£o encontrado.")
             return redirect(url_for("forgot_password"))
         set_user_password(user, password)
         token_item["used"] = True
         token_item["used_at"] = now.isoformat(timespec="seconds")
         save_data(data)
-        flash("Senha atualizada. Faça login.")
+        flash("Senha atualizada. FaÃ§a login.")
         return redirect(url_for("login"))
     return render_template("reset_password.html", token=token)
 
@@ -5145,7 +5168,7 @@ def public_budget_request():
         name = (request.form.get("nome") or "").strip()
         phone = (request.form.get("telefone") or request.form.get("tel") or "").strip()
         if not name or not phone:
-            flash("Informe nome e WhatsApp para enviar o orçamento.")
+            flash("Informe nome e WhatsApp para enviar o orÃ§amento.")
             return redirect(url_for("public_budget_request"))
         lead = {
             "id": next_id(data["leads"]),
@@ -5160,16 +5183,16 @@ def public_budget_request():
             "prazo": request.form.get("prazo") or "",
             "obs": request.form.get("observacoes") or "",
             "ultima_interacao": today_br(),
-            "etapa": "Orçamento recebido",
+            "etapa": "OrÃ§amento recebido",
             "status": "Novo",
             "created_at": datetime.now().isoformat(timespec="seconds"),
         }
         data["leads"].append(lead)
-        create_lead_response_task(data, lead, "Responder orçamento recebido")
+        create_lead_response_task(data, lead, "Responder orÃ§amento recebido")
         register_operation_history(
             data,
-            "Novo orçamento recebido",
-            f"{lead.get('nome')} enviou pedido de orçamento pela página pública.",
+            "Novo orÃ§amento recebido",
+            f"{lead.get('nome')} enviou pedido de orÃ§amento pela pÃ¡gina pÃºblica.",
             "lead",
             f"lead_budget:{lead.get('id')}",
             lead=lead,
@@ -5203,7 +5226,7 @@ def public_create_lead():
         data = load_data()
         audit_public_lead(data, "landing_submit", "blocked", code="origin_not_allowed")
         save_data(data)
-        return public_lead_error("Origem não autorizada para enviar orçamento.", 403, "origin_not_allowed")
+        return public_lead_error("Origem nÃ£o autorizada para enviar orÃ§amento.", 403, "origin_not_allowed")
 
     ip = public_lead_client_ip()
     if public_lead_rate_limited(ip):
@@ -5218,13 +5241,13 @@ def public_create_lead():
 
     payload = request.get_json(silent=True) or {}
     if not isinstance(payload, dict):
-        return public_lead_error("Envio inválido. Revise os dados e tente novamente.")
+        return public_lead_error("Envio invÃ¡lido. Revise os dados e tente novamente.")
 
     if str(payload.get("company_site") or "").strip():
         data = load_data()
         audit_public_lead(data, "landing_submit", "blocked", code="honeypot")
         save_data(data)
-        return public_lead_error("Não foi possível enviar agora. Revise os dados e tente novamente.", 400, "blocked")
+        return public_lead_error("NÃ£o foi possÃ­vel enviar agora. Revise os dados e tente novamente.", 400, "blocked")
 
     name = clean_public_text(payload.get("name") or payload.get("nome") or "", 120)
     phone_raw = str(payload.get("phone") or payload.get("telefone") or payload.get("whatsapp") or "").strip()
@@ -5236,7 +5259,7 @@ def public_create_lead():
     if len(name) < 2:
         return public_lead_error("Digite seu nome para continuar.", 400, "invalid_name")
     if not is_valid_brazil_whatsapp(phone):
-        return public_lead_error("WhatsApp inválido. Use um número real no formato (DDD) 9XXXX-XXXX.", 400, "invalid_phone")
+        return public_lead_error("WhatsApp invÃ¡lido. Use um nÃºmero real no formato (DDD) 9XXXX-XXXX.", 400, "invalid_phone")
     if not project_type:
         return public_lead_error("Selecione o tipo de projeto para continuar.", 400, "invalid_project_type")
 
@@ -5321,7 +5344,7 @@ def public_create_lead():
     register_operation_history(
         data,
         "Novo lead recebido pela landing",
-        f"{lead.get('nome')} enviou pedido de orçamento pelo site uardon.com.br.",
+        f"{lead.get('nome')} enviou pedido de orÃ§amento pelo site uardon.com.br.",
         "lead",
         f"landing_lead:{lead.get('id')}",
         lead=lead,
@@ -5353,7 +5376,7 @@ def dashboard():
         lead
         for lead in data["leads"]
         if (lead.get("origem") or "").lower() == "instagram"
-        and (lead.get("etapa") or "").lower() == "orçamento recebido"
+        and (lead.get("etapa") or "").lower() == "orÃ§amento recebido"
     ][:5]
     summary = {
         "projects": len(data["projetos"]),
@@ -5364,7 +5387,7 @@ def dashboard():
     }
     relationship = relationship_data(data)
     weekly_metrics = build_weekly_metrics(data)
-    funnel = {"Atração": 0, "Interesse": 0, "Proposta": len(data["leads"]), "Negociação": 0, "Fechamento": 0}
+    funnel = {"AtraÃ§Ã£o": 0, "Interesse": 0, "Proposta": len(data["leads"]), "NegociaÃ§Ã£o": 0, "Fechamento": 0}
     alerts = [{"title": n["title"], "subtitle": n["subtitle"]} for n in build_notifications(data)[:4]]
     return render_template(
         "dashboard.html",
@@ -5560,7 +5583,7 @@ def create_event():
     event = {
         "id": next_id(data["eventos"]),
         "titulo": request.form.get("titulo") or "Novo compromisso",
-        "tipo": request.form.get("tipo") or "Reunião",
+        "tipo": request.form.get("tipo") or "ReuniÃ£o",
         "data": request.form.get("data") or "",
         "hora": request.form.get("hora") or "",
         "hora_fim": request.form.get("hora_fim") or "",
@@ -5581,7 +5604,7 @@ def create_event():
             sync_event_to_google(event)
         except Exception as exc:
             event["google_sync_error"] = str(exc)
-            flash(f"Compromisso criado no CRM, mas não sincronizou com Google Agenda: {exc}")
+            flash(f"Compromisso criado no CRM, mas nÃ£o sincronizou com Google Agenda: {exc}")
     save_data(data)
     flash("Compromisso criado.")
     return redirect(url_for("agenda_page"))
@@ -5594,12 +5617,12 @@ def edit_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
     client = find_by_id(data["clientes"], request.form.get("cliente_id"))
     project = find_by_id(data["projetos"], request.form.get("projeto_id"))
     event["titulo"] = request.form.get("titulo") or event.get("titulo") or "Compromisso"
-    event["tipo"] = request.form.get("tipo") or event.get("tipo") or "Reunião"
+    event["tipo"] = request.form.get("tipo") or event.get("tipo") or "ReuniÃ£o"
     event["data"] = request.form.get("data") or event.get("data") or ""
     event["hora"] = request.form.get("hora") or ""
     event["hora_fim"] = request.form.get("hora_fim") or ""
@@ -5637,7 +5660,7 @@ def edit_event(event_id):
             sync_event_to_google(event)
         except Exception as exc:
             event["google_sync_error"] = str(exc)
-            flash(f"Compromisso salvo no CRM, mas não atualizou no Google Agenda: {exc}")
+            flash(f"Compromisso salvo no CRM, mas nÃ£o atualizou no Google Agenda: {exc}")
     save_data(data)
     flash("Compromisso atualizado.")
     return redirect(request.referrer or url_for("agenda_page"))
@@ -5650,20 +5673,20 @@ def create_event_action(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
-    title = request.form.get("titulo") or request.form.get("acao_tipo") or "Próxima ação"
+    title = request.form.get("titulo") or request.form.get("acao_tipo") or "PrÃ³xima aÃ§Ã£o"
     task = create_manual_event_action_task(
         data,
         event,
         title,
         request.form.get("tipo") or "Projeto",
-        request.form.get("pri") or "Média",
+        request.form.get("pri") or "MÃ©dia",
         request.form.get("prazo") or "",
         request.form.get("descricao") or "",
     )
     save_data(data)
-    flash(f"Ação criada em Tarefas: {task.get('titulo')}.")
+    flash(f"AÃ§Ã£o criada em Tarefas: {task.get('titulo')}.")
     return redirect(request.referrer or url_for("agenda_page"))
 
 
@@ -5681,7 +5704,7 @@ def connect_google_calendar():
         session["google_oauth_state"] = state
         return redirect(authorization_url)
     except Exception as exc:
-        flash(f"Não foi possível conectar o Google Agenda: {exc}")
+        flash(f"NÃ£o foi possÃ­vel conectar o Google Agenda: {exc}")
         return redirect(url_for("agenda_page"))
 
 
@@ -5700,7 +5723,7 @@ def google_calendar_callback():
         session.pop("google_oauth_state", None)
         flash("Google Agenda conectado.")
     except Exception as exc:
-        flash(f"Não foi possível finalizar a conexão com Google Agenda: {exc}")
+        flash(f"NÃ£o foi possÃ­vel finalizar a conexÃ£o com Google Agenda: {exc}")
     return redirect(url_for("agenda_page"))
 
 
@@ -5711,7 +5734,7 @@ def sync_google_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
     try:
         sync_event_to_google(event)
@@ -5720,7 +5743,7 @@ def sync_google_event(event_id):
     except Exception as exc:
         event["google_sync_error"] = str(exc)
         save_data(data)
-        flash(f"Não foi possível sincronizar com Google Agenda: {exc}")
+        flash(f"NÃ£o foi possÃ­vel sincronizar com Google Agenda: {exc}")
     return redirect(request.referrer or url_for("agenda_page"))
 
 
@@ -5731,7 +5754,7 @@ def link_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
     client = find_by_id(data["clientes"], request.form.get("cliente_id"))
     project = find_by_id(data["projetos"], request.form.get("projeto_id"))
@@ -5748,11 +5771,11 @@ def confirm_event_link_suggestion(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
     suggestion = event_link_suggestion(event, data)
     if not suggestion:
-        flash("Nenhuma sugestão segura de vínculo encontrada.")
+        flash("Nenhuma sugestÃ£o segura de vÃ­nculo encontrada.")
         return redirect(request.referrer or url_for("agenda_page"))
     client = None
     project = None
@@ -5762,9 +5785,9 @@ def confirm_event_link_suggestion(event_id):
         client = find_by_id(data["clientes"], suggestion.get("id"))
     apply_event_link(data, event, client, project)
     event["vinculo_sugerido_confirmado_em"] = today_br()
-    event["vinculo_sugerido_confiança"] = suggestion.get("confidence", "")
+    event["vinculo_sugerido_confianÃ§a"] = suggestion.get("confidence", "")
     save_data(data)
-    flash(f"Vínculo confirmado: {suggestion.get('label')}.")
+    flash(f"VÃ­nculo confirmado: {suggestion.get('label')}.")
     return redirect(request.referrer or url_for("agenda_page"))
 
 
@@ -5778,7 +5801,7 @@ def import_google_calendar():
         save_data(data)
         flash(f"Google Agenda importado: {result['created']} novo(s), {result['updated']} atualizado(s).")
     except Exception as exc:
-        flash(f"Não foi possível importar do Google Agenda: {exc}")
+        flash(f"NÃ£o foi possÃ­vel importar do Google Agenda: {exc}")
     return redirect(url_for("agenda_page"))
 
 
@@ -5789,7 +5812,7 @@ def open_event(event_id):
     data = load_data()
     event = find_by_id(data["eventos"], event_id)
     if not event:
-        flash("Compromisso não encontrado.")
+        flash("Compromisso nÃ£o encontrado.")
         return redirect(url_for("agenda_page"))
     normalized = normalize_event(event, data)
     return redirect(normalized.get("open_url") or url_for("agenda_page", _anchor=f"evento-{event_id}"))
@@ -5808,9 +5831,9 @@ def complete_event(event_id):
         next_task = create_event_next_action_task(data, event)
         save_data(data)
         if next_task:
-            flash("Compromisso concluído e próxima ação criada.")
+            flash("Compromisso concluÃ­do e prÃ³xima aÃ§Ã£o criada.")
         else:
-            flash("Compromisso concluído.")
+            flash("Compromisso concluÃ­do.")
     return redirect(request.referrer or url_for("agenda_page"))
 
 
@@ -5847,54 +5870,54 @@ def models_page():
         {
             "title": "Primeiro contato",
             "category": "Comercial",
-            "text": "Olá, [Nome]! Tudo bem? Sou a Vitória Uardon. Recebi seu contato e queria entender melhor o que você está imaginando para o seu espaço. Podemos marcar uma conversa rápida para eu te orientar sobre os próximos passos?",
+            "text": "OlÃ¡, [Nome]! Tudo bem? Sou a VitÃ³ria Uardon. Recebi seu contato e queria entender melhor o que vocÃª estÃ¡ imaginando para o seu espaÃ§o. Podemos marcar uma conversa rÃ¡pida para eu te orientar sobre os prÃ³ximos passos?",
         },
         {
             "title": "Follow-up de proposta",
             "category": "Comercial",
-            "text": "Olá, [Nome]! Passando para saber se você conseguiu olhar a proposta com calma. Se tiver qualquer dúvida sobre escopo, prazos ou investimento, fico à disposição para te explicar tudo com tranquilidade.",
+            "text": "OlÃ¡, [Nome]! Passando para saber se vocÃª conseguiu olhar a proposta com calma. Se tiver qualquer dÃºvida sobre escopo, prazos ou investimento, fico Ã  disposiÃ§Ã£o para te explicar tudo com tranquilidade.",
         },
         {
-            "title": "Cobrança amigável",
+            "title": "CobranÃ§a amigÃ¡vel",
             "category": "Financeiro",
-            "text": "Olá, [Nome]! Passando para lembrar, com carinho, que a parcela de [descrição] do projeto [projeto] está prevista para [vencimento]. Qualquer dúvida, fico à disposição.",
+            "text": "OlÃ¡, [Nome]! Passando para lembrar, com carinho, que a parcela de [descriÃ§Ã£o] do projeto [projeto] estÃ¡ prevista para [vencimento]. Qualquer dÃºvida, fico Ã  disposiÃ§Ã£o.",
         },
         {
             "title": "Assinatura de contrato",
             "category": "Contrato",
-            "text": "Olá, [Nome]! Te enviei o contrato do projeto [projeto]. Assim que conseguir assinar, seguimos com a próxima etapa com tudo formalizado e organizado.",
+            "text": "OlÃ¡, [Nome]! Te enviei o contrato do projeto [projeto]. Assim que conseguir assinar, seguimos com a prÃ³xima etapa com tudo formalizado e organizado.",
         },
         {
-            "title": "Pós-entrega",
+            "title": "PÃ³s-entrega",
             "category": "Relacionamento",
-            "text": "Olá, [Nome]! Passando para saber como você está se sentindo com a entrega do projeto. Foi um prazer fazer parte dessa etapa e fico à disposição se precisar de algo.",
+            "text": "OlÃ¡, [Nome]! Passando para saber como vocÃª estÃ¡ se sentindo com a entrega do projeto. Foi um prazer fazer parte dessa etapa e fico Ã  disposiÃ§Ã£o se precisar de algo.",
         },
         {
-            "title": "Pedido de indicação",
+            "title": "Pedido de indicaÃ§Ã£o",
             "category": "Relacionamento",
-            "text": "Olá, [Nome]! Fiquei muito feliz em participar do seu projeto. Se você conhecer alguém que esteja pensando em transformar um ambiente, vou adorar receber essa indicação.",
+            "text": "OlÃ¡, [Nome]! Fiquei muito feliz em participar do seu projeto. Se vocÃª conhecer alguÃ©m que esteja pensando em transformar um ambiente, vou adorar receber essa indicaÃ§Ã£o.",
         },
     ]
     checklist_models = [
         {
-            "title": "Briefing e medição",
-            "items": ["Confirmar ambientes do escopo", "Registrar medidas principais", "Entender rotina dos moradores", "Mapear referências e restrições", "Registrar prazo desejado e orçamento estimado"],
+            "title": "Briefing e mediÃ§Ã£o",
+            "items": ["Confirmar ambientes do escopo", "Registrar medidas principais", "Entender rotina dos moradores", "Mapear referÃªncias e restriÃ§Ãµes", "Registrar prazo desejado e orÃ§amento estimado"],
         },
         {
-            "title": "Reunião de layout",
-            "items": ["Apresentar distribuição dos ambientes", "Validar circulação e prioridades", "Registrar ajustes solicitados", "Confirmar decisões aprovadas", "Definir próxima entrega"],
+            "title": "ReuniÃ£o de layout",
+            "items": ["Apresentar distribuiÃ§Ã£o dos ambientes", "Validar circulaÃ§Ã£o e prioridades", "Registrar ajustes solicitados", "Confirmar decisÃµes aprovadas", "Definir prÃ³xima entrega"],
         },
         {
-            "title": "Apresentação do 3D",
-            "items": ["Apresentar conceito visual", "Validar materiais e atmosfera", "Anotar alterações", "Confirmar pontos aprovados", "Agendar retorno ou próxima etapa"],
+            "title": "ApresentaÃ§Ã£o do 3D",
+            "items": ["Apresentar conceito visual", "Validar materiais e atmosfera", "Anotar alteraÃ§Ãµes", "Confirmar pontos aprovados", "Agendar retorno ou prÃ³xima etapa"],
         },
         {
             "title": "Detalhamento de marcenaria",
-            "items": ["Revisar medidas", "Conferir ferragens e soluções", "Registrar observações de execução", "Separar informações para fornecedores", "Validar pendências técnicas"],
+            "items": ["Revisar medidas", "Conferir ferragens e soluÃ§Ãµes", "Registrar observaÃ§Ãµes de execuÃ§Ã£o", "Separar informaÃ§Ãµes para fornecedores", "Validar pendÃªncias tÃ©cnicas"],
         },
         {
             "title": "Entrega do caderno final",
-            "items": ["Conferir pranchas finais", "Organizar links e arquivos", "Listar pendências restantes", "Enviar orientações ao cliente", "Registrar pós-entrega no histórico"],
+            "items": ["Conferir pranchas finais", "Organizar links e arquivos", "Listar pendÃªncias restantes", "Enviar orientaÃ§Ãµes ao cliente", "Registrar pÃ³s-entrega no histÃ³rico"],
         },
     ]
     return render_template("models.html", active="modelos", message_models=message_models, checklist_models=checklist_models)
@@ -5957,9 +5980,9 @@ def client_detail(client_id):
         contracts=contracts,
         timeline=build_client_timeline(client, projects, tasks, financeiro, contracts),
         next_action=client_next_action(client, snapshot, financeiro, contracts, tasks),
-        followup_whatsapp=whatsapp_link(client.get("tel"), f"Olá, {first}! Passando para saber como você está e se posso te ajudar em algo por aqui."),
-        birthday_whatsapp=whatsapp_link(client.get("tel"), f"Olá, {first}! Feliz aniversário! Que seu novo ciclo seja muito especial."),
-        thanks_whatsapp=whatsapp_link(client.get("tel"), f"Olá, {first}! Obrigada pela confiança no nosso trabalho."),
+        followup_whatsapp=whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Passando para saber como vocÃª estÃ¡ e se posso te ajudar em algo por aqui."),
+        birthday_whatsapp=whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Feliz aniversÃ¡rio! Que seu novo ciclo seja muito especial."),
+        thanks_whatsapp=whatsapp_link(client.get("tel"), f"OlÃ¡, {first}! Obrigada pela confianÃ§a no nosso trabalho."),
     )
 
 
@@ -5984,7 +6007,7 @@ def register_client_interaction(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
     if client:
-        client.setdefault("historico", []).append({"data": today_br(), "titulo": request.form.get("titulo") or "Interação", "descricao": request.form.get("descricao") or ""})
+        client.setdefault("historico", []).append({"data": today_br(), "titulo": request.form.get("titulo") or "InteraÃ§Ã£o", "descricao": request.form.get("descricao") or ""})
         client["ultima_interacao"] = today_br()
         save_data(data)
     return redirect(url_for("client_detail", client_id=client_id))
@@ -5997,7 +6020,7 @@ def quick_client_contact(client_id):
     data = load_data()
     client = find_by_id(data["clientes"], client_id)
     if client:
-        client.setdefault("historico", []).append({"data": today_br(), "titulo": "Contato registrado", "descricao": "Contato rápido registrado pelo CRM."})
+        client.setdefault("historico", []).append({"data": today_br(), "titulo": "Contato registrado", "descricao": "Contato rÃ¡pido registrado pelo CRM."})
         client["ultima_interacao"] = today_br()
         save_data(data)
     return redirect(request.referrer or url_for("client_detail", client_id=client_id))
@@ -6030,7 +6053,7 @@ def create_project():
         "obs": request.form.get("obs") or "",
         "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
         "arquivos": [],
-        "contrato": {"status": "Não iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrão Vitória", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
+        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
         "pagamentos": [],
     }
     data["projetos"].append(project)
@@ -6059,7 +6082,7 @@ def create_project_for_client(client_id):
         "obs": request.form.get("obs") or "",
         "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
         "arquivos": [],
-        "contrato": {"status": "Não iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrão Vitória", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
+        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
         "pagamentos": [],
     }
     data["projetos"].append(project)
@@ -6092,8 +6115,8 @@ def project_detail(project_id):
     first = client.get("nome", "").split(" ")[0] if client else ""
     contract_data.update(
         {
-            "whatsapp_url": whatsapp_link(client.get("tel") if client else "", f"Olá, {first}! Passando para lembrar da assinatura do contrato do projeto {project.get('nome')}."),
-            "email_url": mailto_link(client.get("email") if client else "", f"Contrato - {project.get('nome')}", f"Olá, {first},\n\nPassando para lembrar da assinatura do contrato do projeto {project.get('nome')}.\n\nVitória Uardon"),
+            "whatsapp_url": whatsapp_link(client.get("tel") if client else "", f"OlÃ¡, {first}! Passando para lembrar da assinatura do contrato do projeto {project.get('nome')}."),
+            "email_url": mailto_link(client.get("email") if client else "", f"Contrato - {project.get('nome')}", f"OlÃ¡, {first},\n\nPassando para lembrar da assinatura do contrato do projeto {project.get('nome')}.\n\nVitÃ³ria Uardon"),
         }
     )
     payment_data = payment_summary([project])
@@ -6112,7 +6135,7 @@ def project_detail(project_id):
         stage_data=stage_data,
         next_action=project_next_action(project, client, payment_data, contract_data, linked_tasks, stage_data),
         project_timeline=build_project_timeline(project, payment_data, linked_tasks),
-        contract_statuses=["Não iniciado", "Enviado", "Em assinatura", "Assinado"],
+        contract_statuses=["NÃ£o iniciado", "Enviado", "Em assinatura", "Assinado"],
         contract_data=contract_data,
     )
 
@@ -6177,11 +6200,11 @@ def create_task():
         "text": request.form.get("titulo") or "",
         "descricao": request.form.get("descricao") or "",
         "tipo": request.form.get("tipo") or "Interno",
-        "pri": request.form.get("pri") or "Média",
+        "pri": request.form.get("pri") or "MÃ©dia",
         "prazo": request.form.get("prazo") or "",
         "done": False,
         "status": "Pendente",
-        "responsavel": "Vitória Uardon",
+        "responsavel": "VitÃ³ria Uardon",
         "vinculo_tipo": vinculo_tipo,
         "vinculo_id": vinculo_id,
         "vinculo_nome": vinculo_nome,
@@ -6202,7 +6225,7 @@ def complete_task(task_id):
     task = find_by_id(data["tarefas"], task_id)
     if task:
         task["done"] = True
-        task["status"] = "Concluída"
+        task["status"] = "ConcluÃ­da"
         task["done_at"] = today_br()
         complete_task_operational_effects(data, task)
         save_data(data)
@@ -6293,7 +6316,7 @@ def create_lead():
         "ultima_interacao": today_br(),
         "status": "Novo",
         "responsavel": LEAD_OWNER_DEFAULT,
-        "etapa": request.form.get("etapa") or "Atração",
+        "etapa": request.form.get("etapa") or "AtraÃ§Ã£o",
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "primeiro_contato_prazo": lead_first_contact_deadline(datetime.now().isoformat(timespec="seconds")),
     }
@@ -6331,7 +6354,7 @@ def mark_lead_contacted(lead_id):
 @permission_required("leads:manage")
 def update_lead_stage(lead_id, stage):
     stages = {
-        "novo": ("Novo", "Orçamento recebido"),
+        "novo": ("Novo", "OrÃ§amento recebido"),
         "contato": ("Em contato", "Contato feito"),
         "briefing": ("Em contato", "Briefing marcado"),
         "proposta": ("Em contato", "Proposta enviada"),
@@ -6411,11 +6434,11 @@ def convert_lead(lead_id):
         for task in data.get("tarefas", []):
             if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
             if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
         save_data(data)
     return redirect(url_for("leads"))
@@ -6459,7 +6482,7 @@ def mark_lead_lost(lead_id):
         lead["perdido_em"] = today_br()
         description = f"Motivo: {lead.get('perda_motivo')}."
         if lead.get("perda_obs"):
-            description += f" Observação: {lead.get('perda_obs')}"
+            description += f" ObservaÃ§Ã£o: {lead.get('perda_obs')}"
         register_operation_history(
             data,
             "Lead marcado como perdido",
@@ -6471,11 +6494,11 @@ def mark_lead_lost(lead_id):
         for task in data.get("tarefas", []):
             if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
             if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
         save_data(data)
     return redirect(url_for("leads"))
@@ -6489,14 +6512,14 @@ def mark_lead_future(lead_id):
     lead = find_by_id(data["leads"], lead_id)
     if lead:
         lead["status"] = "futuro"
-        lead["etapa"] = "Nutrição futura"
+        lead["etapa"] = "NutriÃ§Ã£o futura"
         lead["futuro_retorno"] = request.form.get("futuro_retorno") or ""
         lead["perda_obs"] = request.form.get("perda_obs") or ""
-        description = "Lead movido para nutrição futura."
+        description = "Lead movido para nutriÃ§Ã£o futura."
         if lead.get("futuro_retorno"):
             description += f" Retomar em: {lead.get('futuro_retorno')}."
         if lead.get("perda_obs"):
-            description += f" Observação: {lead.get('perda_obs')}"
+            description += f" ObservaÃ§Ã£o: {lead.get('perda_obs')}"
         register_operation_history(
             data,
             "Lead movido para futuro",
@@ -6508,11 +6531,11 @@ def mark_lead_future(lead_id):
         for task in data.get("tarefas", []):
             if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
             if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
                 task["done"] = True
-                task["status"] = "Concluída"
+                task["status"] = "ConcluÃ­da"
                 task["done_at"] = today_br()
         save_data(data)
     return redirect(url_for("leads"))
@@ -6601,9 +6624,9 @@ def confirm_import_csv(kind):
 @login_required
 @permission_required("import:manage")
 def download_import_model(kind):
-    headers = ["nome", "telefone", "e-mail", "profissão", "aniversário", "cidade", "origem", "observações"]
+    headers = ["nome", "telefone", "e-mail", "profissÃ£o", "aniversÃ¡rio", "cidade", "origem", "observaÃ§Ãµes"]
     if kind == "leads":
-        headers = ["nome", "telefone", "e-mail", "profissão", "aniversário", "origem", "ambiente/interesse", "orçamento", "observações", "última interação", "etapa", "status"]
+        headers = ["nome", "telefone", "e-mail", "profissÃ£o", "aniversÃ¡rio", "origem", "ambiente/interesse", "orÃ§amento", "observaÃ§Ãµes", "Ãºltima interaÃ§Ã£o", "etapa", "status"]
     output = ",".join(headers) + "\n"
     return Response(output, mimetype="text/csv", headers={"Content-Disposition": f"attachment; filename=modelo_importacao_{kind}.csv"})
 
@@ -6636,7 +6659,7 @@ def mark_payment_paid(project_id, payment_id):
         register_operation_history(
             data,
             "Parcela marcada como paga",
-            f"{payment.get('descricao') or 'Parcela'} · {format_money(money_to_float(payment.get('valor')))}",
+            f"{payment.get('descricao') or 'Parcela'} Â· {format_money(money_to_float(payment.get('valor')))}",
             "recebivel",
             f"payment_paid:{project_id}:{payment_id}:{payment.get('pago_em')}",
             client=client,
@@ -6687,8 +6710,8 @@ def mark_payment_reminded(project_id, payment_id):
         client = find_by_id(data.get("clientes", []), project.get("cliente_id")) if project else None
         register_operation_history(
             data,
-            "Lembrete de cobrança enviado",
-            f"{payment.get('descricao') or 'Parcela'} · vence {format_date_br(payment.get('vencimento')) or 'sem data'}.",
+            "Lembrete de cobranÃ§a enviado",
+            f"{payment.get('descricao') or 'Parcela'} Â· vence {format_date_br(payment.get('vencimento')) or 'sem data'}.",
             "recebivel",
             f"payment_reminded:{project_id}:{payment_id}:{payment.get('ultimo_lembrete_em')}",
             client=client,
@@ -6819,7 +6842,7 @@ def create_receivable_payment():
     if project:
         append_project_payment(project, request.form)
         save_data(data)
-        flash("Parcela adicionada em Recebíveis.")
+        flash("Parcela adicionada em RecebÃ­veis.")
     else:
         flash("Selecione um projeto para criar a parcela.")
     return redirect(url_for("receivables_page"))
@@ -6845,7 +6868,7 @@ def update_contract(project_id):
             register_operation_history(
                 data,
                 "Contrato atualizado",
-                f"{project.get('nome')} · {old_status or 'sem status'}  {contract.get('status') or 'sem status'}",
+                f"{project.get('nome')} Â· {old_status or 'sem status'}  {contract.get('status') or 'sem status'}",
                 "contrato",
                 f"contract_status:{project_id}:{contract.get('status')}:{contract.get('status_atualizado_em')}",
                 client=client,
@@ -6934,3 +6957,4 @@ if __name__ == "__main__":
     ensure_data_file()
     debug_flag = (os.environ.get("CRM_DEBUG") or "false").strip().lower() in ("1", "true", "yes", "on")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=debug_flag)
+
