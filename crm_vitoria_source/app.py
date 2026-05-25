@@ -4435,11 +4435,11 @@ def validate_password_policy(raw_password):
 def is_password_rotation_expired(user):
     raw = str(user.get("password_changed_at") or "").strip()
     if not raw:
-        return True
+        return False
     try:
         changed = datetime.fromisoformat(raw)
     except ValueError:
-        return True
+        return False
     return (datetime.now() - changed).days >= PASSWORD_MAX_AGE_DAYS
 
 
@@ -4746,6 +4746,9 @@ def login():
                 return render_template("login.html", google_login_enabled=google_login_enabled())
             if not is_password_hash_value(user.get("password")):
                 set_user_password(user, password)
+                save_data(data)
+            if not str(user.get("password_changed_at") or "").strip():
+                user["password_changed_at"] = datetime.now().isoformat(timespec="seconds")
                 save_data(data)
             if is_password_rotation_expired(user):
                 append_auth_audit_log(data, "login", "blocked", code="password_rotation_due", email=user.get("email") or login_value)
