@@ -77,6 +77,7 @@ DEFAULT_DATA = {
     "feedbacks": [],
     "dismissed_notifications": [],
     "audit_logs": [],
+    "auth_audit_logs": [],
     "password_reset_tokens": [],
 }
 
@@ -124,6 +125,11 @@ LEAD_OWNER_DEFAULT = "Vitória Uardon"
 LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
 PUBLIC_SIGNUP_ENABLED = (os.environ.get("CRM_PUBLIC_SIGNUP") or "0").strip().lower() in {"1", "true", "yes", "on"}
+PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS = int((os.environ.get("PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS") or "90").strip() or "90")
+PASSWORD_RESET_TOKEN_TTL_MINUTES = int((os.environ.get("PASSWORD_RESET_TOKEN_TTL_MINUTES") or "30").strip() or "30")
+PASSWORD_RESET_DAILY_LIMIT = int((os.environ.get("PASSWORD_RESET_DAILY_LIMIT") or "8").strip() or "8")
+AUTH_LOGIN_WINDOW_SECONDS = int((os.environ.get("AUTH_LOGIN_WINDOW_SECONDS") or "900").strip() or "900")
+AUTH_LOGIN_BASE_MAX_ATTEMPTS = int((os.environ.get("AUTH_LOGIN_BASE_MAX_ATTEMPTS") or "5").strip() or "5")
 
 # Calibracao operacional (ajustavel sem mexer na logica)
 LEAD_SCORE_WEIGHTS = {
@@ -150,9 +156,24 @@ WEEKLY_GOALS_TARGETS = {
     "financeiro_margin": 28,
 }
 
+ROLE_ALIASES = {
+    "operacao": "arquiteta",
+    "leitura": "cliente",
+}
+
+ROLE_LABELS = {
+    "admin": "Arquiteta responsável (admin)",
+    "arquiteta": "Arquiteta de projetos/interiores",
+    "assistente": "Assistente/estagiária",
+    "comercial": "Comercial",
+    "financeiro": "Financeiro",
+    "parceiro": "Parceiro externo (limitado)",
+    "cliente": "Cliente (portal limitado)",
+}
+
 ROLE_PERMISSIONS = {
     "admin": {"*"},
-    "operacao": {
+    "arquiteta": {
         "dashboard:view",
         "metas:view",
         "leads:view",
@@ -170,6 +191,25 @@ ROLE_PERMISSIONS = {
         "feedbacks:manage",
         "models:view",
         "import:manage",
+        "users:create",
+        "auth_audit:view",
+    },
+    "assistente": {
+        "dashboard:view",
+        "metas:view",
+        "leads:view",
+        "leads:manage",
+        "projects:view",
+        "tasks:view",
+        "tasks:manage",
+        "agenda:view",
+        "agenda:manage",
+        "clients:view",
+        "clients:manage",
+        "activities:view",
+        "feedbacks:view",
+        "feedbacks:manage",
+        "models:view",
     },
     "comercial": {
         "dashboard:view",
@@ -200,21 +240,34 @@ ROLE_PERMISSIONS = {
         "models:view",
         "import:manage",
     },
-    "leitura": {
+    "parceiro": {
         "dashboard:view",
-        "metas:view",
         "leads:view",
         "projects:view",
         "clients:view",
-        "agenda:view",
         "tasks:view",
         "activities:view",
-        "finance:view",
-        "receivables:view",
-        "feedbacks:view",
-        "models:view",
+    },
+    "cliente": {
+        "dashboard:view",
+        "projects:view",
+        "activities:view",
     },
 }
+
+
+def canonical_role_name(raw_role):
+    role = str(raw_role or "").strip().lower()
+    if not role:
+        return "assistente"
+    role = ROLE_ALIASES.get(role, role)
+    if role not in ROLE_PERMISSIONS:
+        return "assistente"
+    return role
+
+
+def role_label(role):
+    return ROLE_LABELS.get(canonical_role_name(role), canonical_role_name(role))
 
 
 def fix_mojibake_text(value):
@@ -372,9 +425,11 @@ def load_data_from_file():
     for key, value in DEFAULT_DATA.items():
         data.setdefault(key, deepcopy(value))
     data.setdefault("password_reset_tokens", [])
+    data.setdefault("auth_audit_logs", [])
     for user in data.get("users", []):
         user.setdefault("email", "")
-        user.setdefault("role", "operacao")
+        user["role"] = canonical_role_name(user.get("role"))
+        user.setdefault("active", True)
     data.setdefault("dismissed_notifications", [])
     return normalize_text_payload(data)
 
@@ -396,6 +451,9 @@ def load_data():
         data.setdefault(key, deepcopy(value))
     for user in data.get("users", []):
         user.setdefault("email", "")
+        user["role"] = canonical_role_name(user.get("role"))
+        user.setdefault("active", True)
+    data.setdefault("auth_audit_logs", [])
     data.setdefault("dismissed_notifications", [])
     return normalize_text_payload(data)
 
@@ -616,6 +674,80 @@ def append_system_audit_log(data, event, status="ok", code="", details=None):
     logs = data.setdefault("audit_logs", [])
     logs.append(entry)
     del logs[:-500]
+
+
+def append_auth_audit_log(data, event, status="ok", code="", email="", details=None):
+    details = details or {}
+    user = session.get("user") or {}
+    entry = {
+        "id": str(uuid.uuid4()),
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "event": event,
+        "status": status,
+        "code": code,
+        "email": str(email or "").strip().lower(),
+        "actor_user_id": user.get("id"),
+        "actor_name": user.get("name") or "Sistema",
+        "actor_role": canonical_role_name(user.get("role")),
+        "ip": public_lead_client_ip(),
+        "user_agent": (request.headers.get("User-Agent") or "")[:220],
+        "details": details,
+    }
+    logs = data.setdefault("auth_audit_logs", [])
+    logs.append(entry)
+    del logs[:-1000]
+
+
+def recent_auth_events_for_email(data, email, event_name, seconds_window):
+    now = datetime.now()
+    target_email = str(email or "").strip().lower()
+    hits = []
+    for item in data.get("auth_audit_logs", []) or []:
+        if str(item.get("event") or "") != event_name:
+            continue
+        if str(item.get("email") or "").strip().lower() != target_email:
+            continue
+        raw = str(item.get("created_at") or "").strip()
+        try:
+            created_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if (now - created_at).total_seconds() <= seconds_window:
+            hits.append(item)
+    return hits
+
+
+def recent_auth_events_for_ip(data, ip, event_name, seconds_window):
+    now = datetime.now()
+    target_ip = str(ip or "").strip()
+    if not target_ip:
+        return []
+    hits = []
+    for item in data.get("auth_audit_logs", []) or []:
+        if str(item.get("event") or "") != event_name:
+            continue
+        if str(item.get("ip") or "").strip() != target_ip:
+            continue
+        raw = str(item.get("created_at") or "").strip()
+        try:
+            created_at = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if (now - created_at).total_seconds() <= seconds_window:
+            hits.append(item)
+    return hits
+
+
+def login_lock_seconds(fail_count):
+    if fail_count >= 16:
+        return 30 * 60
+    if fail_count >= 12:
+        return 15 * 60
+    if fail_count >= 8:
+        return 5 * 60
+    if fail_count >= AUTH_LOGIN_BASE_MAX_ATTEMPTS:
+        return 2 * 60
+    return 0
 
 
 def latest_smoke_check(data):
@@ -1320,8 +1452,7 @@ def login_required(fn):
 
 def current_user_role():
     user = session.get("user") or {}
-    role = str(user.get("role") or "").strip().lower()
-    return role or "operacao"
+    return canonical_role_name(user.get("role"))
 
 
 def has_permission(permission):
@@ -4076,6 +4207,35 @@ def build_technical_health(data, window_hours=24):
     }
 
 
+def build_auth_audit_panel(data, limit=120):
+    events = list(reversed(data.get("auth_audit_logs", []) or []))
+    visible = events[:limit]
+    totals = {"total": len(visible), "ok": 0, "blocked": 0, "failed": 0}
+    buckets = {"login": 0, "reset": 0, "google": 0, "users": 0}
+    for item in visible:
+        status = str(item.get("status") or "").strip().lower()
+        if status in totals:
+            totals[status] += 1
+        event_name = str(item.get("event") or "")
+        if "login" in event_name or event_name == "logout":
+            buckets["login"] += 1
+        elif "reset" in event_name:
+            buckets["reset"] += 1
+        elif "google" in event_name:
+            buckets["google"] += 1
+        elif "user_create" in event_name or "signup" in event_name:
+            buckets["users"] += 1
+    alerts = []
+    if totals["failed"] >= 3:
+        alerts.append({"level": "high", "title": "Falhas de autenticacao", "note": f"{totals['failed']} falhas recentes no fluxo de autenticacao."})
+    if totals["blocked"] >= 8:
+        alerts.append({"level": "medium", "title": "Pico de bloqueios", "note": f"{totals['blocked']} bloqueios recentes (login/reset)."})
+    provider_fails = [e for e in visible if str(e.get("code")) == "provider_error"]
+    if provider_fails:
+        alerts.append({"level": "high", "title": "Falha de envio de e-mail", "note": f"{len(provider_fails)} eventos com provider_error no reset de senha."})
+    return {"events": visible, "totals": totals, "buckets": buckets, "alerts": alerts[:4]}
+
+
 def split_feedbacks(data):
     items = data.get("feedbacks", [])
     return {
@@ -4301,17 +4461,20 @@ def upsert_google_user_and_login(email, name):
             "username": username,
             "email": email,
             "name": name or email.split("@")[0],
-            "role": "operacao",
+            "role": "assistente",
             "password": "",
         }
         data.setdefault("users", []).append(user)
         save_data(data)
     if not user:
         return False
+    if not bool(user.get("active", True)):
+        return False
     session["user"] = {
         "id": user["id"],
         "name": user.get("name") or user.get("username"),
-        "role": (user.get("role") or "operacao").lower(),
+        "role": canonical_role_name(user.get("role")),
+        "email": user.get("email") or "",
     }
     return True
 
@@ -4342,23 +4505,58 @@ def login():
     if request.method == "POST":
         login_value = (request.form.get("username") or "").strip().lower()
         password = request.form.get("password") or ""
+        req_ip = public_lead_client_ip()
+        fail_email = recent_auth_events_for_email(data, login_value, "login", AUTH_LOGIN_WINDOW_SECONDS)
+        fail_email = [e for e in fail_email if str(e.get("status")) == "blocked" and str(e.get("code")) in {"invalid_credentials", "lock_active"}]
+        fail_ip = recent_auth_events_for_ip(data, req_ip, "login", AUTH_LOGIN_WINDOW_SECONDS)
+        fail_ip = [e for e in fail_ip if str(e.get("status")) == "blocked" and str(e.get("code")) in {"invalid_credentials", "lock_active"}]
+        fail_count = max(len(fail_email), len(fail_ip))
+        lock_seconds = login_lock_seconds(fail_count)
+        if lock_seconds > 0:
+            append_auth_audit_log(
+                data,
+                "login",
+                "blocked",
+                code="lock_active",
+                email=login_value,
+                details={"fail_count": fail_count, "lock_seconds": lock_seconds},
+            )
+            save_data(data)
+            wait_minutes = max(1, int(lock_seconds / 60))
+            flash(f"Muitas tentativas. Aguarde {wait_minutes} min e tente novamente.", "warning")
+            return render_template("login.html", google_login_enabled=google_login_enabled())
+
         user = find_user_by_login(data, login_value)
         if user and password_matches(user, password):
+            if not bool(user.get("active", True)):
+                append_auth_audit_log(data, "login", "blocked", code="user_inactive", email=login_value)
+                save_data(data)
+                flash("Conta inativa. Solicite acesso ao administrador.", "warning")
+                return render_template("login.html", google_login_enabled=google_login_enabled())
             if not is_password_hash_value(user.get("password")):
                 set_user_password(user, password)
                 save_data(data)
             session["user"] = {
                 "id": user["id"],
                 "name": user.get("name") or user.get("username"),
-                "role": (user.get("role") or "operacao").lower(),
+                "role": canonical_role_name(user.get("role")),
+                "email": user.get("email") or "",
             }
+            append_auth_audit_log(data, "login", "ok", code="login_success", email=user.get("email") or login_value)
+            save_data(data)
             return redirect(url_for("dashboard"))
-        flash("Login inválido.")
+        append_auth_audit_log(data, "login", "blocked", code="invalid_credentials", email=login_value)
+        save_data(data)
+        flash("Login invalido. Verifique email e senha.", "error")
     return render_template("login.html", google_login_enabled=google_login_enabled())
 
 
 @app.route("/logout")
 def logout():
+    data = load_data()
+    user = session.get("user") or {}
+    append_auth_audit_log(data, "logout", "ok", code="logout", email=user.get("email", ""))
+    save_data(data)
     session.clear()
     return redirect(url_for("login"))
 
@@ -4401,7 +4599,7 @@ def signup():
             "username": username,
             "email": email,
             "name": name,
-            "role": "operacao",
+            "role": "assistente",
             "password": generate_password_hash(password),
         }
         data["users"].append(new_user)
@@ -4420,22 +4618,22 @@ def admin_create_user():
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
-        role = (request.form.get("role") or "operacao").strip().lower()
+        role = canonical_role_name(request.form.get("role"))
         if len(name) < 3:
             flash("Informe um nome completo.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if "@" not in email or "." not in email.split("@")[-1]:
             flash("Informe um e-mail válido.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if role not in ROLE_PERMISSIONS:
             flash("Perfil inválido.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
             flash("Esse e-mail já está em uso.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         username_base = normalize_username_from_name(name)
         username = username_base
         i = 2
@@ -4455,7 +4653,7 @@ def admin_create_user():
         save_data(data)
         flash("Usuário criado com sucesso.")
         return redirect(url_for("admin_create_user"))
-    return render_template("admin_create_user.html", active="usuarios", role_options=role_options)
+    return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
 
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -4464,24 +4662,178 @@ def forgot_password():
         data = load_data()
         email = (request.form.get("email") or "").strip().lower()
         user = next((u for u in data.get("users", []) if str(u.get("email", "")).strip().lower() == email), None)
+        append_auth_audit_log(data, "password_reset_requested", "ok", code="request_received", email=email)
         if not user:
             print(f"[PASSWORD_RESET_USER_NOT_FOUND] {email}")
         else:
+            now = datetime.now()
+            one_day_ago = now - timedelta(days=1)
+            recent_tokens = []
+            for item in data.get("password_reset_tokens", []):
+                if item.get("user_id") != user.get("id"):
+                    continue
+                created_raw = str(item.get("created_at") or item.get("expires_at") or "").strip()
+                try:
+                    created_at = datetime.fromisoformat(created_raw)
+                except ValueError:
+                    created_at = now
+                if created_at >= one_day_ago:
+                    recent_tokens.append(item)
+            if len(recent_tokens) >= PASSWORD_RESET_DAILY_LIMIT:
+                append_auth_audit_log(data, "password_reset_requested", "blocked", code="daily_limit_reached", email=email, details={"daily_requests": len(recent_tokens)})
+                save_data(data)
+                flash("Se o email existir, enviamos um link de recuperacao.", "info")
+                return redirect(url_for("login"))
+
+            recent_requests = recent_auth_events_for_email(data, email, "password_reset_requested", PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS)
+            if len(recent_requests) > 1:
+                append_auth_audit_log(data, "password_reset_requested", "blocked", code="cooldown_active", email=email, details={"cooldown_seconds": PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS})
+                save_data(data)
+                flash("Aguarde um pouco antes de pedir um novo link.", "warning")
+                return redirect(url_for("forgot_password"))
+
             token = uuid.uuid4().hex
-            expires_at = (datetime.now() + timedelta(minutes=30)).isoformat(timespec="seconds")
-            data.setdefault("password_reset_tokens", []).append(
-                {"token": token, "user_id": user.get("id"), "expires_at": expires_at, "used": False}
-            )
-            save_data(data)
+            expires_at = (now + timedelta(minutes=PASSWORD_RESET_TOKEN_TTL_MINUTES)).isoformat(timespec="seconds")
+            tokens = data.setdefault("password_reset_tokens", [])
+            for item in tokens:
+                if item.get("user_id") == user.get("id") and not item.get("used"):
+                    item["used"] = True
+                    item["used_at"] = now.isoformat(timespec="seconds")
+                    item["revoked_reason"] = "superseded_by_new_request"
+            tokens.append({"token": token, "user_id": user.get("id"), "expires_at": expires_at, "created_at": now.isoformat(timespec="seconds"), "used": False})
             reset_link = url_for("reset_password", token=token, _external=True)
             sent, reason = send_password_reset_email(email, reset_link)
             if not sent:
                 print(f"[PASSWORD_RESET_PROVIDER_ERROR] {email} reason={reason}")
+                append_auth_audit_log(data, "password_reset_sent", "failed", code="provider_error", email=email, details={"provider_reason": reason})
             else:
                 print(f"[PASSWORD_RESET_SENT] {email} provider={reason}")
-        flash("Se o e-mail existir, enviamos um link de recuperação.")
+                append_auth_audit_log(data, "password_reset_sent", "ok", code="sent", email=email, details={"provider": reason})
+            save_data(data)
+        flash("Se o email existir, enviamos um link de recuperacao.", "info")
         return redirect(url_for("login"))
     return render_template("forgot_password.html")
+
+
+@app.route("/admin/usuarios")
+@login_required
+@admin_required
+def admin_users():
+    data = load_data()
+    q = (request.args.get("q") or "").strip().lower()
+    users = []
+    for item in data.get("users", []):
+        role = canonical_role_name(item.get("role"))
+        row = dict(item)
+        row["role"] = role
+        row["role_label"] = role_label(role)
+        row["active"] = bool(item.get("active", True))
+        hay = f"{row.get('name','')} {row.get('email','')} {row.get('username','')}".lower()
+        if q and q not in hay:
+            continue
+        users.append(row)
+    users = sorted(users, key=lambda u: (0 if u.get("id") == 1 else 1, str(u.get("name") or "").lower()))
+    return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS)
+
+
+@app.route("/admin/usuarios/<int:user_id>/status", methods=["POST"])
+@login_required
+@admin_required
+def admin_user_toggle_status(user_id):
+    data = load_data()
+    target = find_by_id(data.get("users", []), user_id)
+    if not target:
+        flash("Usuario nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    if int(target.get("id", 0) or 0) == 1:
+        flash("Nao e permitido desativar o usuario raiz.", "warning")
+        return redirect(url_for("admin_users"))
+    target["active"] = not bool(target.get("active", True))
+    append_auth_audit_log(
+        data,
+        "user_status_change",
+        "ok",
+        code="user_activated" if target["active"] else "user_deactivated",
+        email=target.get("email"),
+        details={"target_user_id": target.get("id"), "active": target["active"]},
+    )
+    save_data(data)
+    flash("Status do usuario atualizado.", "success")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/usuarios/<int:user_id>/perfil", methods=["POST"])
+@login_required
+@admin_required
+def admin_user_change_role(user_id):
+    data = load_data()
+    target = find_by_id(data.get("users", []), user_id)
+    if not target:
+        flash("Usuario nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    new_role = canonical_role_name(request.form.get("role"))
+    old_role = canonical_role_name(target.get("role"))
+    if int(target.get("id", 0) or 0) == 1 and new_role != "admin":
+        flash("Nao e permitido alterar o perfil do usuario raiz.", "warning")
+        return redirect(url_for("admin_users"))
+    target["role"] = new_role
+    append_auth_audit_log(
+        data,
+        "user_role_change",
+        "ok",
+        code="role_updated",
+        email=target.get("email"),
+        details={"target_user_id": target.get("id"), "from": old_role, "to": new_role},
+    )
+    save_data(data)
+    flash("Perfil atualizado.", "success")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/usuarios/<int:user_id>/reset-password", methods=["POST"])
+@login_required
+@admin_required
+def admin_user_reset_password(user_id):
+    data = load_data()
+    target = find_by_id(data.get("users", []), user_id)
+    if not target:
+        flash("Usuario nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    email = str(target.get("email") or "").strip().lower()
+    if not email:
+        flash("Usuario sem e-mail cadastrado.", "warning")
+        return redirect(url_for("admin_users"))
+    now = datetime.now()
+    token = uuid.uuid4().hex
+    expires_at = (now + timedelta(minutes=PASSWORD_RESET_TOKEN_TTL_MINUTES)).isoformat(timespec="seconds")
+    tokens = data.setdefault("password_reset_tokens", [])
+    for item in tokens:
+        if item.get("user_id") == target.get("id") and not item.get("used"):
+            item["used"] = True
+            item["used_at"] = now.isoformat(timespec="seconds")
+            item["revoked_reason"] = "superseded_by_admin_request"
+    tokens.append(
+        {
+            "token": token,
+            "user_id": target.get("id"),
+            "expires_at": expires_at,
+            "created_at": now.isoformat(timespec="seconds"),
+            "used": False,
+        }
+    )
+    reset_link = url_for("reset_password", token=token, _external=True)
+    sent, reason = send_password_reset_email(email, reset_link)
+    append_auth_audit_log(
+        data,
+        "admin_password_reset",
+        "ok" if sent else "failed",
+        code="sent" if sent else "provider_error",
+        email=email,
+        details={"target_user_id": target.get("id"), "provider": reason},
+    )
+    save_data(data)
+    flash("Link de redefinicao enviado para o usuario." if sent else "Falha ao enviar o link de redefinicao.", "success" if sent else "error")
+    return redirect(url_for("admin_users"))
 
 
 @app.route("/auth/google/login")
@@ -4507,7 +4859,7 @@ def google_auth_login():
 def google_auth_callback():
     expected_state = session.get("google_login_state")
     if not expected_state:
-        flash("SessÃ£o de login com Google expirada. Tente novamente.")
+        flash("Sessao de login com Google expirada. Tente novamente.", "warning")
         return redirect(url_for("login"))
     try:
         flow = create_google_oauth_flow(state=expected_state)
@@ -4522,17 +4874,29 @@ def google_auth_callback():
         with urllib.request.urlopen(req, timeout=10) as response:
             userinfo = json.loads(response.read().decode("utf-8"))
     except Exception as exc:
-        flash(f"Falha no login com Google: {exc}")
+        flash(f"Falha no login com Google: {exc}", "error")
+        data = load_data()
+        append_auth_audit_log(data, "google_login", "failed", code="oauth_error")
+        save_data(data)
         return redirect(url_for("login"))
     email = str(userinfo.get("email") or "").strip().lower()
     name = str(userinfo.get("name") or "").strip()
     email_verified = bool(userinfo.get("email_verified"))
     if not email or not email_verified:
-        flash("Conta Google sem e-mail verificado.")
+        flash("Conta Google sem e-mail verificado.", "warning")
+        data = load_data()
+        append_auth_audit_log(data, "google_login", "blocked", code="email_not_verified", email=email)
+        save_data(data)
         return redirect(url_for("login"))
     if not upsert_google_user_and_login(email, name):
-        flash("Sua conta ainda não foi autorizada. Solicite acesso ao administrador.")
+        flash("Sua conta ainda nao foi autorizada. Solicite acesso ao administrador.", "warning")
+        data = load_data()
+        append_auth_audit_log(data, "google_login", "blocked", code="not_authorized", email=email)
+        save_data(data)
         return redirect(url_for("login"))
+    data = load_data()
+    append_auth_audit_log(data, "google_login", "ok", code="success", email=email)
+    save_data(data)
     return redirect(url_for("dashboard"))
 
 
@@ -4799,6 +5163,8 @@ def public_create_lead():
 @permission_required("dashboard:view")
 def dashboard():
     data = load_data()
+    if current_user_role() == "cliente":
+        return render_template("client_portal_dashboard.html", active="dashboard")
     ensure_recent_smoke_check(data, reason="dashboard_auto")
     if ensure_daily_automation_tasks(data):
         save_data(data)
@@ -4881,6 +5247,79 @@ def admin_run_smoke_check():
     else:
         flash("Smoke check falhou. Veja detalhes no diagnostico.")
     return redirect(url_for("admin_diagnostics"))
+
+
+@app.route("/admin/auditoria-auth")
+@login_required
+@admin_required
+def admin_auth_audit():
+    data = load_data()
+    event_filter = (request.args.get("event") or "todos").strip().lower()
+    status_filter = (request.args.get("status") or "todos").strip().lower()
+    email_filter = (request.args.get("email") or "").strip().lower()
+    raw_events = list(reversed(data.get("auth_audit_logs", []) or []))
+    filtered = []
+    for item in raw_events:
+        event_name = str(item.get("event") or "").strip().lower()
+        status_name = str(item.get("status") or "").strip().lower()
+        email_name = str(item.get("email") or "").strip().lower()
+        if event_filter != "todos" and event_name != event_filter:
+            continue
+        if status_filter != "todos" and status_name != status_filter:
+            continue
+        if email_filter and email_filter not in email_name:
+            continue
+        filtered.append(item)
+    panel = build_auth_audit_panel({"auth_audit_logs": filtered}, limit=200)
+    event_options = sorted({str(i.get("event") or "").strip() for i in raw_events if i.get("event")})
+    return render_template(
+        "admin_auth_audit.html",
+        active="auditoria_auth",
+        panel=panel,
+        filters={"event": event_filter, "status": status_filter, "email": email_filter},
+        event_options=event_options,
+    )
+
+
+@app.route("/admin/auditoria-auth/export.csv")
+@login_required
+@admin_required
+def admin_auth_audit_export():
+    data = load_data()
+    event_filter = (request.args.get("event") or "todos").strip().lower()
+    status_filter = (request.args.get("status") or "todos").strip().lower()
+    email_filter = (request.args.get("email") or "").strip().lower()
+    rows = []
+    for item in reversed(data.get("auth_audit_logs", []) or []):
+        event_name = str(item.get("event") or "").strip().lower()
+        status_name = str(item.get("status") or "").strip().lower()
+        email_name = str(item.get("email") or "").strip().lower()
+        if event_filter != "todos" and event_name != event_filter:
+            continue
+        if status_filter != "todos" and status_name != status_filter:
+            continue
+        if email_filter and email_filter not in email_name:
+            continue
+        rows.append(item)
+    csv_lines = ["created_at,event,status,code,email,actor_name,actor_role,ip"]
+    for item in rows:
+        values = [
+            str(item.get("created_at") or ""),
+            str(item.get("event") or ""),
+            str(item.get("status") or ""),
+            str(item.get("code") or ""),
+            str(item.get("email") or ""),
+            str(item.get("actor_name") or ""),
+            str(item.get("actor_role") or ""),
+            str(item.get("ip") or ""),
+        ]
+        csv_lines.append(",".join('"' + v.replace('"', '""') + '"' for v in values))
+    payload = "\n".join(csv_lines)
+    return Response(
+        payload,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=auth_audit_{datetime.now():%Y%m%d_%H%M%S}.csv"},
+    )
 
 
 @app.route("/atividades")

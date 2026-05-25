@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Auditoria de Autenticação - Uardon CRM{% endblock %}
+{% block page_title %}Auditoria de Autenticação{% endblock %}
+{% block page_subtitle %}Login, reset de senha, Google e criação de usuários{% endblock %}
+{% block content %}
+<section class="card" style="padding:16px;">
+  <form method="get" style="display:grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap:8px; margin-bottom:12px;">
+    <select class="form-select" name="event">
+      <option value="todos" {% if filters.event=='todos' %}selected{% endif %}>Todos os eventos</option>
+      {% for e in event_options %}
+      <option value="{{ e|lower }}" {% if filters.event==e|lower %}selected{% endif %}>{{ e }}</option>
+      {% endfor %}
+    </select>
+    <select class="form-select" name="status">
+      <option value="todos" {% if filters.status=='todos' %}selected{% endif %}>Todos os status</option>
+      <option value="ok" {% if filters.status=='ok' %}selected{% endif %}>ok</option>
+      <option value="blocked" {% if filters.status=='blocked' %}selected{% endif %}>blocked</option>
+      <option value="failed" {% if filters.status=='failed' %}selected{% endif %}>failed</option>
+    </select>
+    <input class="form-input" type="text" name="email" value="{{ filters.email }}" placeholder="Filtrar por e-mail">
+    <button class="btn btn-ghost" type="submit">Aplicar</button>
+    <a class="btn btn-primary" href="{{ url_for('admin_auth_audit_export', event=filters.event, status=filters.status, email=filters.email) }}">Exportar CSV</a>
+  </form>
+
+  {% if panel.alerts %}
+  <div class="stack-sm" style="margin-bottom:10px;">
+    {% for alert in panel.alerts %}
+    <div class="flash flash-{{ 'error' if alert.level=='high' else 'warning' }}">
+      <strong>{{ alert.title }}</strong><br>{{ alert.note }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="notif-summary" style="margin-bottom:12px;">
+    <span><strong>{{ panel.totals.total }}</strong> eventos</span>
+    <span><strong>{{ panel.totals.ok }}</strong> sucesso</span>
+    <span><strong>{{ panel.totals.blocked }}</strong> bloqueados</span>
+    <span><strong>{{ panel.totals.failed }}</strong> falhas</span>
+    <span>login <strong>{{ panel.buckets.login }}</strong></span>
+    <span>reset <strong>{{ panel.buckets.reset }}</strong></span>
+    <span>google <strong>{{ panel.buckets.google }}</strong></span>
+    <span>usuários <strong>{{ panel.buckets.users }}</strong></span>
+  </div>
+
+  <div class="projects-clean-list">
+    {% for item in panel.events %}
+    <div class="project-clean-row" style="grid-template-columns: 170px 180px 120px 210px 1fr;">
+      <div class="project-clean-col">
+        <span class="project-clean-label">Data</span>
+        <strong>{{ item.created_at }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">Evento</span>
+        <strong>{{ item.event }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">Status</span>
+        <strong>{{ item.status }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">E-mail</span>
+        <strong>{{ item.email or '-' }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">Código</span>
+        <strong>{{ item.code or '-' }}</strong>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">Sem eventos de autenticação ainda.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

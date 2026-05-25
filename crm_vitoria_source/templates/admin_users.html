@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Gestao de Usuarios - Uardon CRM{% endblock %}
+{% block page_title %}Gestao de Usuarios{% endblock %}
+{% block page_subtitle %}Ativar, desativar, trocar perfil e resetar senha{% endblock %}
+{% block content %}
+<section class="card" style="padding:16px;">
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <form method="get" style="display:flex; gap:8px; flex:1; max-width:460px;">
+      <input class="form-input" type="text" name="q" placeholder="Buscar por nome ou e-mail" value="{{ q }}">
+      <button class="btn btn-ghost" type="submit">Filtrar</button>
+    </form>
+    <a class="btn btn-primary" href="{{ url_for('admin_create_user') }}">Novo usuario</a>
+  </div>
+
+  <div class="projects-clean-list">
+    {% for user in users %}
+    <div class="project-clean-row" style="grid-template-columns:1.2fr 1fr .9fr .8fr 1.5fr;">
+      <div class="project-clean-col">
+        <span class="project-clean-label">Nome</span>
+        <strong>{{ user.name }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">E-mail</span>
+        <strong>{{ user.email or '-' }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">Perfil</span>
+        <strong>{{ user.role_label }}</strong>
+      </div>
+      <div class="project-clean-col">
+        <span class="project-clean-label">Status</span>
+        <strong>{{ 'Ativo' if user.active else 'Inativo' }}</strong>
+      </div>
+      <div class="lead-actions-inline">
+        <form method="post" action="{{ url_for('admin_user_toggle_status', user_id=user.id) }}">
+          <button class="btn btn-ghost tiny-btn" type="submit">{{ 'Desativar' if user.active else 'Ativar' }}</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_user_change_role', user_id=user.id) }}" style="display:flex; gap:6px;">
+          <select class="form-select" name="role" style="min-width:170px;">
+            {% for role in role_options %}
+            <option value="{{ role }}" {% if role==user.role %}selected{% endif %}>{{ role_labels.get(role, role) }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-ghost tiny-btn" type="submit">Salvar</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_user_reset_password', user_id=user.id) }}">
+          <button class="btn btn-primary tiny-btn" type="submit">Enviar reset</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">Nenhum usuario encontrado.</div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

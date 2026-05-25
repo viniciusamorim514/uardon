@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Portal do Cliente - Uardon CRM{% endblock %}
+{% block page_title %}Portal do Cliente{% endblock %}
+{% block page_subtitle %}Acesso limitado aos modulos liberados{% endblock %}
+{% block content %}
+<section class="card" style="padding:20px;">
+  <h3>Bem-vindo ao portal</h3>
+  <p class="project-clean-sub" style="margin-top:8px;">
+    Este perfil tem visao limitada para acompanhamento. Use o menu para acessar os modulos liberados.
+  </p>
+  <div class="notif-summary" style="margin-top:14px;">
+    <span>Modulo <strong>Projetos</strong> liberado</span>
+    <span>Modulo <strong>Atividades</strong> liberado</span>
+  </div>
+</section>
+{% endblock %}
