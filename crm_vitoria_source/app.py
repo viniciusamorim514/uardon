@@ -136,6 +136,7 @@ ALERT_WHATSAPP_TO = (os.environ.get("AUTH_ALERT_WHATSAPP_TO") or "").strip()
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
 TELEGRAM_CHAT_ID = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
 TELEGRAM_WEBHOOK_SECRET = (os.environ.get("TELEGRAM_WEBHOOK_SECRET") or "").strip()
+AGENT_CONTROL_SECRET = (os.environ.get("AGENT_CONTROL_SECRET") or "").strip()
 OPERATIONS_INBOX_EMAIL = (os.environ.get("OPERATIONS_INBOX_EMAIL") or "suporte@uardon.com.br").strip().lower()
 PASSWORD_RESET_DELIVERY_MODE = (os.environ.get("PASSWORD_RESET_DELIVERY_MODE") or "target").strip().lower()
 
@@ -5465,6 +5466,23 @@ def public_budget_request():
 @app.route("/health")
 def health_check():
     return public_lead_response({"ok": True, "service": "uardon-crm"})
+
+
+@app.route("/ops/agent-state/<secret>", methods=["GET"])
+def ops_agent_state(secret):
+    if not AGENT_CONTROL_SECRET or secret != AGENT_CONTROL_SECRET:
+        return public_lead_response({"ok": False, "error": "forbidden"}, 403)
+    data = load_data()
+    state = data.setdefault("operations_daily_summary_state", {})
+    ops = build_telegram_ops_status(data)
+    return public_lead_response(
+        {
+            "ok": True,
+            "agent_enabled": bool(state.get("telegram_agent_enabled", False)),
+            "last_daily_summary": str(state.get("last_sent_date") or ""),
+            "ops": ops,
+        }
+    )
 
 
 @app.route("/telegram/webhook", methods=["POST"])

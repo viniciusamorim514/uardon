@@ -7,6 +7,7 @@ Receber alertas críticos de autenticação no Telegram automaticamente.
 - `TELEGRAM_BOT_TOKEN` = token do BotFather
 - `TELEGRAM_CHAT_ID` = id do chat/grupo que receberá alertas
 - `TELEGRAM_WEBHOOK_SECRET` = segredo opcional para proteger comandos do bot
+- `AGENT_CONTROL_SECRET` = segredo para o Codex ler o estado do agente via API
 
 ## Como obter rapidamente
 1. No Telegram, fale com `@BotFather` e crie um bot (`/newbot`).
@@ -43,6 +44,14 @@ Depois de configurar as variáveis:
    - `https://api.telegram.org/bot<SEU_TOKEN>/getWebhookInfo`
 4. Teste:
    - No chat do bot, envie `/status`.
+
+## Endpoint para orquestração automática (Codex)
+- URL: `https://app.uardon.com.br/ops/agent-state/<AGENT_CONTROL_SECRET>`
+- Retorno:
+  - `agent_enabled = true/false` (ligado pelo `/agente_on` e desligado pelo `/agente_off`)
+  - `ops` com resumo operacional
+- Uso:
+  - O executor automático do Codex consulta esse endpoint e só roda melhorias quando `agent_enabled=true`.
 
 ## Observação operacional
 - Se as variáveis não estiverem definidas, o CRM continua funcionando normalmente (sem Telegram).
