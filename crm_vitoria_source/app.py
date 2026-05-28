@@ -5549,7 +5549,10 @@ def admin_run_smoke_check():
 def admin_auth_audit():
     data = load_data()
     page = max(1, int((request.args.get("page") or "1").strip() or "1"))
+    per_page_raw = (request.args.get("per_page") or "50").strip()
     per_page = 50
+    if per_page_raw in {"25", "50", "100"}:
+        per_page = int(per_page_raw)
     event_filter = (request.args.get("event") or "todos").strip().lower()
     status_filter = (request.args.get("status") or "todos").strip().lower()
     email_filter = (request.args.get("email") or "").strip().lower()

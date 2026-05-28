@@ -1,10 +1,10 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Auditoria de Autenticação - Uardon CRM{% endblock %}
 {% block page_title %}Auditoria de Autenticação{% endblock %}
 {% block page_subtitle %}Login, reset de senha, Google e criação de usuários{% endblock %}
 {% block content %}
 <section class="card" style="padding:16px;">
-  <form method="get" style="display:grid; grid-template-columns: 1fr 1fr 1fr auto auto; gap:8px; margin-bottom:12px;">
+  <form method="get" style="display:grid; grid-template-columns: 1fr 1fr 1fr 160px auto auto; gap:8px; margin-bottom:12px;">
     <select class="form-select" name="event">
       <option value="todos" {% if filters.event=='todos' %}selected{% endif %}>Todos os eventos</option>
       {% for e in event_options %}
@@ -18,6 +18,11 @@
       <option value="failed" {% if filters.status=='failed' %}selected{% endif %}>failed</option>
     </select>
     <input class="form-input" type="text" name="email" value="{{ filters.email }}" placeholder="Filtrar por e-mail">
+    <select class="form-select" name="per_page">
+      <option value="25" {% if pagination.per_page==25 %}selected{% endif %}>25 por página</option>
+      <option value="50" {% if pagination.per_page==50 %}selected{% endif %}>50 por página</option>
+      <option value="100" {% if pagination.per_page==100 %}selected{% endif %}>100 por página</option>
+    </select>
     <button class="btn btn-ghost" type="submit">Aplicar</button>
     <a class="btn btn-primary" href="{{ url_for('admin_auth_audit_export', event=filters.event, status=filters.status, email=filters.email) }}">Exportar CSV</a>
   </form>
@@ -82,10 +87,10 @@
   </div>
   <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
     {% if pagination.has_prev %}
-    <a class="btn btn-ghost" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, page=pagination.page-1) }}">Anterior</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, per_page=pagination.per_page, page=pagination.page-1) }}">Anterior</a>
     {% endif %}
     {% if pagination.has_next %}
-    <a class="btn btn-primary" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, page=pagination.page+1) }}">Próxima</a>
+    <a class="btn btn-primary" href="{{ url_for('admin_auth_audit', event=filters.event, status=filters.status, email=filters.email, per_page=pagination.per_page, page=pagination.page+1) }}">Próxima</a>
     {% endif %}
   </div>
 </section>
