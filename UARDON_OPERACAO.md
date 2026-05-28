@@ -108,3 +108,10 @@ O token precisa permitir deploy em Cloudflare Pages no projeto `uardon-landing`.
 4. Enviar o formulario.
 5. Abrir o CRM em `https://app.uardon.com.br`.
 6. Confirmar que o lead entrou com origem/site preenchido.
+
+## Automacao por chat (Codex)
+
+1. Comando `automação ativada`: executa 1 ciclo técnico imediato.
+2. Comando `automação pausada`: pausa rotinas automáticas.
+3. Comando `status da automação`: informa estado atual.
+4. Guia detalhado: `AUTOMACAO_CHAT_OPERACAO.md`.
