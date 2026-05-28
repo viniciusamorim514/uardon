@@ -4783,7 +4783,7 @@ def logout():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if not PUBLIC_SIGNUP_ENABLED:
-        flash("Cadastro pÃºblico desativado. Solicite acesso ao administrador.")
+        flash("Cadastro público desativado. Solicite acesso ao administrador.")
         return redirect(url_for("login"))
     if request.method == "POST":
         data = load_data()
@@ -4795,7 +4795,7 @@ def signup():
             flash("Informe um nome completo.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if "@" not in email or "." not in email.split("@")[-1]:
-            flash("Informe um e-mail vÃ¡lido.")
+            flash("Informe um e-mail válido.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
@@ -4805,10 +4805,10 @@ def signup():
             flash(password_reason, "warning")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if password != password_confirm:
-            flash("A confirmaÃ§Ã£o de senha nÃ£o confere.")
+            flash("A confirmação de senha não confere.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
-            flash("Esse e-mail jÃ¡ estÃ¡ em uso.")
+            flash("Esse e-mail já está em uso.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         username_base = normalize_username_from_name(name)
         username = username_base
@@ -4827,7 +4827,7 @@ def signup():
         }
         data["users"].append(new_user)
         save_data(data)
-        flash("Conta criada. FaÃ§a login para continuar.")
+        flash("Conta criada. Faça login para continuar.")
         return redirect(url_for("login"))
     return render_template("signup.html", google_login_enabled=google_login_enabled())
 
@@ -4846,7 +4846,7 @@ def admin_create_user():
             flash("Informe um nome completo.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if "@" not in email or "." not in email.split("@")[-1]:
-            flash("Informe um e-mail vÃ¡lido.")
+            flash("Informe um e-mail válido.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if len(password) < 8:
             flash("A senha precisa ter ao menos 8 caracteres.")
@@ -4856,10 +4856,10 @@ def admin_create_user():
             flash(password_reason, "warning")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if role not in ROLE_PERMISSIONS:
-            flash("Perfil invÃ¡lido.")
+            flash("Perfil inválido.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
-            flash("Esse e-mail jÃ¡ estÃ¡ em uso.")
+            flash("Esse e-mail já está em uso.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         username_base = normalize_username_from_name(name)
         username = username_base
@@ -4878,7 +4878,7 @@ def admin_create_user():
         }
         data.setdefault("users", []).append(new_user)
         save_data(data)
-        flash("UsuÃ¡rio criado com sucesso.")
+        flash("Usuário criado com sucesso.")
         return redirect(url_for("admin_create_user"))
     return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
 
@@ -5135,14 +5135,14 @@ def admin_user_delete(user_id):
         details={"target_user_id": target.get("id"), "target_username": target.get("username")},
     )
     save_data(data)
-    flash("Usuario excluido com sucesso.", "success")
+    flash("Usuário excluído com sucesso.", "success")
     return redirect(url_for("admin_users"))
 
 
 @app.route("/auth/google/login")
 def google_auth_login():
     if not google_login_enabled():
-        flash("Login com Google nÃƒÂ£o estÃƒÂ¡ disponÃƒÂ­vel no momento.")
+        flash("Login com Google não está disponível no momento.")
         return redirect(url_for("login"))
     try:
         flow = create_google_oauth_flow()
@@ -5152,7 +5152,7 @@ def google_auth_login():
             prompt="select_account",
         )
     except Exception as exc:
-        flash(f"NÃƒÂ£o foi possÃƒÂ­vel iniciar login com Google: {exc}")
+        flash(f"Não foi possível iniciar login com Google: {exc}")
         return redirect(url_for("login"))
     session["google_login_state"] = state
     return redirect(authorization_url)
@@ -5162,7 +5162,7 @@ def google_auth_login():
 def google_auth_callback():
     expected_state = session.get("google_login_state")
     if not expected_state:
-        flash("Sessao de login com Google expirada. Tente novamente.", "warning")
+        flash("Sessão de login com Google expirada. Tente novamente.", "warning")
         return redirect(url_for("login"))
     try:
         flow = create_google_oauth_flow(state=expected_state)
@@ -5192,7 +5192,7 @@ def google_auth_callback():
         save_data(data)
         return redirect(url_for("login"))
     if not upsert_google_user_and_login(email, name):
-        flash("Sua conta ainda nao foi autorizada. Solicite acesso ao administrador.", "warning")
+        flash("Sua conta ainda não foi autorizada. Solicite acesso ao administrador.", "warning")
         data = load_data()
         append_auth_audit_log(data, "google_login", "blocked", code="not_authorized", email=email)
         save_data(data)
@@ -5209,10 +5209,10 @@ def reset_password(token):
     token_item = next((t for t in data.get("password_reset_tokens", []) if t.get("token") == token), None)
     now = datetime.now()
     if not token_item:
-        flash("Link invÃ¡lido.")
+        flash("Link inválido.")
         return redirect(url_for("forgot_password"))
     if token_item.get("used"):
-        flash("Esse link jÃ¡ foi utilizado.")
+        flash("Esse link já foi utilizado.")
         return redirect(url_for("forgot_password"))
     try:
         expires_at = datetime.fromisoformat(str(token_item.get("expires_at") or ""))
@@ -5232,17 +5232,17 @@ def reset_password(token):
             flash(password_reason, "warning")
             return render_template("reset_password.html", token=token)
         if password != password_confirm:
-            flash("A confirmaÃ§Ã£o de senha nÃ£o confere.")
+            flash("A confirmação de senha não confere.")
             return render_template("reset_password.html", token=token)
         user = find_by_id(data.get("users", []), token_item.get("user_id"))
         if not user:
-            flash("UsuÃ¡rio nÃ£o encontrado.")
+            flash("Usuário não encontrado.")
             return redirect(url_for("forgot_password"))
         set_user_password(user, password)
         token_item["used"] = True
         token_item["used_at"] = now.isoformat(timespec="seconds")
         save_data(data)
-        flash("Senha atualizada. FaÃ§a login.")
+        flash("Senha atualizada. Faça login.")
         return redirect(url_for("login"))
     return render_template("reset_password.html", token=token)
 
