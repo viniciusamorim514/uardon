@@ -5,6 +5,17 @@
 {% block content %}
 <div class="content">
   <section class="card" style="padding:16px; margin-bottom:12px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div class="notif-summary" style="padding:0; border-bottom:none; background:transparent;">
+        <span class="{% if semaforo=='red' %}flash-error{% elif semaforo=='yellow' %}flash-warning{% else %}flash-success{% endif %}" style="border:none;">
+          <strong>Semaforo:</strong> {{ semaforo_label }}
+        </span>
+      </div>
+      <a class="btn btn-ghost" href="{{ url_for('operations_daily_summary') }}" target="_blank">Resumo do dia</a>
+    </div>
+  </section>
+
+  <section class="card" style="padding:16px; margin-bottom:12px;">
     <div class="notif-summary">
       <span><strong>CRM/API</strong> Railway (`app.uardon.com.br`)</span>
       <span><strong>Landing</strong> Cloudflare (`uardon.com.br`)</span>

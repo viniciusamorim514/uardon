@@ -5664,7 +5664,48 @@ def operations_page():
         "usuarios_total": len(data.get("users", [])),
         "tasks_abertas": len([t for t in data.get("tarefas", []) if not t.get("done")]),
     }
-    return render_template("operations.html", active="operacoes", owners=owners, technical=technical, auth=auth, kpis=kpis)
+    semaforo = "green"
+    semaforo_label = "Operacao estavel"
+    if technical["totals"]["status_5xx"] > 0 or auth["daily"]["reset_sent_failed"] >= 2:
+        semaforo = "red"
+        semaforo_label = "Incidente critico"
+    elif technical["totals"]["status_4xx"] >= 10 or technical["totals"]["blocked"] >= 8 or auth["daily"]["reset_sent_failed"] >= 1:
+        semaforo = "yellow"
+        semaforo_label = "Atencao operacional"
+    return render_template(
+        "operations.html",
+        active="operacoes",
+        owners=owners,
+        technical=technical,
+        auth=auth,
+        kpis=kpis,
+        semaforo=semaforo,
+        semaforo_label=semaforo_label,
+    )
+
+
+@app.route("/operacoes/resumo-dia")
+@login_required
+@permission_required("dashboard:view")
+def operations_daily_summary():
+    data = load_data()
+    technical = build_technical_health(data, window_hours=24)
+    auth = build_auth_audit_panel(data, limit=120)
+    leads_ativos = len([l for l in data.get("leads", []) if (l.get("status") or "novo").lower() not in ("perdido", "futuro", "convertido")])
+    usuarios_ativos = len([u for u in data.get("users", []) if bool(u.get("active", True))])
+    tasks_abertas = len([t for t in data.get("tarefas", []) if not t.get("done")])
+    linhas = [
+        f"Resumo diario Uardon CRM - {today_br()}",
+        f"- Leads ativos: {leads_ativos}",
+        f"- Usuarios ativos: {usuarios_ativos}",
+        f"- Tarefas abertas: {tasks_abertas}",
+        f"- Eventos tecnicos (24h): {technical['totals']['events']}",
+        f"- 4xx: {technical['totals']['status_4xx']} | 5xx: {technical['totals']['status_5xx']}",
+        f"- Bloqueios auth: {technical['totals']['blocked']}",
+        f"- Reset hoje: enviados {auth['daily']['reset_sent_ok']} | falhas {auth['daily']['reset_sent_failed']}",
+    ]
+    payload = "\n".join(linhas)
+    return Response(payload, mimetype="text/plain; charset=utf-8")
 
 
 @app.route("/agenda")
