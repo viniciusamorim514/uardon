@@ -135,6 +135,7 @@ ALERT_EMAIL_TO = (os.environ.get("AUTH_ALERT_EMAIL_TO") or "").strip().lower()
 ALERT_WHATSAPP_TO = (os.environ.get("AUTH_ALERT_WHATSAPP_TO") or "").strip()
 TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
 TELEGRAM_CHAT_ID = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+TELEGRAM_WEBHOOK_SECRET = (os.environ.get("TELEGRAM_WEBHOOK_SECRET") or "").strip()
 OPERATIONS_INBOX_EMAIL = (os.environ.get("OPERATIONS_INBOX_EMAIL") or "suporte@uardon.com.br").strip().lower()
 PASSWORD_RESET_DELIVERY_MODE = (os.environ.get("PASSWORD_RESET_DELIVERY_MODE") or "target").strip().lower()
 
@@ -2889,8 +2890,9 @@ def find_open_automation_task(data, automation_key):
 
 
 def complete_lead_automation_tasks(data, lead_id, keys):
+    target_keys = {f"{key}:{lead_id}" for key in keys}
     for task in data.get("tarefas", []):
-        if task.get("automation_key") in [f"{key}:{lead_id}" for key in keys] and not task.get("done"):
+        if task.get("automation_key") in target_keys and not task.get("done"):
             task["done"] = True
             task["status"] = "ConcluÃ­da"
             task["done_at"] = today_br()
@@ -4543,9 +4545,15 @@ def send_text_email(recipient_email, subject, text_body, flow_tag="general"):
 def send_telegram_message(text):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return False, "telegram_not_configured"
+    return send_telegram_message_to(TELEGRAM_CHAT_ID, text)
+
+
+def send_telegram_message_to(chat_id, text):
+    if not TELEGRAM_BOT_TOKEN or not str(chat_id or "").strip():
+        return False, "telegram_not_configured"
     payload = json.dumps(
         {
-            "chat_id": TELEGRAM_CHAT_ID,
+            "chat_id": str(chat_id).strip(),
             "text": str(text or "")[:4000],
             "disable_web_page_preview": True,
         }
@@ -4564,6 +4572,114 @@ def send_telegram_message(text):
             return False, f"telegram_http_{status}"
     except Exception as exc:
         return False, f"telegram_error:{exc}"
+
+
+def build_telegram_ops_status(data):
+    technical = build_technical_health(data, window_hours=24)
+    auth = build_auth_audit_panel(data, limit=120)
+    leads_ativos = len([l for l in data.get("leads", []) if (l.get("status") or "novo").lower() not in ("perdido", "futuro", "convertido")])
+    users_active = len([u for u in data.get("users", []) if bool(u.get("active", True))])
+    users_total = len(data.get("users", []) or [])
+    severity = "normal"
+    if technical["totals"]["status_5xx"] > 0 or auth["daily"]["reset_sent_failed"] >= 2:
+        severity = "critical"
+    elif technical["totals"]["status_4xx"] >= 10 or technical["totals"]["blocked"] >= 8 or auth["daily"]["reset_sent_failed"] >= 1:
+        severity = "attention"
+    return {
+        "severity": severity,
+        "leads_ativos": leads_ativos,
+        "users_active": users_active,
+        "users_total": users_total,
+        "reset_sent_ok": auth["daily"]["reset_sent_ok"],
+        "reset_sent_failed": auth["daily"]["reset_sent_failed"],
+        "status_5xx": technical["totals"]["status_5xx"],
+        "status_4xx": technical["totals"]["status_4xx"],
+        "blocked": technical["totals"]["blocked"],
+    }
+
+
+def build_telegram_help_text():
+    return (
+        "Uardon CRM | Comandos operacionais\n\n"
+        "/status - status geral do projeto\n"
+        "/auth_hoje - resumo de login/reset hoje\n"
+        "/leads_hoje - resumo comercial rapido\n"
+        "/agente_status - status do modo agente\n"
+        "/agente_on - ativa modo agente no CRM\n"
+        "/agente_off - pausa modo agente no CRM\n"
+        "/help - ver esta ajuda"
+    )
+
+
+def process_telegram_command(data, text):
+    command = (text or "").strip().split()[0].lower()
+    if command in ("/start", "/help"):
+        return build_telegram_help_text()
+
+    if command == "/status":
+        ops = build_telegram_ops_status(data)
+        badge = {"normal": "OK", "attention": "ATENCAO", "critical": "CRITICO"}.get(ops["severity"], "OK")
+        return (
+            f"Uardon CRM | STATUS {badge}\n"
+            f"- Leads ativos: {ops['leads_ativos']}\n"
+            f"- Usuarios ativos: {ops['users_active']}/{ops['users_total']}\n"
+            f"- Reset hoje: enviados {ops['reset_sent_ok']} | falhas {ops['reset_sent_failed']}\n"
+            f"- HTTP 5xx (24h): {ops['status_5xx']}\n"
+            f"- HTTP 4xx (24h): {ops['status_4xx']}\n"
+            f"- Bloqueios (24h): {ops['blocked']}"
+        )
+
+    if command == "/auth_hoje":
+        auth = build_auth_audit_panel(data, limit=200)
+        return (
+            "Uardon CRM | AUTH HOJE\n"
+            f"- Reset enviados: {auth['daily']['reset_sent_ok']}\n"
+            f"- Reset falhos: {auth['daily']['reset_sent_failed']}\n"
+            f"- Eventos analisados: {auth['totals']['total']}\n"
+            f"- Bloqueios: {auth['totals']['blocked']}"
+        )
+
+    if command == "/leads_hoje":
+        pipeline = build_lead_pipeline(data.get("leads", []) or [])
+        by_col = {col.get("key"): len(col.get("items") or []) for col in pipeline.get("columns", [])}
+        return (
+            "Uardon CRM | LEADS\n"
+            f"- Novos: {by_col.get('new', 0)}\n"
+            f"- Em contato: {by_col.get('contacted', 0)}\n"
+            f"- Briefing: {by_col.get('briefing', 0)}\n"
+            f"- Proposta: {by_col.get('proposal', 0)}\n"
+            f"- Fechados: {by_col.get('closed', 0)}\n"
+            f"- Perdidos: {len(pipeline.get('lost', []) or [])}"
+        )
+
+    if command == "/agente_status":
+        state = data.setdefault("operations_daily_summary_state", {})
+        enabled = bool(state.get("telegram_agent_enabled", False))
+        last_sent = str(state.get("last_sent_date") or "-")
+        return (
+            "Uardon CRM | AGENTE\n"
+            f"- Modo agente: {'ATIVO' if enabled else 'PAUSADO'}\n"
+            f"- Ultimo resumo diario: {last_sent}\n"
+            "- Dica: use /agente_on ou /agente_off"
+        )
+
+    if command == "/agente_on":
+        state = data.setdefault("operations_daily_summary_state", {})
+        state["telegram_agent_enabled"] = True
+        save_data(data)
+        append_system_audit_log(data, "telegram_agent_mode", "ok", code="enabled", details={"source": "telegram"})
+        save_data(data)
+        return "Modo agente ATIVADO no CRM."
+
+    if command == "/agente_off":
+        state = data.setdefault("operations_daily_summary_state", {})
+        state["telegram_agent_enabled"] = False
+        save_data(data)
+        append_system_audit_log(data, "telegram_agent_mode", "ok", code="disabled", details={"source": "telegram"})
+        save_data(data)
+        return "Modo agente PAUSADO no CRM."
+
+    return "Comando nao reconhecido. Use /help."
 
 
 def send_password_reset_email_resend(recipient_email, reset_link):
@@ -5349,6 +5465,46 @@ def public_budget_request():
 @app.route("/health")
 def health_check():
     return public_lead_response({"ok": True, "service": "uardon-crm"})
+
+
+@app.route("/telegram/webhook", methods=["POST"])
+@app.route("/telegram/webhook/<secret>", methods=["POST"])
+def telegram_webhook(secret=None):
+    if TELEGRAM_WEBHOOK_SECRET and secret != TELEGRAM_WEBHOOK_SECRET:
+        return public_lead_response({"ok": False, "error": "forbidden"}, 403)
+    payload = request.get_json(silent=True) or {}
+    message = payload.get("message") or {}
+    chat = message.get("chat") or {}
+    from_user = message.get("from") or {}
+    text = (message.get("text") or "").strip()
+    incoming_chat_id = str(chat.get("id") or "").strip()
+    configured_chat_id = str(TELEGRAM_CHAT_ID or "").strip()
+    if not incoming_chat_id or not text:
+        return public_lead_response({"ok": True, "ignored": "empty_message"})
+    if configured_chat_id and incoming_chat_id != configured_chat_id:
+        data = load_data()
+        append_system_audit_log(
+            data,
+            "telegram_command_denied",
+            "blocked",
+            code="chat_not_allowed",
+            details={"chat_id": incoming_chat_id, "username": from_user.get("username") or ""},
+        )
+        save_data(data)
+        return public_lead_response({"ok": True, "ignored": "chat_not_allowed"})
+
+    data = load_data()
+    reply = process_telegram_command(data, text)
+    sent, reason = send_telegram_message_to(incoming_chat_id, reply)
+    append_system_audit_log(
+        data,
+        "telegram_command",
+        "ok" if sent else "failed",
+        code="handled" if sent else "reply_failed",
+        details={"command": text.split()[0].lower(), "reason": reason},
+    )
+    save_data(data)
+    return public_lead_response({"ok": True, "sent": bool(sent), "reason": reason})
 
 
 @app.route("/v1/leads", methods=["POST", "OPTIONS"])
@@ -6751,15 +6907,7 @@ def convert_lead(lead_id):
             client=client,
             lead=lead,
         )
-        for task in data.get("tarefas", []):
-            if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
-            if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
+        complete_lead_automation_tasks(data, lead_id, ["lead_response", "lead_followup"])
         save_data(data)
     return redirect(url_for("leads"))
 
@@ -6775,6 +6923,9 @@ def reactivate_lead(lead_id):
         lead["etapa"] = "Contato retomado"
         lead["ultima_interacao"] = today_br()
         lead["perda_motivo"] = ""
+        lead["perda_obs"] = ""
+        lead["perdido_em"] = ""
+        lead["futuro_retorno"] = ""
         register_operation_history(
             data,
             "Lead reativado",
@@ -6797,9 +6948,11 @@ def mark_lead_lost(lead_id):
     if lead:
         lead["status"] = "perdido"
         lead["etapa"] = "Perdido"
+        lead["ultima_interacao"] = today_br()
         lead["perda_motivo"] = request.form.get("perda_motivo") or "Outro"
         lead["perda_obs"] = request.form.get("perda_obs") or ""
         lead["perdido_em"] = today_br()
+        lead["futuro_retorno"] = ""
         description = f"Motivo: {lead.get('perda_motivo')}."
         if lead.get("perda_obs"):
             description += f" ObservaÃ§Ã£o: {lead.get('perda_obs')}"
@@ -6811,15 +6964,7 @@ def mark_lead_lost(lead_id):
             f"lead_lost:{lead_id}:{lead.get('perdido_em')}",
             lead=lead,
         )
-        for task in data.get("tarefas", []):
-            if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
-            if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
+        complete_lead_automation_tasks(data, lead_id, ["lead_response", "lead_followup"])
         save_data(data)
     return redirect(url_for("leads"))
 
@@ -6832,10 +6977,13 @@ def mark_lead_future(lead_id):
     lead = find_by_id(data["leads"], lead_id)
     if lead:
         lead["status"] = "futuro"
-        lead["etapa"] = "NutriÃ§Ã£o futura"
+        lead["etapa"] = "Nutrição futura"
+        lead["ultima_interacao"] = today_br()
         lead["futuro_retorno"] = request.form.get("futuro_retorno") or ""
+        lead["perda_motivo"] = ""
         lead["perda_obs"] = request.form.get("perda_obs") or ""
-        description = "Lead movido para nutriÃ§Ã£o futura."
+        lead["perdido_em"] = ""
+        description = "Lead movido para nutrição futura."
         if lead.get("futuro_retorno"):
             description += f" Retomar em: {lead.get('futuro_retorno')}."
         if lead.get("perda_obs"):
@@ -6848,15 +6996,7 @@ def mark_lead_future(lead_id):
             f"lead_future:{lead_id}:{today_br()}",
             lead=lead,
         )
-        for task in data.get("tarefas", []):
-            if task.get("automation_key") == f"lead_response:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
-            if task.get("automation_key") == f"lead_followup:{lead_id}" and not task.get("done"):
-                task["done"] = True
-                task["status"] = "ConcluÃ­da"
-                task["done_at"] = today_br()
+        complete_lead_automation_tasks(data, lead_id, ["lead_response", "lead_followup"])
         save_data(data)
     return redirect(url_for("leads"))
 
