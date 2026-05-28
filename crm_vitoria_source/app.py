@@ -5459,8 +5459,9 @@ def dashboard():
     if current_user_role() == "cliente":
         return render_template("client_portal_dashboard.html", active="dashboard")
     ensure_recent_smoke_check(data, reason="dashboard_auto")
-    if ensure_daily_automation_tasks(data):
-        save_data(data)
+    maybe_send_daily_operations_summary(data, force=False)
+    ensure_daily_automation_tasks(data)
+    save_data(data)
     board = build_task_board(data)
     agenda = build_agenda_board(data)
     pipeline = build_lead_pipeline(data["leads"])
@@ -5681,6 +5682,7 @@ def operations_page():
         kpis=kpis,
         semaforo=semaforo,
         semaforo_label=semaforo_label,
+        ops_state=data.get("operations_daily_summary_state", {}),
     )
 
 
@@ -5706,6 +5708,86 @@ def operations_daily_summary():
     ]
     payload = "\n".join(linhas)
     return Response(payload, mimetype="text/plain; charset=utf-8")
+
+
+@app.route("/operacoes/resumo-dia/enviar", methods=["POST"])
+@login_required
+@admin_required
+def operations_daily_summary_send():
+    data = load_data()
+    force = (request.form.get("force") or "").strip().lower() in {"1", "true", "yes", "on"}
+    sent, reason = maybe_send_daily_operations_summary(data, force=force)
+    save_data(data)
+    if sent:
+        flash("Resumo diário enviado com sucesso.", "success")
+    else:
+        flash(f"Resumo diário não enviado: {reason}.", "warning")
+    return redirect(url_for("operations_page"))
+
+
+def maybe_send_daily_operations_summary(data, force=False):
+    today_key = datetime.now().date().isoformat()
+    state = data.setdefault("operations_daily_summary_state", {})
+    last_sent = str(state.get("last_sent_date") or "").strip()
+    if not force and last_sent == today_key:
+        return False, "already_sent"
+    target = OPERATIONS_INBOX_EMAIL or ALERT_EMAIL_TO
+    if not target:
+        state["last_error"] = "no_target_email"
+        state["last_attempt_at"] = datetime.now().isoformat(timespec="seconds")
+        return False, "no_target_email"
+
+    technical = build_technical_health(data, window_hours=24)
+    auth = build_auth_audit_panel(data, limit=120)
+    leads_ativos = len([l for l in data.get("leads", []) if (l.get("status") or "novo").lower() not in ("perdido", "futuro", "convertido")])
+    usuarios_ativos = len([u for u in data.get("users", []) if bool(u.get("active", True))])
+    tasks_abertas = len([t for t in data.get("tarefas", []) if not t.get("done")])
+    linhas = [
+        f"Resumo diario Uardon CRM - {today_br()}",
+        "",
+        f"- Leads ativos: {leads_ativos}",
+        f"- Usuarios ativos: {usuarios_ativos}",
+        f"- Tarefas abertas: {tasks_abertas}",
+        f"- Eventos tecnicos (24h): {technical['totals']['events']}",
+        f"- 4xx: {technical['totals']['status_4xx']} | 5xx: {technical['totals']['status_5xx']}",
+        f"- Bloqueios auth: {technical['totals']['blocked']}",
+        f"- Reset hoje: enviados {auth['daily']['reset_sent_ok']} | falhas {auth['daily']['reset_sent_failed']}",
+    ]
+    if technical.get("alerts") or auth.get("alerts"):
+        linhas.append("")
+        linhas.append("Alertas:")
+        for alert in (technical.get("alerts") or [])[:3]:
+            linhas.append(f"- [Tecnico] {alert.get('title')}: {alert.get('note')}")
+        for alert in (auth.get("alerts") or [])[:3]:
+            linhas.append(f"- [Auth] {alert.get('title')}: {alert.get('note')}")
+    body = "\n".join(linhas)
+    subject = f"Uardon CRM | Resumo operacional diario ({today_br()})"
+    sent, reason = send_text_email(target, subject, body, flow_tag="ops_daily_summary")
+    state["last_attempt_at"] = datetime.now().isoformat(timespec="seconds")
+    state["last_reason"] = reason
+    state["last_target"] = target
+    if sent:
+        state["last_sent_date"] = today_key
+        state["last_sent_at"] = datetime.now().isoformat(timespec="seconds")
+        append_auth_audit_log(
+            data,
+            "operations_daily_summary",
+            "ok",
+            code="sent",
+            email=target,
+            details={"reason": reason},
+        )
+        return True, reason
+    state["last_error"] = reason
+    append_auth_audit_log(
+        data,
+        "operations_daily_summary",
+        "failed",
+        code="provider_error",
+        email=target,
+        details={"reason": reason},
+    )
+    return False, reason
 
 
 @app.route("/agenda")

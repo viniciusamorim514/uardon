@@ -8,7 +8,7 @@
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
       <div class="notif-summary" style="padding:0; border-bottom:none; background:transparent;">
         <span class="{% if semaforo=='red' %}flash-error{% elif semaforo=='yellow' %}flash-warning{% else %}flash-success{% endif %}" style="border:none;">
-          <strong>Semaforo:</strong> {{ semaforo_label }}
+          <strong>Semáforo:</strong> {{ semaforo_label }}
         </span>
       </div>
       <a class="btn btn-ghost" href="{{ url_for('operations_daily_summary') }}" target="_blank">Resumo do dia</a>
@@ -27,6 +27,31 @@
       <span>Usuários ativos <strong>{{ kpis.usuarios_ativos }}</strong> / {{ kpis.usuarios_total }}</span>
       <span>Tarefas abertas <strong>{{ kpis.tasks_abertas }}</strong></span>
       <span>Reset hoje: enviados <strong>{{ auth.daily.reset_sent_ok }}</strong> / falhas <strong>{{ auth.daily.reset_sent_failed }}</strong></span>
+    </div>
+  </section>
+
+  <section class="card" style="padding:16px; margin-bottom:12px;">
+    <div class="section-title" style="margin-bottom:8px;">Resumo diário automático</div>
+    <div class="notif-summary">
+      <span>Último envio (data): <strong>{{ ops_state.last_sent_date or '-' }}</strong></span>
+      <span>Último envio (hora): <strong>{{ ops_state.last_sent_at or '-' }}</strong></span>
+      <span>Última tentativa: <strong>{{ ops_state.last_attempt_at or '-' }}</strong></span>
+      <span>Destino: <strong>{{ ops_state.last_target or '-' }}</strong></span>
+      <span>Status: <strong>{{ ops_state.last_reason or '-' }}</strong></span>
+    </div>
+    {% if ops_state.last_error %}
+    <div class="flash flash-warning" style="margin-top:8px;">
+      <strong>Último erro:</strong> {{ ops_state.last_error }}
+    </div>
+    {% endif %}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <form method="post" action="{{ url_for('operations_daily_summary_send') }}">
+        <button class="btn btn-secondary" type="submit">Enviar resumo agora</button>
+      </form>
+      <form method="post" action="{{ url_for('operations_daily_summary_send') }}">
+        <input type="hidden" name="force" value="1">
+        <button class="btn btn-ghost" type="submit">Forçar reenvio</button>
+      </form>
     </div>
   </section>
 
@@ -73,7 +98,6 @@
       {% endfor %}
     </div>
     {% endif %}
-
   </section>
 
   <section class="card" style="padding:16px; margin-top:12px;">
@@ -108,3 +132,4 @@
   </section>
 </div>
 {% endblock %}
+
