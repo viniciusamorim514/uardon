@@ -4914,9 +4914,23 @@ def forgot_password():
 
             recent_requests = recent_auth_events_for_email(data, email, "password_reset_requested", PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS)
             if len(recent_requests) > 1:
+                latest_request_at = None
+                for req_item in recent_requests:
+                    raw = str(req_item.get("created_at") or "").strip()
+                    try:
+                        created_at = datetime.fromisoformat(raw)
+                    except ValueError:
+                        continue
+                    if latest_request_at is None or created_at > latest_request_at:
+                        latest_request_at = created_at
+                wait_seconds = PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS
+                if latest_request_at is not None:
+                    elapsed = int((datetime.now() - latest_request_at).total_seconds())
+                    wait_seconds = max(1, PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS - max(0, elapsed))
+                wait_minutes = max(1, int((wait_seconds + 59) // 60))
                 append_auth_audit_log(data, "password_reset_requested", "blocked", code="cooldown_active", email=email, details={"cooldown_seconds": PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS})
                 save_data(data)
-                flash("Aguarde um pouco antes de pedir um novo link.", "warning")
+                flash(f"Aguarde {wait_minutes} min antes de pedir um novo link.", "warning")
                 return redirect(url_for("forgot_password"))
 
             token = uuid.uuid4().hex
