@@ -5648,6 +5648,7 @@ def activities_page():
 @login_required
 @permission_required("dashboard:view")
 def operations_page():
+    data = load_data()
     owners = {
         "produto": "Vitória Uardon",
         "crm": "Responsável CRM",
@@ -5655,7 +5656,15 @@ def operations_page():
         "dns": "Responsável técnico",
         "suporte": "Responsável suporte",
     }
-    return render_template("operations.html", active="operacoes", owners=owners)
+    technical = build_technical_health(data, window_hours=24)
+    auth = build_auth_audit_panel(data, limit=120)
+    kpis = {
+        "leads_ativos": len([l for l in data.get("leads", []) if (l.get("status") or "novo").lower() not in ("perdido", "futuro", "convertido")]),
+        "usuarios_ativos": len([u for u in data.get("users", []) if bool(u.get("active", True))]),
+        "usuarios_total": len(data.get("users", [])),
+        "tasks_abertas": len([t for t in data.get("tarefas", []) if not t.get("done")]),
+    }
+    return render_template("operations.html", active="operacoes", owners=owners, technical=technical, auth=auth, kpis=kpis)
 
 
 @app.route("/agenda")

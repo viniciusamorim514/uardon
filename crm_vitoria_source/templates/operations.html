@@ -11,6 +11,12 @@
       <span><strong>Código</strong> GitHub `viniciusamorim514/uardon`</span>
       <span><strong>E-mail</strong> Resend + Umbler</span>
     </div>
+    <div class="notif-summary" style="margin-top:8px;">
+      <span>Leads ativos <strong>{{ kpis.leads_ativos }}</strong></span>
+      <span>Usuários ativos <strong>{{ kpis.usuarios_ativos }}</strong> / {{ kpis.usuarios_total }}</span>
+      <span>Tarefas abertas <strong>{{ kpis.tasks_abertas }}</strong></span>
+      <span>Reset hoje: enviados <strong>{{ auth.daily.reset_sent_ok }}</strong> / falhas <strong>{{ auth.daily.reset_sent_failed }}</strong></span>
+    </div>
   </section>
 
   <section class="grid-2">
@@ -35,6 +41,28 @@
         <div class="item"><div class="item-main"><div class="item-title">Suporte operacional</div><div class="item-sub">{{ owners.suporte }}</div></div></div>
       </div>
     </article>
+  </section>
+
+  <section class="card" style="padding:16px; margin-top:12px;">
+    <div class="section-title" style="margin-bottom:8px;">Monitoramento (24h)</div>
+    <div class="notif-summary" style="margin-bottom:12px;">
+      <span>Eventos técnicos <strong>{{ technical.totals.events }}</strong></span>
+      <span>4xx <strong>{{ technical.totals.status_4xx }}</strong></span>
+      <span>5xx <strong>{{ technical.totals.status_5xx }}</strong></span>
+      <span>Bloqueios <strong>{{ technical.totals.blocked }}</strong></span>
+      <span>Smoke: <strong>{{ technical.totals.smoke_total }}</strong> total / <strong>{{ technical.totals.smoke_failed }}</strong> falhas</span>
+    </div>
+    {% if technical.alerts or auth.alerts %}
+    <div class="stack-sm" style="margin-bottom:12px;">
+      {% for alert in technical.alerts %}
+      <div class="flash flash-{{ 'error' if alert.level=='high' else 'warning' }}"><strong>{{ alert.title }}</strong><br>{{ alert.note }}</div>
+      {% endfor %}
+      {% for alert in auth.alerts %}
+      <div class="flash flash-{{ 'error' if alert.level=='high' else 'warning' }}"><strong>{{ alert.title }}</strong><br>{{ alert.note }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
   </section>
 
   <section class="card" style="padding:16px; margin-top:12px;">
@@ -69,4 +97,3 @@
   </section>
 </div>
 {% endblock %}
-
