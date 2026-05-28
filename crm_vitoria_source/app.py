@@ -133,6 +133,8 @@ AUTH_LOGIN_BASE_MAX_ATTEMPTS = int((os.environ.get("AUTH_LOGIN_BASE_MAX_ATTEMPTS
 PASSWORD_MAX_AGE_DAYS = int((os.environ.get("PASSWORD_MAX_AGE_DAYS") or "90").strip() or "90")
 ALERT_EMAIL_TO = (os.environ.get("AUTH_ALERT_EMAIL_TO") or "").strip().lower()
 ALERT_WHATSAPP_TO = (os.environ.get("AUTH_ALERT_WHATSAPP_TO") or "").strip()
+TELEGRAM_BOT_TOKEN = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+TELEGRAM_CHAT_ID = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
 OPERATIONS_INBOX_EMAIL = (os.environ.get("OPERATIONS_INBOX_EMAIL") or "suporte@uardon.com.br").strip().lower()
 PASSWORD_RESET_DELIVERY_MODE = (os.environ.get("PASSWORD_RESET_DELIVERY_MODE") or "target").strip().lower()
 
@@ -736,6 +738,9 @@ def maybe_emit_auth_incident_alert(data, entry):
     )
     if ALERT_EMAIL_TO:
         send_text_email(ALERT_EMAIL_TO, subject, body, flow_tag="auth_alert")
+    tg_sent, tg_reason = send_telegram_message(subject + "\n\n" + body)
+    if not tg_sent and tg_reason != "telegram_not_configured":
+        print(f"[AUTH_ALERT_TELEGRAM_ERROR] reason={tg_reason}")
 
     # Alerta proativo: 2+ falhas consecutivas de entrega de reset.
     if str(entry.get("event") or "") == "password_reset_sent" and str(entry.get("status") or "") == "failed":
@@ -757,6 +762,9 @@ def maybe_emit_auth_incident_alert(data, entry):
             )
             if ALERT_EMAIL_TO:
                 send_text_email(ALERT_EMAIL_TO, fail_subject, fail_body, flow_tag="auth_alert_critical")
+            tg_sent, tg_reason = send_telegram_message(fail_subject + "\n\n" + fail_body)
+            if not tg_sent and tg_reason != "telegram_not_configured":
+                print(f"[AUTH_ALERT_TELEGRAM_ERROR] reason={tg_reason}")
             if wa_digits:
                 print(f"[AUTH_ALERT_WHATSAPP] {whatsapp_link(wa_digits, fail_body[:400])}")
     wa_digits = normalize_brazil_phone(ALERT_WHATSAPP_TO)
@@ -4530,6 +4538,32 @@ def send_text_email(recipient_email, subject, text_body, flow_tag="general"):
         return True, "sent_smtp"
     except Exception:
         return False, "smtp_send_failed"
+
+
+def send_telegram_message(text):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return False, "telegram_not_configured"
+    payload = json.dumps(
+        {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": str(text or "")[:4000],
+            "disable_web_page_preview": True,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+        data=payload,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            status = int(getattr(response, "status", 0) or 0)
+            if 200 <= status < 300:
+                return True, "telegram_ok"
+            return False, f"telegram_http_{status}"
+    except Exception as exc:
+        return False, f"telegram_error:{exc}"
 
 
 def send_password_reset_email_resend(recipient_email, reset_link):
