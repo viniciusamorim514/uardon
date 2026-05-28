@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Operações - Uardon CRM{% endblock %}
+{% block page_title %}Operações do Serviço{% endblock %}
+{% block page_subtitle %}Mapa único para equipe: código, deploy, DNS, logs e suporte{% endblock %}
+{% block content %}
+<div class="content">
+  <section class="card" style="padding:16px; margin-bottom:12px;">
+    <div class="notif-summary">
+      <span><strong>CRM/API</strong> Railway (`app.uardon.com.br`)</span>
+      <span><strong>Landing</strong> Cloudflare (`uardon.com.br`)</span>
+      <span><strong>Código</strong> GitHub `viniciusamorim514/uardon`</span>
+      <span><strong>E-mail</strong> Resend + Umbler</span>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <article class="card" style="padding:16px;">
+      <div class="section-title">Onde fica cada coisa</div>
+      <div class="list" style="padding-left:0;">
+        <div class="item"><div class="item-main"><div class="item-title">Código-fonte</div><div class="item-sub">GitHub / branch <strong>main</strong> / pasta CRM: <code>crm_vitoria_source</code></div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">Publicação (deploy)</div><div class="item-sub">Push no GitHub dispara deploy automático no Railway e na landing.</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">Domínio e DNS</div><div class="item-sub">Cloudflare: zona `uardon.com.br` e subdomínio `app.uardon.com.br`.</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">Logs</div><div class="item-sub">Railway: Deploy Logs + HTTP Logs. CRM: <a href="{{ url_for('admin_auth_audit') }}">/admin/auditoria-auth</a>.</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">E-mail operacional</div><div class="item-sub">Envio: Resend (`noreply@uardon.com.br`) / Caixa: `suporte@uardon.com.br` (Umbler).</div></div></div>
+      </div>
+    </article>
+
+    <article class="card" style="padding:16px;">
+      <div class="section-title">Responsáveis</div>
+      <div class="list" style="padding-left:0;">
+        <div class="item"><div class="item-main"><div class="item-title">Produto e comercial</div><div class="item-sub">{{ owners.produto }}</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">CRM e operação</div><div class="item-sub">{{ owners.crm }}</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">Infra / deploy</div><div class="item-sub">{{ owners.infra }}</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">DNS / domínio</div><div class="item-sub">{{ owners.dns }}</div></div></div>
+        <div class="item"><div class="item-main"><div class="item-title">Suporte operacional</div><div class="item-sub">{{ owners.suporte }}</div></div></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="card" style="padding:16px; margin-top:12px;">
+    <div class="section-title">Checklist Diário (5 minutos)</div>
+    <div class="projects-clean-list compact-list">
+      <div class="project-clean-row compact-row">
+        <div class="project-clean-main"><div class="project-clean-title" style="font-size:19px">1) Saúde</div><div class="project-clean-sub">Verificar `app.uardon.com.br/health`</div></div>
+        <div class="project-clean-col"><span class="project-clean-label">Ação</span><strong>Abrir URL</strong></div>
+        <div class="project-clean-col status-align"><span class="mini-status">Diário</span></div>
+      </div>
+      <div class="project-clean-row compact-row">
+        <div class="project-clean-main"><div class="project-clean-title" style="font-size:19px">2) Logs</div><div class="project-clean-sub">Railway: Deploy Logs e HTTP Logs</div></div>
+        <div class="project-clean-col"><span class="project-clean-label">Ação</span><strong>Revisar erros</strong></div>
+        <div class="project-clean-col status-align"><span class="mini-status">Diário</span></div>
+      </div>
+      <div class="project-clean-row compact-row">
+        <div class="project-clean-main"><div class="project-clean-title" style="font-size:19px">3) Auth</div><div class="project-clean-sub">Auditoria de login/reset/admin</div></div>
+        <div class="project-clean-col"><span class="project-clean-label">Ação</span><strong>Revisar alertas</strong></div>
+        <div class="project-clean-col status-align"><span class="mini-status">Diário</span></div>
+      </div>
+      <div class="project-clean-row compact-row">
+        <div class="project-clean-main"><div class="project-clean-title" style="font-size:19px">4) E-mail</div><div class="project-clean-sub">Conferir `suporte@uardon.com.br` + spam</div></div>
+        <div class="project-clean-col"><span class="project-clean-label">Ação</span><strong>Inbox</strong></div>
+        <div class="project-clean-col status-align"><span class="mini-status">Diário</span></div>
+      </div>
+      <div class="project-clean-row compact-row">
+        <div class="project-clean-main"><div class="project-clean-title" style="font-size:19px">5) Comercial</div><div class="project-clean-sub">Validar novos leads e SLA de contato</div></div>
+        <div class="project-clean-col"><span class="project-clean-label">Ação</span><strong>Leads</strong></div>
+        <div class="project-clean-col status-align"><span class="mini-status">Diário</span></div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+

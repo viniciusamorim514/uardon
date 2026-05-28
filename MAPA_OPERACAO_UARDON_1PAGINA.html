@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mapa de Operação - Uardon</title>
+  <style>
+    :root{
+      --bg:#f6f3ee;
+      --card:#ffffff;
+      --text:#1f1e1b;
+      --muted:#6b675f;
+      --brand:#c97d5e;
+      --line:#e8e1d8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      line-height:1.35;
+    }
+    .page{
+      max-width:980px;
+      margin:24px auto;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:24px;
+    }
+    h1{
+      margin:0 0 6px 0;
+      font-size:30px;
+      letter-spacing:.2px;
+    }
+    .sub{
+      color:var(--muted);
+      margin-bottom:16px;
+      font-size:14px;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+    .box{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:12px 14px;
+      background:#fff;
+    }
+    h2{
+      margin:0 0 8px 0;
+      font-size:16px;
+      color:var(--brand);
+    }
+    ul{
+      margin:0;
+      padding-left:18px;
+      font-size:13px;
+    }
+    li{margin:4px 0}
+    .full{grid-column:1 / -1}
+    .pill{
+      display:inline-block;
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      background:#fbeee8;
+      color:#8a5038;
+      margin-right:6px;
+      margin-bottom:6px;
+    }
+    .quote{
+      border-left:3px solid var(--brand);
+      padding:10px 12px;
+      font-size:13px;
+      background:#fff8f5;
+      border-radius:8px;
+    }
+    .footer{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .print{
+      margin-top:14px;
+      padding:10px 12px;
+      border:1px dashed var(--line);
+      border-radius:8px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr}
+      .page{margin:0;border-radius:0;border:none}
+    }
+    @media print{
+      body{background:#fff}
+      .page{margin:0;border:none;padding:8mm;max-width:none}
+      .print{display:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Mapa de Operação - Uardon</h1>
+    <div class="sub">Versão 1 página para operação diária e explicação comercial.</div>
+
+    <section class="grid">
+      <article class="box">
+        <h2>1) Onde fica o código</h2>
+        <ul>
+          <li>GitHub: <strong>viniciusamorim514/uardon</strong></li>
+          <li>Branch de produção: <strong>main</strong></li>
+          <li>CRM: <code>crm_vitoria_source/</code></li>
+          <li>Landing: <code>web/</code></li>
+        </ul>
+      </article>
+
+      <article class="box">
+        <h2>2) Onde publica</h2>
+        <ul>
+          <li><strong>CRM/API</strong> em Railway (<code>app.uardon.com.br</code>)</li>
+          <li><strong>Landing</strong> em Cloudflare Pages/Workers (<code>uardon.com.br</code>)</li>
+          <li>Fluxo: push no GitHub → deploy automático</li>
+        </ul>
+      </article>
+
+      <article class="box">
+        <h2>3) Domínio e DNS</h2>
+        <ul>
+          <li>Gerenciamento DNS: <strong>Cloudflare</strong></li>
+          <li>Domínio principal: <code>uardon.com.br</code></li>
+          <li>Subdomínio CRM: <code>app.uardon.com.br</code></li>
+        </ul>
+      </article>
+
+      <article class="box">
+        <h2>4) Onde ver logs</h2>
+        <ul>
+          <li>Railway: <strong>Deploy Logs</strong> + <strong>HTTP Logs</strong></li>
+          <li>CRM: <code>/admin/auditoria-auth</code></li>
+          <li>Ver login, reset, ações admin e bloqueios</li>
+        </ul>
+      </article>
+
+      <article class="box">
+        <h2>5) Onde ver e-mail</h2>
+        <ul>
+          <li>Envio transacional: <strong>Resend</strong></li>
+          <li>Caixa operacional: <strong>Umbler Webmail</strong></li>
+          <li>Operação: <code>suporte@uardon.com.br</code></li>
+          <li>Remetente técnico: <code>noreply@uardon.com.br</code></li>
+        </ul>
+      </article>
+
+      <article class="box">
+        <h2>6) Responsáveis</h2>
+        <ul>
+          <li>Produto/comercial: <strong>Vitória Uardon</strong></li>
+          <li>CRM e operação: <strong>Responsável CRM</strong></li>
+          <li>Infra/deploy/DNS: <strong>Responsável técnico</strong></li>
+          <li>Atendimento caixa suporte: <strong>Responsável suporte</strong></li>
+        </ul>
+      </article>
+
+      <article class="box full">
+        <h2>7) Rotina diária (5 minutos)</h2>
+        <span class="pill">health</span>
+        <span class="pill">deploy</span>
+        <span class="pill">auditoria auth</span>
+        <span class="pill">e-mail operacional</span>
+        <span class="pill">novos leads</span>
+      </article>
+
+      <article class="box full">
+        <h2>8) Escalonamento rápido</h2>
+        <ul>
+          <li>Falha login/reset: auditoria auth + logs Railway + painel Resend.</li>
+          <li>Falha deploy: Deploy Logs no Railway + último commit.</li>
+          <li>Falha domínio: DNS da Cloudflare (zona <code>uardon.com.br</code>).</li>
+          <li>Falha e-mail: status Resend + caixa suporte na Umbler.</li>
+        </ul>
+      </article>
+
+      <article class="box full">
+        <h2>9) Mensagem comercial padrão</h2>
+        <div class="quote">
+          A Uardon opera com arquitetura separada para estabilidade: landing em Cloudflare e CRM/API em Railway com banco Postgres, deploy automatizado por GitHub, trilha de auditoria e monitoramento de autenticação.
+        </div>
+      </article>
+    </section>
+
+    <div class="print">
+      Para gerar PDF: abra este arquivo no navegador e use <strong>Imprimir → Salvar como PDF</strong>.
+    </div>
+    <div class="footer">
+      <span>Documento operacional interno - Uardon</span>
+      <span>Atualizado em 27/05/2026</span>
+    </div>
+  </main>
+</body>
+</html>
+

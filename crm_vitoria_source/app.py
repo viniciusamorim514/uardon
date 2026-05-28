@@ -5644,6 +5644,20 @@ def activities_page():
     return render_template("activities.html", active="atividades", activities=build_activity_center(data, filters))
 
 
+@app.route("/operacoes")
+@login_required
+@permission_required("dashboard:view")
+def operations_page():
+    owners = {
+        "produto": "Vitória Uardon",
+        "crm": "Responsável CRM",
+        "infra": "Responsável técnico",
+        "dns": "Responsável técnico",
+        "suporte": "Responsável suporte",
+    }
+    return render_template("operations.html", active="operacoes", owners=owners)
+
+
 @app.route("/agenda")
 @login_required
 @permission_required("agenda:view")

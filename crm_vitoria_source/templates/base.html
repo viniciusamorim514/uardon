@@ -51,6 +51,7 @@
       {% if can_access('activities:view') %}
       <a class="nav-item {% if active=='atividades' %}active{% endif %}" href="{{ url_for('activities_page') }}"><span class="nav-icon">H</span> Atividades</a>
       {% endif %}
+      <a class="nav-item {% if active=='operacoes' %}active{% endif %}" href="{{ url_for('operations_page') }}"><span class="nav-icon">O</span> Operações</a>
       {% if can_access('finance:view') %}
       <a class="nav-item {% if active=='financeiro' %}active{% endif %}" href="{{ url_for('finance_page') }}"><span class="nav-icon">R$</span> Financeiro</a>
       {% endif %}
