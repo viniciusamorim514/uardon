@@ -5556,6 +5556,10 @@ def admin_auth_audit():
     event_filter = (request.args.get("event") or "todos").strip().lower()
     status_filter = (request.args.get("status") or "todos").strip().lower()
     email_filter = (request.args.get("email") or "").strip().lower()
+    date_from_filter = (request.args.get("date_from") or "").strip()
+    date_to_filter = (request.args.get("date_to") or "").strip()
+    date_from = parse_date(date_from_filter) if date_from_filter else None
+    date_to = parse_date(date_to_filter) if date_to_filter else None
     raw_events = list(reversed(data.get("auth_audit_logs", []) or []))
     filtered = []
     for item in raw_events:
@@ -5567,6 +5571,13 @@ def admin_auth_audit():
         if status_filter != "todos" and status_name != status_filter:
             continue
         if email_filter and email_filter not in email_name:
+            continue
+        created_at_raw = str(item.get("created_at") or "").strip()
+        created_dt = parse_datetime_iso(created_at_raw)
+        created_date = created_dt.date() if created_dt else None
+        if date_from and (not created_date or created_date < date_from):
+            continue
+        if date_to and (not created_date or created_date > date_to):
             continue
         filtered.append(item)
     total_filtered = len(filtered)
@@ -5582,7 +5593,13 @@ def admin_auth_audit():
         "admin_auth_audit.html",
         active="auditoria_auth",
         panel=panel,
-        filters={"event": event_filter, "status": status_filter, "email": email_filter},
+        filters={
+            "event": event_filter,
+            "status": status_filter,
+            "email": email_filter,
+            "date_from": date_from_filter,
+            "date_to": date_to_filter,
+        },
         event_options=event_options,
         pagination={
             "page": page,
@@ -5603,6 +5620,10 @@ def admin_auth_audit_export():
     event_filter = (request.args.get("event") or "todos").strip().lower()
     status_filter = (request.args.get("status") or "todos").strip().lower()
     email_filter = (request.args.get("email") or "").strip().lower()
+    date_from_filter = (request.args.get("date_from") or "").strip()
+    date_to_filter = (request.args.get("date_to") or "").strip()
+    date_from = parse_date(date_from_filter) if date_from_filter else None
+    date_to = parse_date(date_to_filter) if date_to_filter else None
     rows = []
     for item in reversed(data.get("auth_audit_logs", []) or []):
         event_name = str(item.get("event") or "").strip().lower()
@@ -5613,6 +5634,13 @@ def admin_auth_audit_export():
         if status_filter != "todos" and status_name != status_filter:
             continue
         if email_filter and email_filter not in email_name:
+            continue
+        created_at_raw = str(item.get("created_at") or "").strip()
+        created_dt = parse_datetime_iso(created_at_raw)
+        created_date = created_dt.date() if created_dt else None
+        if date_from and (not created_date or created_date < date_from):
+            continue
+        if date_to and (not created_date or created_date > date_to):
             continue
         rows.append(item)
     csv_lines = ["created_at,event,status,code,email,actor_name,actor_role,ip"]
