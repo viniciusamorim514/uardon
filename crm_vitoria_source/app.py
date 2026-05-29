@@ -80,6 +80,12 @@ DEFAULT_DATA = {
     "audit_logs": [],
     "auth_audit_logs": [],
     "password_reset_tokens": [],
+    "agent_brain": {
+        "last_focus": "",
+        "last_reason": "",
+        "last_updated_at": "",
+        "learning_log": [],
+    },
 }
 
 PROJECT_STAGES = [
@@ -443,6 +449,7 @@ def load_data_from_file():
         data.setdefault(key, deepcopy(value))
     data.setdefault("password_reset_tokens", [])
     data.setdefault("auth_audit_logs", [])
+    data.setdefault("agent_brain", deepcopy(DEFAULT_DATA["agent_brain"]))
     for user in data.get("users", []):
         user.setdefault("email", "")
         user["role"] = canonical_role_name(user.get("role"))
@@ -474,6 +481,7 @@ def load_data():
         user.setdefault("password_changed_at", "")
     data.setdefault("auth_audit_logs", [])
     data.setdefault("dismissed_notifications", [])
+    data.setdefault("agent_brain", deepcopy(DEFAULT_DATA["agent_brain"]))
     return normalize_text_payload(data)
 
 
@@ -4620,6 +4628,56 @@ def build_telegram_ops_status(data):
     }
 
 
+def build_agent_next_focus(data):
+    ops = build_telegram_ops_status(data)
+    auth = build_auth_audit_panel(data, limit=200)
+    pipeline = build_lead_pipeline(data.get("leads", []) or [])
+    by_col = {col.get("key"): len(col.get("items") or []) for col in pipeline.get("columns", [])}
+    briefing_and_proposal = by_col.get("briefing", 0) + by_col.get("proposal", 0)
+
+    scores = {
+        "auth_reset_hardening": (ops["reset_sent_failed"] * 4) + (auth["totals"]["blocked"] // 3) + (6 if ops["status_5xx"] > 0 else 0),
+        "operational_audit_and_alerting": (ops["status_5xx"] * 8) + (ops["status_4xx"] // 4),
+        "crm_ux_flow_workspace": briefing_and_proposal // 2,
+        "lead_integrity": max(0, len(pipeline.get("lost", []) or []) // 3),
+    }
+    focus = max(scores, key=scores.get)
+    reason_map = {
+        "auth_reset_hardening": "Sinais de risco em autenticacao/reset pedem reforco imediato e de baixo risco.",
+        "operational_audit_and_alerting": "Incidentes tecnicos recentes indicam priorizar observabilidade e resposta.",
+        "crm_ux_flow_workspace": "Pipeline comercial ativo pede melhoria de fluxo visual e produtividade diaria.",
+        "lead_integrity": "Volume de leads fora do fluxo principal pede revisar consistencia operacional.",
+    }
+    return {
+        "focus": focus,
+        "score": int(scores.get(focus, 0)),
+        "reason": reason_map.get(focus, "Prioridade calculada pelo agente."),
+        "scores": scores,
+    }
+
+
+def refresh_agent_brain(data):
+    brain = data.setdefault("agent_brain", deepcopy(DEFAULT_DATA["agent_brain"]))
+    rec = build_agent_next_focus(data)
+    changed = rec["focus"] != str(brain.get("last_focus") or "")
+    brain["last_focus"] = rec["focus"]
+    brain["last_reason"] = rec["reason"]
+    brain["last_updated_at"] = datetime.now().isoformat(timespec="seconds")
+    if changed:
+        logs = brain.setdefault("learning_log", [])
+        logs.append(
+            {
+                "at": brain["last_updated_at"],
+                "focus": rec["focus"],
+                "score": rec["score"],
+                "reason": rec["reason"],
+            }
+        )
+        if len(logs) > 40:
+            del logs[:-40]
+    return rec
+
+
 def build_telegram_help_text():
     return (
         "Uardon CRM | Comandos operacionais\n\n"
@@ -4647,6 +4705,8 @@ def process_telegram_command(data, text):
 
     if command == "/status":
         ops = build_telegram_ops_status(data)
+        rec = refresh_agent_brain(data)
+        save_data(data)
         badge = {"normal": "OK", "attention": "ATENCAO", "critical": "CRITICO"}.get(ops["severity"], "OK")
         return (
             f"Uardon CRM | STATUS {badge}\n"
@@ -4656,7 +4716,8 @@ def process_telegram_command(data, text):
             f"- Reset e-mail inexistente: {ops['reset_user_not_found']}\n"
             f"- HTTP 5xx (24h): {ops['status_5xx']}\n"
             f"- HTTP 4xx (24h): {ops['status_4xx']}\n"
-            f"- Bloqueios (24h): {ops['blocked']}"
+            f"- Bloqueios (24h): {ops['blocked']}\n"
+            f"- Proximo foco IA: {rec['focus']} (score {rec['score']})"
         )
 
     if command == "/auth_hoje":
@@ -4714,6 +4775,9 @@ def process_telegram_command(data, text):
 
     if command == "/agente_status":
         state = data.setdefault("operations_daily_summary_state", {})
+        rec = refresh_agent_brain(data)
+        brain = data.setdefault("agent_brain", deepcopy(DEFAULT_DATA["agent_brain"]))
+        save_data(data)
         enabled = bool(state.get("telegram_agent_enabled", False))
         last_sent = str(state.get("last_sent_date") or "-")
         forced_at = str(state.get("force_cycle_requested_at") or "-")
@@ -4722,6 +4786,8 @@ def process_telegram_command(data, text):
             f"- Modo agente: {'ATIVO' if enabled else 'PAUSADO'}\n"
             f"- Ultimo resumo diario: {last_sent}\n"
             f"- Execucao imediata solicitada: {forced_at}\n"
+            f"- Foco IA atual: {rec['focus']} (score {rec['score']})\n"
+            f"- Atualizado em: {str(brain.get('last_updated_at') or '-')}\n"
             "- Dica: use /agente_on ou /agente_off"
         )
 
@@ -4744,10 +4810,11 @@ def process_telegram_command(data, text):
     if command == "/roadmap_run":
         state = data.setdefault("operations_daily_summary_state", {})
         state["force_cycle_requested_at"] = datetime.now().isoformat(timespec="seconds")
+        rec = refresh_agent_brain(data)
         save_data(data)
         append_system_audit_log(data, "telegram_agent_mode", "ok", code="force_cycle_requested", details={"source": "telegram"})
         save_data(data)
-        return "Execucao imediata solicitada. O proximo ciclo vai priorizar melhorias agora."
+        return f"Execucao imediata solicitada. Proximo foco IA: {rec['focus']} (score {rec['score']})."
 
     if not command:
         return "Mensagem recebida. Para operar o CRM por aqui, use /help."
@@ -5591,6 +5658,8 @@ def ops_agent_state(secret):
     data = load_data()
     state = data.setdefault("operations_daily_summary_state", {})
     ops = build_telegram_ops_status(data)
+    rec = refresh_agent_brain(data)
+    save_data(data)
     return public_lead_response(
         {
             "ok": True,
@@ -5598,6 +5667,7 @@ def ops_agent_state(secret):
             "last_daily_summary": str(state.get("last_sent_date") or ""),
             "force_cycle_requested_at": str(state.get("force_cycle_requested_at") or ""),
             "ops": ops,
+            "next_focus": rec,
         }
     )
 
