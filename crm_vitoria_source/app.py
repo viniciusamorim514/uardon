@@ -4940,16 +4940,25 @@ def login():
         fail_count = max(len(fail_email), len(fail_ip))
         lock_seconds = login_lock_seconds(fail_count)
         if lock_seconds > 0:
+            wait_minutes = max(1, math.ceil(lock_seconds / 60))
+            lock_basis = "email" if len(fail_email) >= len(fail_ip) else "ip"
             append_auth_audit_log(
                 data,
                 "login",
                 "blocked",
                 code="lock_active",
                 email=login_value,
-                details={"fail_count": fail_count, "lock_seconds": lock_seconds},
+                details={
+                    "fail_count": fail_count,
+                    "fail_email_count": len(fail_email),
+                    "fail_ip_count": len(fail_ip),
+                    "lock_seconds": lock_seconds,
+                    "wait_minutes": wait_minutes,
+                    "lock_basis": lock_basis,
+                    "window_seconds": AUTH_LOGIN_WINDOW_SECONDS,
+                },
             )
             save_data(data)
-            wait_minutes = max(1, int(lock_seconds / 60))
             flash(f"Muitas tentativas. Aguarde {wait_minutes} min e tente novamente.", "warning")
             return render_template("login.html", google_login_enabled=google_login_enabled())
 
