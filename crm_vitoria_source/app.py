@@ -4372,7 +4372,7 @@ def build_auth_audit_panel(data, limit=120):
 
     # Resumo diario de reset enviado x falhou.
     today = datetime.now().date()
-    daily = {"date": today.isoformat(), "reset_sent_ok": 0, "reset_sent_failed": 0}
+    daily = {"date": today.isoformat(), "reset_sent_ok": 0, "reset_sent_failed": 0, "reset_user_not_found": 0}
     for item in data.get("auth_audit_logs", []) or []:
         if str(item.get("event") or "") != "password_reset_sent":
             continue
@@ -4383,10 +4383,13 @@ def build_auth_audit_panel(data, limit=120):
             continue
         if created_at.date() != today:
             continue
+        code = str(item.get("code") or "")
         if str(item.get("status") or "") == "ok":
             daily["reset_sent_ok"] += 1
         elif str(item.get("status") or "") == "failed":
             daily["reset_sent_failed"] += 1
+        elif code == "user_not_found":
+            daily["reset_user_not_found"] += 1
 
     return {"events": visible, "totals": totals, "buckets": buckets, "alerts": alerts[:5], "daily": daily}
 
@@ -4610,6 +4613,7 @@ def build_telegram_ops_status(data):
         "users_total": users_total,
         "reset_sent_ok": auth["daily"]["reset_sent_ok"],
         "reset_sent_failed": auth["daily"]["reset_sent_failed"],
+        "reset_user_not_found": auth["daily"]["reset_user_not_found"],
         "status_5xx": technical["totals"]["status_5xx"],
         "status_4xx": technical["totals"]["status_4xx"],
         "blocked": technical["totals"]["blocked"],
@@ -4649,6 +4653,7 @@ def process_telegram_command(data, text):
             f"- Leads ativos: {ops['leads_ativos']}\n"
             f"- Usuarios ativos: {ops['users_active']}/{ops['users_total']}\n"
             f"- Reset hoje: enviados {ops['reset_sent_ok']} | falhas {ops['reset_sent_failed']}\n"
+            f"- Reset e-mail inexistente: {ops['reset_user_not_found']}\n"
             f"- HTTP 5xx (24h): {ops['status_5xx']}\n"
             f"- HTTP 4xx (24h): {ops['status_4xx']}\n"
             f"- Bloqueios (24h): {ops['blocked']}"
@@ -4660,6 +4665,7 @@ def process_telegram_command(data, text):
             "Uardon CRM | AUTH HOJE\n"
             f"- Reset enviados: {auth['daily']['reset_sent_ok']}\n"
             f"- Reset falhos: {auth['daily']['reset_sent_failed']}\n"
+            f"- Reset e-mail inexistente: {auth['daily']['reset_user_not_found']}\n"
             f"- Eventos analisados: {auth['totals']['total']}\n"
             f"- Bloqueios: {auth['totals']['blocked']}"
         )
