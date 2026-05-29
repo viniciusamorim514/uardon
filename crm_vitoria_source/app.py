@@ -4614,7 +4614,11 @@ def build_telegram_help_text():
 
 
 def process_telegram_command(data, text):
-    command = (text or "").strip().split()[0].lower()
+    raw_text = (text or "").strip()
+    if not raw_text:
+        return "Envie /help para ver os comandos disponiveis."
+    first_token = raw_text.split()[0].lower()
+    command = first_token.split("@", 1)[0] if first_token.startswith("/") else ""
     if command in ("/start", "/help"):
         return build_telegram_help_text()
 
@@ -4691,6 +4695,8 @@ def process_telegram_command(data, text):
         save_data(data)
         return "Execucao imediata solicitada. O proximo ciclo vai priorizar melhorias agora."
 
+    if not command:
+        return "Mensagem recebida. Para operar o CRM por aqui, use /help."
     return "Comando nao reconhecido. Use /help."
 
 
