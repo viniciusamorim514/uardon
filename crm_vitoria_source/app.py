@@ -2,6 +2,7 @@
 import calendar
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -573,9 +574,18 @@ def public_lead_error(message, status=400, code="invalid_request"):
 
 def public_lead_client_ip():
     forwarded = request.headers.get("X-Forwarded-For", "")
+    candidates = []
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.remote_addr or "unknown"
+        candidates.extend([chunk.strip() for chunk in forwarded.split(",") if chunk.strip()])
+    if request.remote_addr:
+        candidates.append(str(request.remote_addr).strip())
+    for raw in candidates:
+        try:
+            ip = ipaddress.ip_address(raw)
+            return str(ip)
+        except ValueError:
+            continue
+    return "unknown"
 
 
 def public_lead_rate_limited(ip, limit=5, window_seconds=600):
