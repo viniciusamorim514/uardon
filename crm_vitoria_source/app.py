@@ -4959,7 +4959,7 @@ def login():
             if is_password_rotation_expired(user):
                 append_auth_audit_log(data, "login", "blocked", code="password_rotation_due", email=user.get("email") or login_value)
                 save_data(data)
-                flash("Sua senha expirou por politica de seguranca. Use 'Esqueci minha senha'.", "warning")
+                flash("Sua senha expirou por política de segurança. Use 'Esqueci minha senha'.", "warning")
                 return render_template("login.html", google_login_enabled=google_login_enabled())
             session["user"] = {
                 "id": user["id"],
@@ -4972,7 +4972,7 @@ def login():
             return redirect(url_for("dashboard"))
         append_auth_audit_log(data, "login", "blocked", code="invalid_credentials", email=login_value)
         save_data(data)
-        flash("Login invalido. Verifique email e senha.", "error")
+        flash("Login inválido. Verifique e-mail e senha.", "error")
     return render_template("login.html", google_login_enabled=google_login_enabled())
 
 
@@ -5115,7 +5115,7 @@ def forgot_password():
             if len(recent_tokens) >= PASSWORD_RESET_DAILY_LIMIT:
                 append_auth_audit_log(data, "password_reset_requested", "blocked", code="daily_limit_reached", email=email, details={"daily_requests": len(recent_tokens)})
                 save_data(data)
-                flash("Se o email existir, enviamos um link de recuperacao.", "info")
+                flash("Se o e-mail existir, enviamos um link de recuperação.", "info")
                 return redirect(url_for("login"))
 
             recent_requests = recent_auth_events_for_email(data, email, "password_reset_requested", PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS)
@@ -5136,7 +5136,7 @@ def forgot_password():
                 wait_minutes = max(1, int((wait_seconds + 59) // 60))
                 append_auth_audit_log(data, "password_reset_requested", "blocked", code="cooldown_active", email=email, details={"cooldown_seconds": PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS})
                 save_data(data)
-                flash(f"Aguarde {wait_minutes} min antes de pedir um novo link.", "warning")
+                flash(f"Aguarde {wait_minutes} min antes de solicitar um novo link.", "warning")
                 return redirect(url_for("forgot_password"))
 
             token = uuid.uuid4().hex
@@ -5171,7 +5171,7 @@ def forgot_password():
                     details={"provider": reason, "delivered_to": delivery_email},
                 )
             save_data(data)
-        flash("Se o email existir, enviamos um link de recuperacao.", "info")
+        flash("Se o e-mail existir, enviamos um link de recuperação.", "info")
         return redirect(url_for("login"))
     return render_template("forgot_password.html")
 
