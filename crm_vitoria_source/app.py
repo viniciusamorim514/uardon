@@ -5117,6 +5117,14 @@ def forgot_password():
         append_auth_audit_log(data, "password_reset_requested", "ok", code="request_received", email=email)
         if not user:
             print(f"[PASSWORD_RESET_USER_NOT_FOUND] {email}")
+            append_auth_audit_log(
+                data,
+                "password_reset_sent",
+                "blocked",
+                code="user_not_found",
+                email=email,
+                details={"delivery_mode": os.getenv("PASSWORD_RESET_DELIVERY_MODE", "target")},
+            )
         else:
             now = datetime.now()
             one_day_ago = now - timedelta(days=1)
