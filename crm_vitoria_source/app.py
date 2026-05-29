@@ -5415,17 +5415,17 @@ def reset_password(token):
     token_item = next((t for t in data.get("password_reset_tokens", []) if t.get("token") == token), None)
     now = datetime.now()
     if not token_item:
-        flash("Link inválido.")
+        flash("Link inválido.", "error")
         return redirect(url_for("forgot_password"))
     if token_item.get("used"):
-        flash("Esse link já foi utilizado.")
+        flash("Esse link já foi utilizado.", "warning")
         return redirect(url_for("forgot_password"))
     try:
         expires_at = datetime.fromisoformat(str(token_item.get("expires_at") or ""))
     except Exception:
         expires_at = now - timedelta(seconds=1)
     if expires_at <= now:
-        flash("Esse link expirou. Solicite um novo.")
+        flash("Esse link expirou. Solicite um novo.", "warning")
         return redirect(url_for("forgot_password"))
     if request.method == "POST":
         password = request.form.get("password") or ""
@@ -5444,7 +5444,7 @@ def reset_password(token):
             flash("A confirmação de senha não confere.")
             return render_template("reset_password.html", token=token)
         if not user:
-            flash("Usuário não encontrado.")
+            flash("Usuário não encontrado.", "error")
             return redirect(url_for("forgot_password"))
         set_user_password(user, password)
         token_item["used"] = True
@@ -5457,7 +5457,7 @@ def reset_password(token):
             email=user_email,
         )
         save_data(data)
-        flash("Senha atualizada. Faça login.")
+        flash("Senha atualizada. Faça login.", "success")
         return redirect(url_for("login"))
     return render_template("reset_password.html", token=token)
 
