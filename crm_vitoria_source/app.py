@@ -5483,8 +5483,21 @@ def reset_password(token):
             flash("A confirmação de senha não confere.")
             return render_template("reset_password.html", token=token)
         if not user:
+            append_auth_audit_log(data, "password_reset_apply", "blocked", code="user_not_found")
+            save_data(data)
             flash("Usuário não encontrado.", "error")
             return redirect(url_for("forgot_password"))
+        if password_matches(user, password):
+            append_auth_audit_log(
+                data,
+                "password_reset_apply",
+                "blocked",
+                code="password_reuse_blocked",
+                email=user_email,
+            )
+            save_data(data)
+            flash("A nova senha deve ser diferente da senha atual.", "warning")
+            return render_template("reset_password.html", token=token)
         set_user_password(user, password)
         token_item["used"] = True
         token_item["used_at"] = now.isoformat(timespec="seconds")
