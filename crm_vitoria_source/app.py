@@ -5005,9 +5005,13 @@ def signup():
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
+            append_auth_audit_log(data, "signup", "blocked", code="weak_password", email=email, details={"reason": password_reason})
+            save_data(data)
             flash(password_reason, "warning")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if password != password_confirm:
+            append_auth_audit_log(data, "signup", "blocked", code="password_confirm_mismatch", email=email)
+            save_data(data)
             flash("A confirmação de senha não confere.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
@@ -5053,6 +5057,8 @@ def admin_create_user():
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
+            append_auth_audit_log(data, "admin_user_create", "blocked", code="weak_password", email=email, details={"reason": password_reason})
+            save_data(data)
             flash(password_reason, "warning")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if role not in ROLE_PERMISSIONS:
@@ -5424,14 +5430,19 @@ def reset_password(token):
     if request.method == "POST":
         password = request.form.get("password") or ""
         password_confirm = request.form.get("password_confirm") or ""
+        user = find_by_id(data.get("users", []), token_item.get("user_id"))
+        user_email = (user or {}).get("email") or ""
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
+            append_auth_audit_log(data, "password_reset_apply", "blocked", code="weak_password", email=user_email, details={"reason": password_reason})
+            save_data(data)
             flash(password_reason, "warning")
             return render_template("reset_password.html", token=token)
         if password != password_confirm:
+            append_auth_audit_log(data, "password_reset_apply", "blocked", code="password_confirm_mismatch", email=user_email)
+            save_data(data)
             flash("A confirmação de senha não confere.")
             return render_template("reset_password.html", token=token)
-        user = find_by_id(data.get("users", []), token_item.get("user_id"))
         if not user:
             flash("Usuário não encontrado.")
             return redirect(url_for("forgot_password"))
