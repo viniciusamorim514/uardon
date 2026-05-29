@@ -279,6 +279,13 @@ def role_label(role):
     return ROLE_LABELS.get(canonical_role_name(role), canonical_role_name(role))
 
 
+def is_admin_role_value(raw_role):
+    role_raw = str(raw_role or "").strip().lower()
+    if canonical_role_name(role_raw) == "admin":
+        return True
+    return "admin" in role_raw
+
+
 def fix_mojibake_text(value):
     if not isinstance(value, str):
         return value
@@ -4678,7 +4685,7 @@ def process_telegram_command(data, text):
         total = len(users)
         ativos = len([u for u in users if bool(u.get("active", True))])
         inativos = max(0, total - ativos)
-        admins = len([u for u in users if canonical_role_name(u.get("role")) == "admin"])
+        admins = len([u for u in users if is_admin_role_value(u.get("role"))])
         sem_email = len([u for u in users if not str(u.get("email") or "").strip()])
         return (
             "Uardon CRM | USUARIOS\n"
@@ -4917,9 +4924,9 @@ def login():
         password = request.form.get("password") or ""
         req_ip = public_lead_client_ip()
         fail_email = recent_auth_events_for_email(data, login_value, "login", AUTH_LOGIN_WINDOW_SECONDS)
-        fail_email = [e for e in fail_email if str(e.get("status")) == "blocked" and str(e.get("code")) in {"invalid_credentials", "lock_active"}]
+        fail_email = [e for e in fail_email if str(e.get("status")) == "blocked" and str(e.get("code")) == "invalid_credentials"]
         fail_ip = recent_auth_events_for_ip(data, req_ip, "login", AUTH_LOGIN_WINDOW_SECONDS)
-        fail_ip = [e for e in fail_ip if str(e.get("status")) == "blocked" and str(e.get("code")) in {"invalid_credentials", "lock_active"}]
+        fail_ip = [e for e in fail_ip if str(e.get("status")) == "blocked" and str(e.get("code")) == "invalid_credentials"]
         fail_count = max(len(fail_email), len(fail_ip))
         lock_seconds = login_lock_seconds(fail_count)
         if lock_seconds > 0:
