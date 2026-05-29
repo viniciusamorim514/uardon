@@ -4608,6 +4608,7 @@ def build_telegram_help_text():
         "/agente_status - status do modo agente\n"
         "/agente_on - ativa modo agente no CRM\n"
         "/agente_off - pausa modo agente no CRM\n"
+        "/roadmap_run - solicitar execucao imediata do proximo ciclo\n"
         "/help - ver esta ajuda"
     )
 
@@ -4657,10 +4658,12 @@ def process_telegram_command(data, text):
         state = data.setdefault("operations_daily_summary_state", {})
         enabled = bool(state.get("telegram_agent_enabled", False))
         last_sent = str(state.get("last_sent_date") or "-")
+        forced_at = str(state.get("force_cycle_requested_at") or "-")
         return (
             "Uardon CRM | AGENTE\n"
             f"- Modo agente: {'ATIVO' if enabled else 'PAUSADO'}\n"
             f"- Ultimo resumo diario: {last_sent}\n"
+            f"- Execucao imediata solicitada: {forced_at}\n"
             "- Dica: use /agente_on ou /agente_off"
         )
 
@@ -4679,6 +4682,14 @@ def process_telegram_command(data, text):
         append_system_audit_log(data, "telegram_agent_mode", "ok", code="disabled", details={"source": "telegram"})
         save_data(data)
         return "Modo agente PAUSADO no CRM."
+
+    if command == "/roadmap_run":
+        state = data.setdefault("operations_daily_summary_state", {})
+        state["force_cycle_requested_at"] = datetime.now().isoformat(timespec="seconds")
+        save_data(data)
+        append_system_audit_log(data, "telegram_agent_mode", "ok", code="force_cycle_requested", details={"source": "telegram"})
+        save_data(data)
+        return "Execucao imediata solicitada. O proximo ciclo vai priorizar melhorias agora."
 
     return "Comando nao reconhecido. Use /help."
 
@@ -5480,6 +5491,7 @@ def ops_agent_state(secret):
             "ok": True,
             "agent_enabled": bool(state.get("telegram_agent_enabled", False)),
             "last_daily_summary": str(state.get("last_sent_date") or ""),
+            "force_cycle_requested_at": str(state.get("force_cycle_requested_at") or ""),
             "ops": ops,
         }
     )

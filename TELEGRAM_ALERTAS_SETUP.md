@@ -29,6 +29,7 @@ Receber alertas críticos de autenticação no Telegram automaticamente.
 - `/agente_status` = status do modo agente no CRM
 - `/agente_on` = ativa modo agente no CRM
 - `/agente_off` = pausa modo agente no CRM
+- `/roadmap_run` = solicita execução imediata do próximo ciclo automático
 
 ## Ativar webhook (obrigatório para comandos)
 Depois de configurar as variáveis:
