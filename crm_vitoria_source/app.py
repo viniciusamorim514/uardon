@@ -5449,6 +5449,13 @@ def reset_password(token):
         set_user_password(user, password)
         token_item["used"] = True
         token_item["used_at"] = now.isoformat(timespec="seconds")
+        append_auth_audit_log(
+            data,
+            "password_reset_apply",
+            "ok",
+            code="password_updated",
+            email=user_email,
+        )
         save_data(data)
         flash("Senha atualizada. Faça login.")
         return redirect(url_for("login"))
