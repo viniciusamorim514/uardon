@@ -5415,9 +5415,13 @@ def reset_password(token):
     token_item = next((t for t in data.get("password_reset_tokens", []) if t.get("token") == token), None)
     now = datetime.now()
     if not token_item:
+        append_auth_audit_log(data, "password_reset_apply", "blocked", code="token_invalid")
+        save_data(data)
         flash("Link inválido.", "error")
         return redirect(url_for("forgot_password"))
     if token_item.get("used"):
+        append_auth_audit_log(data, "password_reset_apply", "blocked", code="token_already_used")
+        save_data(data)
         flash("Esse link já foi utilizado.", "warning")
         return redirect(url_for("forgot_password"))
     try:
@@ -5425,6 +5429,8 @@ def reset_password(token):
     except Exception:
         expires_at = now - timedelta(seconds=1)
     if expires_at <= now:
+        append_auth_audit_log(data, "password_reset_apply", "blocked", code="token_expired")
+        save_data(data)
         flash("Esse link expirou. Solicite um novo.", "warning")
         return redirect(url_for("forgot_password"))
     if request.method == "POST":
