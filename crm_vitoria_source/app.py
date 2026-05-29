@@ -4604,6 +4604,7 @@ def build_telegram_help_text():
         "Uardon CRM | Comandos operacionais\n\n"
         "/status - status geral do projeto\n"
         "/auth_hoje - resumo de login/reset hoje\n"
+        "/auditoria_24h - resumo tecnico e auth das ultimas 24h\n"
         "/leads_hoje - resumo comercial rapido\n"
         "/usuarios - resumo da equipe (ativos/inativos/admin)\n"
         "/agente_status - status do modo agente\n"
@@ -4644,6 +4645,19 @@ def process_telegram_command(data, text):
             f"- Reset falhos: {auth['daily']['reset_sent_failed']}\n"
             f"- Eventos analisados: {auth['totals']['total']}\n"
             f"- Bloqueios: {auth['totals']['blocked']}"
+        )
+
+    if command == "/auditoria_24h":
+        technical = build_technical_health(data, window_hours=24)
+        auth = build_auth_audit_panel(data, limit=200)
+        return (
+            "Uardon CRM | AUDITORIA 24H\n"
+            f"- HTTP 5xx: {technical['totals']['status_5xx']}\n"
+            f"- HTTP 4xx: {technical['totals']['status_4xx']}\n"
+            f"- Bloqueios: {technical['totals']['blocked']}\n"
+            f"- Auth eventos: {auth['totals']['total']}\n"
+            f"- Auth falhas: {auth['totals']['failed']}\n"
+            f"- Auth bloqueios: {auth['totals']['blocked']}"
         )
 
     if command == "/leads_hoje":
