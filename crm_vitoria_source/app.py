@@ -5003,9 +5003,6 @@ def signup():
         if "@" not in email or "." not in email.split("@")[-1]:
             flash("Informe um e-mail válido.")
             return render_template("signup.html", google_login_enabled=google_login_enabled())
-        if len(password) < 8:
-            flash("A senha precisa ter ao menos 8 caracteres.")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
             flash(password_reason, "warning")
@@ -5053,9 +5050,6 @@ def admin_create_user():
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         if "@" not in email or "." not in email.split("@")[-1]:
             flash("Informe um e-mail válido.")
-            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
-        if len(password) < 8:
-            flash("A senha precisa ter ao menos 8 caracteres.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
@@ -5430,9 +5424,6 @@ def reset_password(token):
     if request.method == "POST":
         password = request.form.get("password") or ""
         password_confirm = request.form.get("password_confirm") or ""
-        if len(password) < 8:
-            flash("A nova senha precisa ter ao menos 8 caracteres.")
-            return render_template("reset_password.html", token=token)
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
             flash(password_reason, "warning")
