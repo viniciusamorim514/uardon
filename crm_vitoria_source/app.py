@@ -133,6 +133,8 @@ LEAD_FIRST_CONTACT_SLA_MINUTES = 15
 LEAD_SMOKE_CHECK_INTERVAL_SECONDS = int((os.environ.get("LEAD_SMOKE_CHECK_INTERVAL_SECONDS") or "3600").strip() or "3600")
 PUBLIC_SIGNUP_ENABLED = (os.environ.get("CRM_PUBLIC_SIGNUP") or "0").strip().lower() in {"1", "true", "yes", "on"}
 PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS = int((os.environ.get("PASSWORD_RESET_REQUEST_COOLDOWN_SECONDS") or "90").strip() or "90")
+PASSWORD_RESET_IP_WINDOW_SECONDS = int((os.environ.get("PASSWORD_RESET_IP_WINDOW_SECONDS") or "300").strip() or "300")
+PASSWORD_RESET_IP_MAX_REQUESTS = int((os.environ.get("PASSWORD_RESET_IP_MAX_REQUESTS") or "5").strip() or "5")
 PASSWORD_RESET_TOKEN_TTL_MINUTES = int((os.environ.get("PASSWORD_RESET_TOKEN_TTL_MINUTES") or "30").strip() or "30")
 PASSWORD_RESET_DAILY_LIMIT = int((os.environ.get("PASSWORD_RESET_DAILY_LIMIT") or "8").strip() or "8")
 AUTH_LOGIN_WINDOW_SECONDS = int((os.environ.get("AUTH_LOGIN_WINDOW_SECONDS") or "900").strip() or "900")
@@ -5186,8 +5188,45 @@ def forgot_password():
     if request.method == "POST":
         data = load_data()
         email = (request.form.get("email") or "").strip().lower()
+        req_ip = public_lead_client_ip()
         user = next((u for u in data.get("users", []) if str(u.get("email", "")).strip().lower() == email), None)
         append_auth_audit_log(data, "password_reset_requested", "ok", code="request_received", email=email)
+        recent_ip_requests = recent_auth_events_for_ip(
+            data,
+            req_ip,
+            "password_reset_requested",
+            PASSWORD_RESET_IP_WINDOW_SECONDS,
+        )
+        if len(recent_ip_requests) > PASSWORD_RESET_IP_MAX_REQUESTS:
+            latest_request_at = None
+            for req_item in recent_ip_requests:
+                raw = str(req_item.get("created_at") or "").strip()
+                try:
+                    created_at = datetime.fromisoformat(raw)
+                except ValueError:
+                    continue
+                if latest_request_at is None or created_at > latest_request_at:
+                    latest_request_at = created_at
+            wait_seconds = PASSWORD_RESET_IP_WINDOW_SECONDS
+            if latest_request_at is not None:
+                elapsed = int((datetime.now() - latest_request_at).total_seconds())
+                wait_seconds = max(1, PASSWORD_RESET_IP_WINDOW_SECONDS - max(0, elapsed))
+            wait_minutes = max(1, int((wait_seconds + 59) // 60))
+            append_auth_audit_log(
+                data,
+                "password_reset_requested",
+                "blocked",
+                code="ip_cooldown_active",
+                email=email,
+                details={
+                    "ip_window_seconds": PASSWORD_RESET_IP_WINDOW_SECONDS,
+                    "ip_max_requests": PASSWORD_RESET_IP_MAX_REQUESTS,
+                    "requests_in_window": len(recent_ip_requests),
+                },
+            )
+            save_data(data)
+            flash(f"Aguarde {wait_minutes} min antes de solicitar um novo link.", "warning")
+            return redirect(url_for("forgot_password"))
         if not user:
             print(f"[PASSWORD_RESET_USER_NOT_FOUND] {email}")
             append_auth_audit_log(
