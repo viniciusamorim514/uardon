@@ -4605,6 +4605,7 @@ def build_telegram_help_text():
         "/status - status geral do projeto\n"
         "/auth_hoje - resumo de login/reset hoje\n"
         "/leads_hoje - resumo comercial rapido\n"
+        "/usuarios - resumo da equipe (ativos/inativos/admin)\n"
         "/agente_status - status do modo agente\n"
         "/agente_on - ativa modo agente no CRM\n"
         "/agente_off - pausa modo agente no CRM\n"
@@ -4656,6 +4657,22 @@ def process_telegram_command(data, text):
             f"- Proposta: {by_col.get('proposal', 0)}\n"
             f"- Fechados: {by_col.get('closed', 0)}\n"
             f"- Perdidos: {len(pipeline.get('lost', []) or [])}"
+        )
+
+    if command == "/usuarios":
+        users = data.get("users", []) or []
+        total = len(users)
+        ativos = len([u for u in users if bool(u.get("active", True))])
+        inativos = max(0, total - ativos)
+        admins = len([u for u in users if canonical_role_name(u.get("role")) == "admin"])
+        sem_email = len([u for u in users if not str(u.get("email") or "").strip()])
+        return (
+            "Uardon CRM | USUARIOS\n"
+            f"- Total: {total}\n"
+            f"- Ativos: {ativos}\n"
+            f"- Inativos: {inativos}\n"
+            f"- Admins: {admins}\n"
+            f"- Sem e-mail: {sem_email}"
         )
 
     if command == "/agente_status":
