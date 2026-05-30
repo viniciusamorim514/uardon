@@ -51,11 +51,25 @@ UPLOAD_DIR = Path(os.environ.get("CRM_UPLOAD_DIR", str(DEFAULT_STORAGE_BASE / "u
 SEED_DATA_FILE = BASE_DIR / "data.json"
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 WRITE_LOCK_KEY = 761451
+GOOGLE_CREDENTIALS_JSON = (os.environ.get("GOOGLE_CREDENTIALS_JSON") or "").strip()
 
 # Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
     DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(SEED_DATA_FILE, DATA_FILE)
+
+# Permite configurar credenciais Google via variável de ambiente no Railway.
+if GOOGLE_CREDENTIALS_JSON:
+    try:
+        google_credentials_path = APP_DIR / "google_credentials.json"
+        if not google_credentials_path.exists():
+            parsed_google_credentials = json.loads(GOOGLE_CREDENTIALS_JSON)
+            google_credentials_path.write_text(
+                json.dumps(parsed_google_credentials, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+    except Exception:
+        pass
 
 DEFAULT_DATA = {
     "users": [
