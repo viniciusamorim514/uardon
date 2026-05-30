@@ -1,47 +1,113 @@
-{% extends 'base.html' %}
-{% block page_title %}Mesa do dia{% endblock %}
-{% block page_subtitle %}Escolha uma frente de gestão para continuar{% endblock %}
+﻿{% extends 'base.html' %}
+{% block page_title %}Workspace do escritorio{% endblock %}
+{% block page_subtitle %}Operacao direta: prioridades, pipeline e proximas acoes{% endblock %}
 {% block content %}
-<div class="content dashboard-clean">
-  <section class="card today-command-card desk-card">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Áreas do escritório</div>
-        <div class="section-note">clique para abrir a rotina desejada</div>
-      </div>
+<div class="content workspace-home">
+  <section class="workspace-top">
+    <div class="workspace-stats">
+      <article class="card workspace-stat">
+        <span>Leads ativos</span>
+        <strong>{{ summary.proposals }}</strong>
+      </article>
+      <article class="card workspace-stat">
+        <span>Tarefas do dia</span>
+        <strong>{{ summary.tasks_today }}</strong>
+      </article>
+      <article class="card workspace-stat">
+        <span>Agenda de hoje</span>
+        <strong>{{ summary.events_today }}</strong>
+      </article>
+      <article class="card workspace-stat">
+        <span>Projetos em andamento</span>
+        <strong>{{ summary.projects }}</strong>
+      </article>
     </div>
-    <div class="office-areas-wrap" style="border-top:0">
-      <div class="office-areas-grid">
-        <a class="office-area-card area-leads" href="{{ url_for('leads') }}">
-          <span>Principal</span>
-          <strong>Leads</strong>
-        </a>
-        <a class="office-area-card area-client" href="{{ url_for('clients') }}">
-          <span>Gestão</span>
-          <strong>Clientes</strong>
-        </a>
-        <a class="office-area-card area-projects" href="{{ url_for('projects') }}">
-          <span>Gestão</span>
-          <strong>Projetos</strong>
-        </a>
-        <a class="office-area-card area-agenda" href="{{ url_for('agenda_page') }}">
-          <span>Gestão</span>
-          <strong>Agenda</strong>
-        </a>
-        <a class="office-area-card area-team" href="{{ url_for('tasks_page') }}">
-          <span>Gestão</span>
-          <strong>Tarefas</strong>
-        </a>
-        <a class="office-area-card area-finance" href="{{ url_for('finance_page') }}">
-          <span>Gestão</span>
-          <strong>Financeiro</strong>
-        </a>
-        <a class="office-area-card area-projects" href="{{ url_for('goals_page') }}">
-          <span>Principal</span>
-          <strong>Metas</strong>
-        </a>
+    <article class="card workspace-command">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Comando do dia</div>
+          <div class="section-note">{{ summary.ref_label }}</div>
+        </div>
       </div>
-    </div>
+      <div class="workspace-command-body">
+        <h3>{{ daily_command.title or 'Priorizar o que move fechamento hoje' }}</h3>
+        <p>{{ daily_command.subtitle or 'Execute as proximas acoes de maior impacto comercial e operacional.' }}</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="workspace-grid">
+    <article class="card workspace-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Atalhos do escritorio</div>
+          <div class="section-note">acao rapida sem ruido</div>
+        </div>
+      </div>
+      <div class="workspace-shortcuts">
+        <a class="workspace-shortcut" href="{{ url_for('leads') }}"><span>Principal</span><strong>Leads</strong></a>
+        <a class="workspace-shortcut" href="{{ url_for('clients') }}"><span>Gestao</span><strong>Clientes</strong></a>
+        <a class="workspace-shortcut" href="{{ url_for('projects') }}"><span>Gestao</span><strong>Projetos</strong></a>
+        <a class="workspace-shortcut" href="{{ url_for('agenda_page') }}"><span>Hoje</span><strong>Agenda</strong></a>
+        <a class="workspace-shortcut" href="{{ url_for('tasks_page') }}"><span>Execucao</span><strong>Tarefas</strong></a>
+        <a class="workspace-shortcut" href="{{ url_for('finance_page') }}"><span>Controle</span><strong>Financeiro</strong></a>
+      </div>
+    </article>
+
+    <article class="card workspace-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Prioridades de hoje</div>
+          <div class="section-note">tarefas e follow-ups</div>
+        </div>
+      </div>
+      <div class="workspace-list">
+        {% for item in tasks[:5] %}
+        <div class="workspace-item">
+          <strong>{{ item.title or item.nome or 'Tarefa' }}</strong>
+          <span>{{ item.due_date or item.data or 'Hoje' }}</span>
+        </div>
+        {% else %}
+        <div class="empty-state">Sem tarefas urgentes no momento.</div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="card workspace-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Pipeline rapido</div>
+          <div class="section-note">visao comercial</div>
+        </div>
+      </div>
+      <div class="workspace-pipeline">
+        {% for col in pipeline.columns %}
+        <div class="pipeline-chip">
+          <span>{{ col.label }}</span>
+          <strong>{{ (col.items or [])|length }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="card workspace-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Alertas operacionais</div>
+          <div class="section-note">somente o que importa</div>
+        </div>
+      </div>
+      <div class="workspace-list">
+        {% for alert in alerts %}
+        <div class="workspace-item">
+          <strong>{{ alert.title }}</strong>
+          <span>{{ alert.subtitle }}</span>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhum alerta critico agora.</div>
+        {% endfor %}
+      </div>
+    </article>
   </section>
 </div>
 {% endblock %}
