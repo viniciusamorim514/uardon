@@ -29,7 +29,7 @@ except Exception:
 from flask import (
     Flask,
     Response,
-    flash,
+    flash as flask_flash,
     g,
     has_request_context,
     redirect,
@@ -318,31 +318,37 @@ def is_admin_role_value(raw_role):
 def fix_mojibake_text(value):
     if not isinstance(value, str):
         return value
-    suspicious_tokens = ("Ãƒ", "Ã‚", "Ã¢", "Ã¯Â¿Â½", "\ufffd", "Ä™", "Å‘", "Å•", "Ã§Äƒo")
+    suspicious_tokens = ("Ã", "Â", "Ä", "Å", "\ufffd", "ï¿½")
     fixed = value
+
     if any(token in value for token in suspicious_tokens):
-        try:
-            decoded = value.encode("latin-1").decode("utf-8")
-            if decoded:
-                fixed = decoded
-        except Exception:
-            fixed = value
+        candidates = [value]
+        for source_encoding in ("latin-1", "cp1252"):
+            try:
+                candidates.append(value.encode(source_encoding).decode("utf-8"))
+            except Exception:
+                pass
+
+        def score(text):
+            bad = text.count("Ã") + text.count("Â") + text.count("Ä") + text.count("Å") + text.count("\ufffd")
+            good = sum(text.count(ch) for ch in "áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ")
+            return (good, -bad, len(text))
+
+        fixed = max(candidates, key=score)
 
     corrections = {
-        "vocÄ™": "vocÃª",
-        "opÃ§Å‘es": "opÃ§Ãµes",
-        "disposiÃ§Äƒo": "disposiÃ§Ã£o",
-        "Å• ": "Ã  ",
-        "oramento": "orÃ§amento",
-        "prximos": "prÃ³ximos",
-        "segurana": "seguranÃ§a",
-        "dvida": "dÃºvida",
-        "por a?": "por aÃ­?",
+        "Ol, ": "Olá, ",
+        "Nao": "Não",
+        "nao": "não",
+        "possivel": "possível",
+        "conexao": "conexão",
+        "configuracao": "configuração",
+        "informacao": "informação",
+        "operacao": "operação",
+        "vinculo": "vínculo",
     }
     for bad, good in corrections.items():
         fixed = fixed.replace(bad, good)
-    if fixed.startswith("Ol, "):
-        fixed = "OlÃ¡, " + fixed[4:]
     return fixed
 
 
@@ -352,6 +358,10 @@ def normalize_text_payload(value):
     if isinstance(value, list):
         return [normalize_text_payload(v) for v in value]
     return fix_mojibake_text(value)
+
+
+def flash(message, category="message"):
+    return flask_flash(fix_mojibake_text(message), category)
 
 
 def ensure_data_file():
