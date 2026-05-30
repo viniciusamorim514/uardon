@@ -53,6 +53,9 @@ SEED_DATA_FILE = BASE_DIR / "data.json"
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 WRITE_LOCK_KEY = 761451
 GOOGLE_CREDENTIALS_JSON = (os.environ.get("GOOGLE_CREDENTIALS_JSON") or "").strip()
+WHATSAPP_CLOUD_TOKEN = (os.environ.get("WHATSAPP_CLOUD_TOKEN") or "").strip()
+WHATSAPP_CLOUD_PHONE_NUMBER_ID = (os.environ.get("WHATSAPP_CLOUD_PHONE_NUMBER_ID") or "").strip()
+WHATSAPP_CLOUD_API_VERSION = (os.environ.get("WHATSAPP_CLOUD_API_VERSION") or "v20.0").strip()
 
 # Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
@@ -583,6 +586,51 @@ def whatsapp_link(phone, message=""):
     digits = phone_digits(phone)
     text = urllib.parse.quote_plus(message or "")
     return f"https://web.whatsapp.com/send?phone={digits}&text={text}" if digits else "#"
+
+
+def whatsapp_cloud_enabled():
+    return bool(WHATSAPP_CLOUD_TOKEN and WHATSAPP_CLOUD_PHONE_NUMBER_ID)
+
+
+def parse_whatsapp_link(value):
+    url = str(value or "").strip()
+    if not url or "phone=" not in url:
+        return "", ""
+    parsed = urllib.parse.urlparse(url)
+    query = urllib.parse.parse_qs(parsed.query)
+    phone = phone_digits((query.get("phone") or [""])[0])
+    text = (query.get("text") or [""])[0]
+    return phone, urllib.parse.unquote_plus(text or "")
+
+
+def send_whatsapp_cloud_text(phone, text):
+    if not whatsapp_cloud_enabled():
+        raise RuntimeError("WhatsApp Cloud API não configurada.")
+    phone_clean = phone_digits(phone)
+    if not phone_clean:
+        raise RuntimeError("Número de telefone inválido para envio.")
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone_clean,
+        "type": "text",
+        "text": {"body": text or "Olá!"},
+    }
+    req = urllib.request.Request(
+        f"https://graph.facebook.com/{WHATSAPP_CLOUD_API_VERSION}/{WHATSAPP_CLOUD_PHONE_NUMBER_ID}/messages",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {WHATSAPP_CLOUD_TOKEN}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            return json.loads(raw) if raw else {"ok": True}
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Falha no envio WhatsApp Cloud ({exc.code}): {detail[:250]}") from exc
 
 
 def public_lead_origin():
@@ -1817,6 +1865,7 @@ def normalize_task(task, data):
         task["whatsapp_url"] = whatsapp_link(lead.get("tel"), f"OlÃ¡, {lead.get('nome', '').split(' ')[0]}! Recebi seu pedido e vou te chamar para entender melhor.")
     else:
         task["whatsapp_url"] = "#"
+    task["whatsapp_cloud_enabled"] = whatsapp_cloud_enabled()
     if task.get("vinculo_tipo") == "cliente" and task.get("cliente_id"):
         task["link_url"] = url_for("client_detail", client_id=task["cliente_id"])
     elif task.get("vinculo_tipo") == "projeto" and task.get("vinculo_id"):
@@ -5046,6 +5095,7 @@ def inject_globals():
         "google_calendar_connected": google_connected,
         "google_calendar_credentials_exists": google_credentials_exists,
         "whatsapp_link": whatsapp_link,
+        "whatsapp_cloud_enabled": whatsapp_cloud_enabled(),
         "mailto_link": mailto_link,
         "format_date_br": format_date_br,
     }
@@ -7003,6 +7053,28 @@ def create_task():
     }
     data["tarefas"].append(task)
     save_data(data)
+    return redirect(request.referrer or url_for("tasks_page"))
+
+
+@app.route("/tarefas/<int:task_id>/whatsapp/enviar", methods=["POST"])
+@login_required
+@permission_required("tasks:manage")
+def send_task_whatsapp(task_id):
+    data = load_data()
+    task = find_by_id(data["tarefas"], task_id)
+    if not task:
+        flash("Tarefa não encontrada.")
+        return redirect(request.referrer or url_for("tasks_page"))
+    normalized = normalize_task(task, data)
+    phone, text = parse_whatsapp_link(normalized.get("whatsapp_url"))
+    if not phone:
+        flash("Tarefa sem número válido para WhatsApp.")
+        return redirect(request.referrer or url_for("tasks_page"))
+    try:
+        send_whatsapp_cloud_text(phone, text or (normalized.get("titulo") or "Olá!"))
+        flash("Mensagem enviada pelo WhatsApp Cloud.")
+    except Exception as exc:
+        flash(f"Não foi possível enviar no WhatsApp Cloud: {exc}")
     return redirect(request.referrer or url_for("tasks_page"))
 
 

@@ -13,6 +13,11 @@
     </div>
   </a>
   <div class="task-actions-row">
+    {% if whatsapp_cloud_enabled and task.whatsapp_url and task.whatsapp_url != '#' %}
+    <form method="post" action="{{ url_for('send_task_whatsapp', task_id=task.id) }}">
+      <button class="mini-btn primary" type="submit">Enviar WA Cloud</button>
+    </form>
+    {% endif %}
     {% if task.whatsapp_url and task.whatsapp_url != '#' %}
     <a class="mini-btn primary" href="{{ task.whatsapp_url }}" target="_blank">WhatsApp</a>
     {% endif %}
