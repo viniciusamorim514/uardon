@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block page_title %}Workspace do escritorio{% endblock %}
+{% block page_subtitle %}Modo seguro ativo para manter operacao sem interrupcao{% endblock %}
+{% block content %}
+<div class="content">
+  <section class="card" style="padding:18px; margin-bottom:14px;">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;margin-bottom:8px;">Painel em modo seguro</h3>
+    <p style="color:var(--text-muted);">Detectamos uma instabilidade visual e ativamos uma versao segura para nao interromper o trabalho do escritorio.</p>
+  </section>
+
+  <section class="card" style="padding:14px;">
+    <div class="workspace-shortcuts">
+      <a class="workspace-shortcut" href="{{ url_for('leads') }}"><span>Principal</span><strong>Leads</strong></a>
+      <a class="workspace-shortcut" href="{{ url_for('clients') }}"><span>Gestao</span><strong>Clientes</strong></a>
+      <a class="workspace-shortcut" href="{{ url_for('projects') }}"><span>Gestao</span><strong>Projetos</strong></a>
+      <a class="workspace-shortcut" href="{{ url_for('agenda_page') }}"><span>Hoje</span><strong>Agenda</strong></a>
+      <a class="workspace-shortcut" href="{{ url_for('tasks_page') }}"><span>Execucao</span><strong>Tarefas</strong></a>
+      <a class="workspace-shortcut" href="{{ url_for('finance_page') }}"><span>Controle</span><strong>Financeiro</strong></a>
+    </div>
+  </section>
+</div>
+{% endblock %}

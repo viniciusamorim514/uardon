@@ -5933,26 +5933,37 @@ def dashboard():
     weekly_metrics = build_weekly_metrics(data)
     funnel = {"AtraÃ§Ã£o": 0, "Interesse": 0, "Proposta": len(data["leads"]), "NegociaÃ§Ã£o": 0, "Fechamento": 0}
     alerts = [{"title": n["title"], "subtitle": n["subtitle"]} for n in build_notifications(data)[:4]]
-    return render_template(
-        "dashboard.html",
-        active="dashboard",
-        summary=summary,
-        tasks=(board["overdue"] + board["today"])[:8],
-        events=events_today,
-        followups=board["suggested"],
-        alerts=alerts,
-        projects=data["projetos"][:6],
-        proposals=data["leads"][:5],
-        budget_leads=budget_leads,
-        commercial=commercial,
-        daily_command=daily_command,
-        dashboard_results=build_dashboard_results(data, board),
-        pipeline=pipeline,
-        automation_actions=build_automation_actions(data, board),
-        relationship=relationship,
-        weekly_metrics=weekly_metrics,
-        funnel=funnel,
-    )
+    context = {
+        "active": "dashboard",
+        "summary": summary,
+        "tasks": (board["overdue"] + board["today"])[:8],
+        "events": events_today,
+        "followups": board["suggested"],
+        "alerts": alerts,
+        "projects": data["projetos"][:6],
+        "proposals": data["leads"][:5],
+        "budget_leads": budget_leads,
+        "commercial": commercial,
+        "daily_command": daily_command,
+        "dashboard_results": build_dashboard_results(data, board),
+        "pipeline": pipeline,
+        "automation_actions": build_automation_actions(data, board),
+        "relationship": relationship,
+        "weekly_metrics": weekly_metrics,
+        "funnel": funnel,
+    }
+    try:
+        return render_template("dashboard.html", **context)
+    except Exception as exc:
+        append_system_audit_log(
+            data,
+            "dashboard_render",
+            "failed",
+            code="template_error",
+            details={"error": str(exc)[:260]},
+        )
+        save_data(data)
+        return render_template("dashboard_safe.html", active="dashboard", summary=summary)
 
 
 @app.route("/metas")
