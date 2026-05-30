@@ -33,7 +33,7 @@ from flask import (
     g,
     has_request_context,
     redirect,
-    render_template,
+    render_template as flask_render_template,
     request,
     send_file,
     session,
@@ -362,6 +362,11 @@ def normalize_text_payload(value):
 
 def flash(message, category="message"):
     return flask_flash(fix_mojibake_text(message), category)
+
+
+def render_template(template_name_or_list, **context):
+    sanitized = {k: normalize_text_payload(v) for k, v in context.items()}
+    return flask_render_template(template_name_or_list, **sanitized)
 
 
 def ensure_data_file():
