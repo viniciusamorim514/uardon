@@ -4995,6 +4995,9 @@ def upsert_google_user_and_login(email, name):
 def inject_globals():
     data = load_data()
     notifications = build_notifications(data)
+    gpaths = google_calendar_paths()
+    google_connected = gpaths["token"].exists()
+    google_credentials_exists = gpaths["credentials"].exists()
     return {
         "nav_counts": nav_counts(data),
         "open_tasks_count": open_tasks_count(data),
@@ -5005,6 +5008,8 @@ def inject_globals():
         "notifications_menu": notifications,
         "notifications_count": len(notifications),
         "notifications_summary": notification_summary(notifications),
+        "google_calendar_connected": google_connected,
+        "google_calendar_credentials_exists": google_credentials_exists,
         "whatsapp_link": whatsapp_link,
         "mailto_link": mailto_link,
         "format_date_br": format_date_br,

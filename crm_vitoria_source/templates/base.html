@@ -88,6 +88,11 @@
       </div>
       <div class="topbar-actions">
         {% block topbar_actions %}{% endblock %}
+        {% if can_access('agenda:manage') and google_calendar_credentials_exists %}
+        <a class="btn {% if google_calendar_connected %}btn-ghost{% else %}btn-primary{% endif %}" href="{{ url_for('connect_google_calendar') }}">
+          {{ 'Google conectado' if google_calendar_connected else 'Conectar Google' }}
+        </a>
+        {% endif %}
         <button class="btn btn-ghost" type="button" onclick="openFeedbackModal()">Feedback</button>
         <div class="notif-wrap" id="notifWrap">
           <button class="bell-btn" type="button" onclick="toggleNotifications(event)" aria-label="Pendências do dia">
