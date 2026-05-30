@@ -39,6 +39,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -133,6 +134,8 @@ app = Flask(
     template_folder=str(RESOURCE_DIR / "templates"),
     static_folder=str(RESOURCE_DIR / "static"),
 )
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+app.config["PREFERRED_URL_SCHEME"] = "https"
 CRM_ENV = (os.environ.get("CRM_ENV") or "development").strip().lower()
 CRM_SECRET = os.environ.get("CRM_SECRET_KEY")
 if CRM_ENV == "production" and not CRM_SECRET:
