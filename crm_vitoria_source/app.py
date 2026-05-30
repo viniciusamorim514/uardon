@@ -1174,6 +1174,16 @@ def sync_event_to_google(event):
     return google_event
 
 
+def should_auto_sync_google_event(event):
+    meeting_type = str(event.get("reuniao_tipo") or "").strip().lower()
+    link_value = str(event.get("link") or "").strip().lower()
+    if meeting_type == "google meet":
+        return True
+    if "meet.google.com/" in link_value:
+        return True
+    return False
+
+
 def google_datetime_parts(value):
     if not value:
         return "", "", ""
@@ -6330,14 +6340,22 @@ def create_event():
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }
     data["eventos"].append(event)
-    if request.form.get("sync_google"):
+    manual_sync = bool(request.form.get("sync_google"))
+    auto_sync = should_auto_sync_google_event(event)
+    if manual_sync or auto_sync:
         try:
             sync_event_to_google(event)
         except Exception as exc:
             event["google_sync_error"] = str(exc)
-            flash(f"Compromisso criado no CRM, mas nÃ£o sincronizou com Google Agenda: {exc}")
+            if manual_sync:
+                flash(f"Compromisso criado no CRM, mas nÃ£o sincronizou com Google Agenda: {exc}")
+            elif auto_sync:
+                flash("Compromisso criado no CRM. Para gerar link Meet automaticamente, conecte o Google Agenda.", "warning")
     save_data(data)
-    flash("Compromisso criado.")
+    if auto_sync and event.get("link"):
+        flash("Compromisso criado com link Google Meet automÃ¡tico.")
+    else:
+        flash("Compromisso criado.")
     return redirect(url_for("agenda_page"))
 
 
@@ -6385,7 +6403,7 @@ def edit_event(event_id):
         event["projeto_id"] = ""
         event["projeto"] = ""
     event["updated_at"] = datetime.now().isoformat(timespec="seconds")
-    should_sync = request.form.get("sync_google") or event.get("google_event_id")
+    should_sync = request.form.get("sync_google") or event.get("google_event_id") or should_auto_sync_google_event(event)
     if should_sync:
         try:
             sync_event_to_google(event)
