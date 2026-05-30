@@ -62,12 +62,15 @@ if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
 if GOOGLE_CREDENTIALS_JSON:
     try:
         google_credentials_path = APP_DIR / "google_credentials.json"
-        if not google_credentials_path.exists():
-            parsed_google_credentials = json.loads(GOOGLE_CREDENTIALS_JSON)
-            google_credentials_path.write_text(
-                json.dumps(parsed_google_credentials, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+        parsed_google_credentials = json.loads(GOOGLE_CREDENTIALS_JSON)
+        # Aceita JSON duplamente serializado e sempre sincroniza o arquivo local
+        # para evitar uso de credenciais antigas persistidas em volume.
+        if isinstance(parsed_google_credentials, str):
+            parsed_google_credentials = json.loads(parsed_google_credentials)
+        google_credentials_path.write_text(
+            json.dumps(parsed_google_credentials, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
     except Exception:
         pass
 
