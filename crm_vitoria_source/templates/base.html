@@ -88,9 +88,15 @@
       </div>
       <div class="topbar-actions">
         {% block topbar_actions %}{% endblock %}
-        {% if can_access('agenda:manage') and google_calendar_credentials_exists %}
+        {% if can_access('agenda:manage') %}
         <a class="btn {% if google_calendar_connected %}btn-ghost{% else %}btn-primary{% endif %}" href="{{ url_for('connect_google_calendar') }}">
-          {{ 'Google conectado' if google_calendar_connected else 'Conectar Google' }}
+          {% if google_calendar_connected %}
+          Google conectado
+          {% elif google_calendar_credentials_exists %}
+          Conectar Google
+          {% else %}
+          Configurar Google
+          {% endif %}
         </a>
         {% endif %}
         <button class="btn btn-ghost" type="button" onclick="openFeedbackModal()">Feedback</button>
