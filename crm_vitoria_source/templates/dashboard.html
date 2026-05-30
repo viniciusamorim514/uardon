@@ -84,7 +84,7 @@
         {% for col in pipeline.columns %}
         <div class="pipeline-chip">
           <span>{{ col.label }}</span>
-          <strong>{{ (col.items or [])|length }}</strong>
+          <strong>{{ (col['items'] or [])|length }}</strong>
         </div>
         {% endfor %}
       </div>
