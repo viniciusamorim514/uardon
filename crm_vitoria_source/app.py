@@ -911,10 +911,13 @@ def request_admin_two_step_approval(data, action_key, action_label):
     if admin_email:
         subject = f"Uardon CRM | Codigo de aprovacao ({action_label})"
         body = f"Codigo: {code}\nValidade: 5 minutos.\nAcao: {action_label}\n"
-        send_text_email(admin_email, subject, body, flow_tag="admin_approval")
-        flash("Codigo de aprovacao enviado ao email do admin. Digite o codigo para confirmar.", "warning")
+        sent, reason = send_text_email(admin_email, subject, body, flow_tag="admin_approval")
+        if sent:
+            flash("Codigo de aprovacao enviado ao email do admin. Digite o codigo para confirmar.", "warning")
+        else:
+            flash(f"Email indisponivel no momento ({reason}). Use este codigo agora: {code}", "warning")
     else:
-        flash("Defina email no usuario admin para habilitar aprovacao em duas etapas.", "error")
+        flash(f"Admin sem email configurado. Use este codigo agora: {code}", "warning")
     append_auth_audit_log(data, "admin_approval_requested", "ok", code="approval_challenge", email=admin_email, details={"action_key": action_key, "action_label": action_label})
     save_data(data)
     return False
