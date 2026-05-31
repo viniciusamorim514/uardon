@@ -6922,17 +6922,36 @@ def projects():
 @permission_required("projects:manage")
 def create_project():
     data = load_data()
-    client = find_by_id(data["clientes"], request.form.get("cliente_id"))
+    project_name = (request.form.get("nome") or "").strip()
+    client_id_raw = request.form.get("cliente_id")
+    client_name_raw = (request.form.get("cliente") or "").strip()
+    if not project_name:
+        flash("Informe o nome do projeto.")
+        return redirect(url_for("projects"))
+    client = find_by_id(data["clientes"], client_id_raw)
+    if not client and client_name_raw:
+        client = next(
+            (
+                item
+                for item in data.get("clientes", [])
+                if str(item.get("nome") or "").strip().lower() == client_name_raw.lower()
+            ),
+            None,
+        )
+    try:
+        value_num = money_to_float(request.form.get("valor"))
+    except Exception:
+        value_num = 0.0
     project = {
         "id": next_id(data["projetos"]),
-        "nome": request.form.get("nome") or "",
-        "cliente": client.get("nome") if client else request.form.get("cliente") or "",
+        "nome": project_name,
+        "cliente": client.get("nome") if client else client_name_raw,
         "cliente_id": client.get("id") if client else "",
-        "valor": money_to_float(request.form.get("valor")),
+        "valor": value_num,
         "prazo": request.form.get("prazo") or "",
         "tipo": request.form.get("tipo") or "",
         "progresso": 0,
-        "status": "Planejamento",
+        "status": (request.form.get("status") or "Planejamento").strip() or "Planejamento",
         "obs": request.form.get("obs") or "",
         "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
         "arquivos": [],
@@ -6941,7 +6960,8 @@ def create_project():
     }
     data["projetos"].append(project)
     save_data(data)
-    return redirect(url_for("projects"))
+    flash("Projeto criado com sucesso.")
+    return redirect(url_for("project_detail", project_id=project.get("id")))
 
 
 @app.route("/clientes/<int:client_id>/projetos/novo", methods=["POST"])
