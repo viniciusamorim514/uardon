@@ -12,6 +12,20 @@
     <a class="btn btn-primary" href="{{ url_for('admin_create_user') }}">Novo usuário</a>
   </div>
 
+  <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px; border:1px solid #e8ddd7; border-radius:10px;">
+    <div style="font-size:12px; color:#6e615a;">
+      {% if approval_active %}
+      Sessao administrativa desbloqueada ate {{ unlock_until }}.
+      {% else %}
+      Desbloqueie uma vez para executar acoes sensiveis por 15 minutos.
+      {% endif %}
+    </div>
+    <form method="post" action="{{ url_for('admin_unlock_sensitive_session') }}" style="display:flex; gap:8px;">
+      <input class="form-input" name="approval_code" placeholder="Codigo de aprovacao" style="min-width:180px;">
+      <button class="btn btn-ghost" type="submit">Desbloquear</button>
+    </form>
+  </div>
+
   <div class="projects-clean-list users-clean-list">
     {% for user in users %}
     <div class="project-clean-row users-clean-row">
@@ -33,11 +47,9 @@
       </div>
       <div class="lead-actions-inline">
         <form method="post" action="{{ url_for('admin_user_toggle_status', user_id=user.id) }}">
-          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-ghost tiny-btn" type="submit">{{ 'Desativar' if user.active else 'Ativar' }}</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_change_role', user_id=user.id) }}" style="display:flex; gap:6px;">
-          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px;">
           <select class="form-select" name="role" style="min-width:170px;">
             {% for role in role_options %}
             <option value="{{ role }}" {% if role==user.role %}selected{% endif %}>{{ role_labels.get(role, role) }}</option>
@@ -46,16 +58,13 @@
           <button class="btn btn-ghost tiny-btn" type="submit">Salvar</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_reset_password', user_id=user.id) }}">
-          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-primary tiny-btn" type="submit">Enviar reset</button>
         </form>
         {% if user.id != 1 %}
         <form method="post" action="{{ url_for('admin_user_delete', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
-          <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-ghost tiny-btn danger-btn" type="submit">Excluir usuário</button>
         </form>
         <form method="post" action="{{ url_for('admin_user_merge', user_id=user.id) }}" onsubmit="return confirm('Mesclar este usuario no destino selecionado?');" style="display:flex; gap:6px;">
-          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px;">
           <select class="form-select" name="target_user_id" style="min-width:170px;">
             {% for target in merge_targets %}
             {% if target.id != user.id %}

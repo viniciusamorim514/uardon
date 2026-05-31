@@ -887,8 +887,15 @@ def maybe_emit_auth_incident_alert(data, entry):
 
 
 def request_admin_two_step_approval(data, action_key, action_label):
-    approvals = session.setdefault("admin_approvals", {})
     now = datetime.now()
+    session_unlock_raw = str(session.get("admin_approval_unlock_until") or "").strip()
+    if session_unlock_raw:
+        try:
+            if datetime.fromisoformat(session_unlock_raw) > now:
+                return True
+        except ValueError:
+            pass
+    approvals = session.setdefault("admin_approvals", {})
     pending = approvals.get(action_key) or {}
     pending_raw = str(pending.get("expires_at") or "").strip()
     if pending_raw:
@@ -902,6 +909,8 @@ def request_admin_two_step_approval(data, action_key, action_label):
     if pending and pending_exp > now and typed_code and typed_code == str(pending.get("code") or ""):
         approvals.pop(action_key, None)
         session["admin_approvals"] = approvals
+        session["admin_approval_unlock_until"] = (now + timedelta(minutes=15)).isoformat(timespec="seconds")
+        flash("Sessao admin desbloqueada por 15 minutos.", "success")
         return True
     code = str(uuid.uuid4().hex[:6]).upper()
     expires_at = (now + timedelta(minutes=5)).isoformat(timespec="seconds")
@@ -921,6 +930,16 @@ def request_admin_two_step_approval(data, action_key, action_label):
     append_auth_audit_log(data, "admin_approval_requested", "ok", code="approval_challenge", email=admin_email, details={"action_key": action_key, "action_label": action_label})
     save_data(data)
     return False
+
+
+@app.route("/admin/usuarios/desbloquear-sessao", methods=["POST"])
+@login_required
+@admin_required
+def admin_unlock_sensitive_session():
+    data = load_data()
+    if request_admin_two_step_approval(data, "__admin_session_unlock__", "Desbloquear sessao administrativa"):
+        return redirect(url_for("admin_users"))
+    return redirect(url_for("admin_users"))
 
 
 def recent_auth_events_for_email(data, email, event_name, seconds_window):
@@ -5491,7 +5510,18 @@ def admin_users():
         users.append(row)
     users = sorted(users, key=lambda u: (0 if u.get("id") == 1 else 1, str(u.get("name") or "").lower()))
     merge_targets = [{"id": u.get("id"), "name": u.get("name")} for u in users]
-    return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS, merge_targets=merge_targets)
+    approval_active = False
+    unlock_until = ""
+    unlock_raw = str(session.get("admin_approval_unlock_until") or "").strip()
+    if unlock_raw:
+        try:
+            unlock_dt = datetime.fromisoformat(unlock_raw)
+            if unlock_dt > datetime.now():
+                approval_active = True
+                unlock_until = unlock_dt.strftime("%H:%M")
+        except ValueError:
+            pass
+    return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS, merge_targets=merge_targets, approval_active=approval_active, unlock_until=unlock_until)
 
 
 @app.route("/admin/usuarios/<int:user_id>/status", methods=["POST"])
