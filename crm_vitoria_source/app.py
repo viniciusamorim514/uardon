@@ -932,16 +932,6 @@ def request_admin_two_step_approval(data, action_key, action_label):
     return False
 
 
-@app.route("/admin/usuarios/desbloquear-sessao", methods=["POST"])
-@login_required
-@admin_required
-def admin_unlock_sensitive_session():
-    data = load_data()
-    if request_admin_two_step_approval(data, "__admin_session_unlock__", "Desbloquear sessao administrativa"):
-        return redirect(url_for("admin_users"))
-    return redirect(url_for("admin_users"))
-
-
 def recent_auth_events_for_email(data, email, event_name, seconds_window):
     now = datetime.now()
     target_email = str(email or "").strip().lower()
@@ -5522,6 +5512,15 @@ def admin_users():
         except ValueError:
             pass
     return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS, merge_targets=merge_targets, approval_active=approval_active, unlock_until=unlock_until)
+
+
+@app.route("/admin/usuarios/desbloquear-sessao", methods=["POST"])
+@login_required
+@admin_required
+def admin_unlock_sensitive_session():
+    data = load_data()
+    request_admin_two_step_approval(data, "__admin_session_unlock__", "Desbloquear sessao administrativa")
+    return redirect(url_for("admin_users"))
 
 
 @app.route("/admin/usuarios/<int:user_id>/status", methods=["POST"])
