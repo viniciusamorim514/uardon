@@ -56,6 +56,8 @@ GOOGLE_CREDENTIALS_JSON = (os.environ.get("GOOGLE_CREDENTIALS_JSON") or "").stri
 WHATSAPP_CLOUD_TOKEN = (os.environ.get("WHATSAPP_CLOUD_TOKEN") or "").strip()
 WHATSAPP_CLOUD_PHONE_NUMBER_ID = (os.environ.get("WHATSAPP_CLOUD_PHONE_NUMBER_ID") or "").strip()
 WHATSAPP_CLOUD_API_VERSION = (os.environ.get("WHATSAPP_CLOUD_API_VERSION") or "v20.0").strip()
+CLICKSIGN_API_BASE = (os.environ.get("CLICKSIGN_API_BASE") or "https://api.clicksign.com").strip().rstrip("/")
+CLICKSIGN_API_TOKEN = (os.environ.get("CLICKSIGN_API_TOKEN") or "").strip()
 
 # Em produÃ§Ã£o com volume novo, restaura o snapshot local para nÃ£o iniciar zerado.
 if not DATA_FILE.exists() and SEED_DATA_FILE.exists():
@@ -2165,8 +2167,50 @@ def contract_label(contract):
     return {"label": status, "tone": tone}
 
 
+def ensure_contract_defaults(contract):
+    defaults = {
+        "status": "NÃ£o iniciado",
+        "emitido_em": "",
+        "assinado_em": "",
+        "arquivo": None,
+        "modelo": "Contrato padrÃ£o VitÃ³ria",
+        "observacoes": "",
+        "lembrete_assinatura_dias": 3,
+        "ultimo_followup_em": "",
+        "clicksign_envelope_id": "",
+        "clicksign_status": "",
+        "clicksign_last_sync_at": "",
+    }
+    for key, value in defaults.items():
+        contract.setdefault(key, value)
+    return contract
+
+
+def clicksign_enabled():
+    return bool(CLICKSIGN_API_TOKEN)
+
+
+def clicksign_get_envelope(envelope_id):
+    envelope_id = str(envelope_id or "").strip()
+    if not envelope_id:
+        raise ValueError("envelope_id ausente")
+    if not clicksign_enabled():
+        raise RuntimeError("Clicksign indisponivel: token ausente")
+    req = urllib.request.Request(
+        f"{CLICKSIGN_API_BASE}/api/v3/envelopes/{urllib.parse.quote(envelope_id)}",
+        headers={
+            "accept": "application/json",
+            "Authorization": f"Bearer {CLICKSIGN_API_TOKEN}",
+        },
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=15) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload
+
+
 def enrich_project(project):
-    project.setdefault("contrato", {})
+    ensure_contract_defaults(project.setdefault("contrato", {}))
     project.setdefault("pagamentos", [])
     project.setdefault("arquivos", [])
     project["contract_data"] = contract_label(project.get("contrato"))
@@ -6892,7 +6936,7 @@ def create_project():
         "obs": request.form.get("obs") or "",
         "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
         "arquivos": [],
-        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
+        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": "", "clicksign_envelope_id": "", "clicksign_status": "", "clicksign_last_sync_at": ""},
         "pagamentos": [],
     }
     data["projetos"].append(project)
@@ -6921,7 +6965,7 @@ def create_project_for_client(client_id):
         "obs": request.form.get("obs") or "",
         "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
         "arquivos": [],
-        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": ""},
+        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": "", "clicksign_envelope_id": "", "clicksign_status": "", "clicksign_last_sync_at": ""},
         "pagamentos": [],
     }
     data["projetos"].append(project)
@@ -6956,6 +7000,7 @@ def project_detail(project_id):
         {
             "whatsapp_url": whatsapp_link(client.get("tel") if client else "", f"OlÃ¡, {first}! Passando para lembrar da assinatura do contrato do projeto {project.get('nome')}."),
             "email_url": mailto_link(client.get("email") if client else "", f"Contrato - {project.get('nome')}", f"OlÃ¡, {first},\n\nPassando para lembrar da assinatura do contrato do projeto {project.get('nome')}.\n\nVitÃ³ria Uardon"),
+            "clicksign_enabled": clicksign_enabled(),
         }
     )
     payment_data = payment_summary([project])
@@ -7788,9 +7833,9 @@ def update_contract(project_id):
     data = load_data()
     project = find_by_id(data["projetos"], project_id)
     if project:
-        contract = project.setdefault("contrato", {})
+        contract = ensure_contract_defaults(project.setdefault("contrato", {}))
         old_status = contract.get("status")
-        for key in ("status", "modelo", "emitido_em", "assinado_em", "lembrete_assinatura_dias", "observacoes"):
+        for key in ("status", "modelo", "emitido_em", "assinado_em", "lembrete_assinatura_dias", "observacoes", "clicksign_envelope_id"):
             if key in request.form:
                 contract[key] = request.form.get(key) or ""
         if contract.get("status") == "Assinado" and not contract.get("assinado_em"):
@@ -7817,6 +7862,63 @@ def update_contract(project_id):
             file.save(project_dir / filename)
             contract["arquivo"] = {"filename": filename, "original_name": file.filename, "uploaded_at": today_br()}
         save_data(data)
+    return redirect(url_for("project_detail", project_id=project_id))
+
+
+@app.route("/projetos/<int:project_id>/contrato/clicksign/sync", methods=["POST"])
+@login_required
+@permission_required("projects:manage")
+def sync_contract_clicksign(project_id):
+    data = load_data()
+    project = find_by_id(data["projetos"], project_id)
+    if not project:
+        return redirect(url_for("projects"))
+    contract = ensure_contract_defaults(project.setdefault("contrato", {}))
+    envelope_id = str(contract.get("clicksign_envelope_id") or "").strip()
+    if not envelope_id:
+        flash("Informe o Envelope ID da Clicksign para sincronizar.")
+        return redirect(url_for("project_detail", project_id=project_id))
+    if not clicksign_enabled():
+        flash("Clicksign indisponível: configure CLICKSIGN_API_TOKEN no ambiente.")
+        return redirect(url_for("project_detail", project_id=project_id))
+    try:
+        payload = clicksign_get_envelope(envelope_id)
+        envelope = payload.get("envelope") if isinstance(payload, dict) else None
+        status_value = ""
+        if isinstance(envelope, dict):
+            status_value = envelope.get("status") or ""
+        contract["clicksign_status"] = str(status_value or "")
+        contract["clicksign_last_sync_at"] = datetime.now().isoformat(timespec="seconds")
+        client = find_by_id(data.get("clientes", []), project.get("cliente_id"))
+        register_operation_history(
+            data,
+            "Clicksign sincronizado",
+            f"Status do envelope {envelope_id}: {contract.get('clicksign_status') or 'sem status'}.",
+            "contrato",
+            f"clicksign_sync:{project_id}:{envelope_id}:{contract.get('clicksign_last_sync_at')}",
+            client=client,
+            project=project,
+            update_client=False,
+        )
+        append_system_audit_log(
+            data,
+            "clicksign_contract_sync",
+            "ok",
+            code="sync_success",
+            details={"project_id": project_id, "envelope_id": envelope_id, "status": contract.get("clicksign_status")},
+        )
+        save_data(data)
+        flash("Status da Clicksign sincronizado.")
+    except Exception as exc:
+        append_system_audit_log(
+            data,
+            "clicksign_contract_sync",
+            "failed",
+            code="sync_failed",
+            details={"project_id": project_id, "envelope_id": envelope_id, "error": str(exc)},
+        )
+        save_data(data)
+        flash(f"Falha na sincronização Clicksign: {exc}")
     return redirect(url_for("project_detail", project_id=project_id))
 
 
