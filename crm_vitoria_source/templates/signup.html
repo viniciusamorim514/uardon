@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
-{% block title %}Criar Conta - Vitória Uardon CRM{% endblock %}
+﻿{% extends 'base.html' %}
+{% block title %}Criar Conta - Uardon CRM{% endblock %}
 {% block content %}
 <div class="login-shell">
   <div class="login-card">
@@ -7,6 +7,18 @@
       <div class="login-eyebrow">Primeiro acesso</div>
       <h1>Criar conta</h1>
     </div>
+
+    <div class="login-form" style="margin-bottom:10px;">
+      {% if google_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}">Criar com Google</a>
+      {% endif %}
+      {% if microsoft_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('microsoft_auth_login') }}" style="margin-top:8px;">Criar com Outlook</a>
+      {% endif %}
+    </div>
+
+    <div style="text-align:center; font-size:11px; color:#9f8f84; margin:8px 0;">ou crie com formulario</div>
+
     <form method="post" class="login-form">
       <div class="login-field">
         <label class="form-label">Nome completo</label>
@@ -25,10 +37,8 @@
         <input class="form-input" name="password_confirm" type="password" minlength="8" required>
       </div>
       <button class="btn btn-primary full login-submit" type="submit">Criar conta</button>
-      {% if google_login_enabled %}
-      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}" style="margin-top:10px;">Cadastrar com Google</a>
-      {% endif %}
     </form>
+
     <div class="stack-sm" style="margin-top:10px; text-align:center;">
       <a class="mini-link" href="{{ url_for('login') }}">Voltar para login</a>
     </div>

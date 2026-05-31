@@ -5078,6 +5078,42 @@ def google_login_enabled():
     return bool(google_login_config())
 
 
+def microsoft_login_config():
+    client_id = (os.environ.get("MICROSOFT_LOGIN_CLIENT_ID") or "").strip()
+    client_secret = (os.environ.get("MICROSOFT_LOGIN_CLIENT_SECRET") or "").strip()
+    tenant = (os.environ.get("MICROSOFT_LOGIN_TENANT") or "common").strip() or "common"
+    if client_id and client_secret:
+        base = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0"
+        return {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "authorize_uri": f"{base}/authorize",
+            "token_uri": f"{base}/token",
+        }
+    return None
+
+
+def microsoft_login_enabled():
+    return bool(microsoft_login_config())
+
+
+def render_login_page():
+    return render_template(
+        "login.html",
+        google_login_enabled=google_login_enabled(),
+        microsoft_login_enabled=microsoft_login_enabled(),
+        public_signup_enabled=PUBLIC_SIGNUP_ENABLED,
+    )
+
+
+def render_signup_page():
+    return render_template(
+        "signup.html",
+        google_login_enabled=google_login_enabled(),
+        microsoft_login_enabled=microsoft_login_enabled(),
+    )
+
+
 def create_google_oauth_flow(state=None):
     cfg = google_login_config()
     if not cfg:
@@ -5134,6 +5170,10 @@ def upsert_google_user_and_login(email, name):
         "email": user.get("email") or "",
     }
     return True
+
+
+def upsert_oauth_user_and_login(email, name):
+    return upsert_google_user_and_login(email, name)
 
 
 @app.context_processor
@@ -5196,7 +5236,7 @@ def login():
             )
             save_data(data)
             flash(f"Muitas tentativas. Aguarde {wait_minutes} min e tente novamente.", "warning")
-            return render_template("login.html", google_login_enabled=google_login_enabled())
+            return render_login_page()
 
         user = find_user_by_login(data, login_value)
         if user and password_matches(user, password):
@@ -5204,7 +5244,7 @@ def login():
                 append_auth_audit_log(data, "login", "blocked", code="user_inactive", email=login_value)
                 save_data(data)
                 flash("Conta inativa. Solicite acesso ao administrador.", "warning")
-                return render_template("login.html", google_login_enabled=google_login_enabled())
+                return render_login_page()
             if not is_password_hash_value(user.get("password")):
                 set_user_password(user, password)
                 save_data(data)
@@ -5215,7 +5255,7 @@ def login():
                 append_auth_audit_log(data, "login", "blocked", code="password_rotation_due", email=user.get("email") or login_value)
                 save_data(data)
                 flash("Sua senha expirou por política de segurança. Use 'Esqueci minha senha'.", "warning")
-                return render_template("login.html", google_login_enabled=google_login_enabled())
+                return render_login_page()
             session["user"] = {
                 "id": user["id"],
                 "name": user.get("name") or user.get("username"),
@@ -5228,7 +5268,7 @@ def login():
         append_auth_audit_log(data, "login", "blocked", code="invalid_credentials", email=login_value)
         save_data(data)
         flash("Login inválido. Verifique e-mail e senha.", "error")
-    return render_template("login.html", google_login_enabled=google_login_enabled())
+    return render_login_page()
 
 
 @app.route("/logout")
@@ -5254,24 +5294,24 @@ def signup():
         password_confirm = request.form.get("password_confirm") or ""
         if len(name) < 3:
             flash("Informe um nome completo.")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
+            return render_signup_page()
         if "@" not in email or "." not in email.split("@")[-1]:
             flash("Informe um e-mail válido.")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
+            return render_signup_page()
         password_ok, password_reason = validate_password_policy(password)
         if not password_ok:
             append_auth_audit_log(data, "signup", "blocked", code="weak_password", email=email, details={"reason": password_reason})
             save_data(data)
             flash(password_reason, "warning")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
+            return render_signup_page()
         if password != password_confirm:
             append_auth_audit_log(data, "signup", "blocked", code="password_confirm_mismatch", email=email)
             save_data(data)
             flash("A confirmação de senha não confere.")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
+            return render_signup_page()
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
             flash("Esse e-mail já está em uso.")
-            return render_template("signup.html", google_login_enabled=google_login_enabled())
+            return render_signup_page()
         username_base = normalize_username_from_name(name)
         username = username_base
         i = 2
@@ -5291,7 +5331,7 @@ def signup():
         save_data(data)
         flash("Conta criada. Faça login para continuar.")
         return redirect(url_for("login"))
-    return render_template("signup.html", google_login_enabled=google_login_enabled())
+    return render_signup_page()
 
 
 @app.route("/admin/usuarios/novo", methods=["GET", "POST"])
@@ -5776,6 +5816,102 @@ def google_auth_callback():
         return redirect(url_for("login"))
     data = load_data()
     append_auth_audit_log(data, "google_login", "ok", code="success", email=email)
+    save_data(data)
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/auth/microsoft/login")
+def microsoft_auth_login():
+    cfg = microsoft_login_config()
+    if not cfg:
+        flash("Login com Microsoft nao esta disponivel no momento.", "warning")
+        return redirect(url_for("login"))
+    state = uuid.uuid4().hex
+    session["microsoft_login_state"] = state
+    params = {
+        "client_id": cfg["client_id"],
+        "response_type": "code",
+        "redirect_uri": url_for("microsoft_auth_callback", _external=True),
+        "response_mode": "query",
+        "scope": "openid profile email User.Read",
+        "state": state,
+        "prompt": "select_account",
+    }
+    return redirect(f"{cfg['authorize_uri']}?{urllib.parse.urlencode(params)}")
+
+
+@app.route("/auth/microsoft/callback")
+def microsoft_auth_callback():
+    expected_state = session.get("microsoft_login_state")
+    incoming_state = (request.args.get("state") or "").strip()
+    if not expected_state or incoming_state != expected_state:
+        flash("Sessao de login Microsoft expirada. Tente novamente.", "warning")
+        return redirect(url_for("login"))
+    session.pop("microsoft_login_state", None)
+    if request.args.get("error"):
+        error_desc = request.args.get("error_description") or request.args.get("error") or "oauth_error"
+        flash(f"Falha no login com Microsoft: {error_desc}", "error")
+        data = load_data()
+        append_auth_audit_log(data, "microsoft_login", "failed", code="oauth_error")
+        save_data(data)
+        return redirect(url_for("login"))
+    code = (request.args.get("code") or "").strip()
+    if not code:
+        flash("Falha no login com Microsoft: codigo ausente.", "error")
+        return redirect(url_for("login"))
+    cfg = microsoft_login_config()
+    if not cfg:
+        flash("Login com Microsoft nao configurado.", "error")
+        return redirect(url_for("login"))
+    try:
+        token_payload = urllib.parse.urlencode(
+            {
+                "client_id": cfg["client_id"],
+                "client_secret": cfg["client_secret"],
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": url_for("microsoft_auth_callback", _external=True),
+            }
+        ).encode("utf-8")
+        token_req = urllib.request.Request(
+            cfg["token_uri"],
+            data=token_payload,
+            method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with urllib.request.urlopen(token_req, timeout=15) as token_resp:
+            token_data = json.loads(token_resp.read().decode("utf-8"))
+        access_token = str(token_data.get("access_token") or "").strip()
+        if not access_token:
+            raise RuntimeError("access_token ausente")
+        me_req = urllib.request.Request(
+            "https://graph.microsoft.com/v1.0/me?$select=displayName,mail,userPrincipalName",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        with urllib.request.urlopen(me_req, timeout=15) as me_resp:
+            me_data = json.loads(me_resp.read().decode("utf-8"))
+    except Exception as exc:
+        flash(f"Falha no login com Microsoft: {exc}", "error")
+        data = load_data()
+        append_auth_audit_log(data, "microsoft_login", "failed", code="oauth_exchange_error")
+        save_data(data)
+        return redirect(url_for("login"))
+    email = str(me_data.get("mail") or me_data.get("userPrincipalName") or "").strip().lower()
+    name = str(me_data.get("displayName") or "").strip() or email.split("@")[0]
+    if not email:
+        flash("Conta Microsoft sem e-mail valido.", "warning")
+        data = load_data()
+        append_auth_audit_log(data, "microsoft_login", "blocked", code="email_missing")
+        save_data(data)
+        return redirect(url_for("login"))
+    if not upsert_oauth_user_and_login(email, name):
+        flash("Sua conta ainda nao foi autorizada. Solicite acesso ao administrador.", "warning")
+        data = load_data()
+        append_auth_audit_log(data, "microsoft_login", "blocked", code="not_authorized", email=email)
+        save_data(data)
+        return redirect(url_for("login"))
+    data = load_data()
+    append_auth_audit_log(data, "microsoft_login", "ok", code="success", email=email)
     save_data(data)
     return redirect(url_for("dashboard"))
 

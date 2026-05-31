@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}Login - Uardon CRM{% endblock %}
 {% block content %}
 <div class="login-shell">
@@ -8,8 +8,23 @@
         <img class="login-key-logo" src="https://uardon.com.br/assets/generated/asset-002-bea613bdb145.png?v=brandkey3" alt="Chave Uardon">
       </div>
       <h1>Uardon</h1>
-      <p>CRM de arquitetura para clientes, projetos e rotina do escritório.</p>
+      <p>CRM de arquitetura para clientes, projetos e rotina do escritorio.</p>
     </div>
+
+    <div class="login-form" style="margin-bottom:10px;">
+      {% if google_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}">Entrar com Google</a>
+      {% endif %}
+      {% if microsoft_login_enabled %}
+      <a class="btn btn-ghost full" href="{{ url_for('microsoft_auth_login') }}" style="margin-top:8px;">Entrar com Outlook</a>
+      {% endif %}
+      {% if public_signup_enabled %}
+      <a class="btn btn-primary full" href="{{ url_for('signup') }}" style="margin-top:8px;">Criar sua conta</a>
+      {% endif %}
+    </div>
+
+    <div style="text-align:center; font-size:11px; color:#9f8f84; margin:8px 0;">ou entre com e-mail e senha</div>
+
     <form method="post" class="login-form">
       <div class="login-field">
         <label class="form-label">E-mail</label>
@@ -20,10 +35,8 @@
         <input class="form-input" name="password" type="password" placeholder="Digite sua senha" required>
       </div>
       <button class="btn btn-primary full login-submit" type="submit">Entrar</button>
-      {% if google_login_enabled %}
-      <a class="btn btn-ghost full" href="{{ url_for('google_auth_login') }}" style="margin-top:10px;">Continuar com Google</a>
-      {% endif %}
     </form>
+
     <div class="stack-sm login-links" style="margin-top:10px; text-align:center;">
       <a class="mini-link" href="{{ url_for('forgot_password') }}">Esqueci minha senha</a>
     </div>
