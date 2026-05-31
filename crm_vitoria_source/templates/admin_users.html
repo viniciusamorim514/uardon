@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Gestão de Usuários - Uardon CRM{% endblock %}
 {% block page_title %}Gestão de Usuários{% endblock %}
-{% block page_subtitle %}Ativar, desativar, trocar perfil e resetar senha{% endblock %}
+{% block page_subtitle %}Ativar, desativar, trocar perfil, resetar senha e mesclar duplicados{% endblock %}
 {% block content %}
 <section class="card" style="padding:16px;">
   <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -53,6 +53,17 @@
         <form method="post" action="{{ url_for('admin_user_delete', user_id=user.id) }}" onsubmit="return confirm('Excluir este usuário?');">
           <input class="form-input" name="approval_code" placeholder="Código 2 etapas" style="min-width:130px; margin-bottom:6px;">
           <button class="btn btn-ghost tiny-btn danger-btn" type="submit">Excluir usuário</button>
+        </form>
+        <form method="post" action="{{ url_for('admin_user_merge', user_id=user.id) }}" onsubmit="return confirm('Mesclar este usuario no destino selecionado?');" style="display:flex; gap:6px;">
+          <input class="form-input" name="approval_code" placeholder="Codigo 2 etapas" style="min-width:130px;">
+          <select class="form-select" name="target_user_id" style="min-width:170px;">
+            {% for target in merge_targets %}
+            {% if target.id != user.id %}
+            <option value="{{ target.id }}">{{ target.name }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+          <button class="btn btn-ghost tiny-btn" type="submit">Mesclar</button>
         </form>
         {% endif %}
       </div>

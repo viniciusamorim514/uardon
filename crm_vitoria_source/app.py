@@ -4637,6 +4637,11 @@ def normalize_username_from_name(name):
     return slug or f"user.{int(time.time())}"
 
 
+def normalize_person_name(name):
+    base = "".join(ch for ch in unicodedata.normalize("NFD", str(name or "").strip().lower()) if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", base)).strip()
+
+
 def smtp_settings():
     host = (os.environ.get("SMTP_HOST") or "").strip()
     user = (os.environ.get("SMTP_USER") or "").strip()
@@ -5305,6 +5310,10 @@ def admin_create_user():
         if any(str(u.get("email", "")).strip().lower() == email for u in data.get("users", [])):
             flash("Esse e-mail já está em uso.")
             return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
+        normalized_name = normalize_person_name(name)
+        if normalized_name and any(normalize_person_name(u.get("name")) == normalized_name for u in data.get("users", [])):
+            flash("Ja existe usuario com nome muito parecido. Revise antes de criar outro cadastro.")
+            return render_template("admin_create_user.html", active="usuarios", role_options=role_options, role_labels=ROLE_LABELS)
         username_base = normalize_username_from_name(name)
         username = username_base
         i = 2
@@ -5475,9 +5484,11 @@ def admin_users():
         hay = f"{row.get('name','')} {row.get('email','')} {row.get('username','')}".lower()
         if q and q not in hay:
             continue
+        row["normalized_name"] = normalize_person_name(row.get("name"))
         users.append(row)
     users = sorted(users, key=lambda u: (0 if u.get("id") == 1 else 1, str(u.get("name") or "").lower()))
-    return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS)
+    merge_targets = [{"id": u.get("id"), "name": u.get("name")} for u in users]
+    return render_template("admin_users.html", active="usuarios", users=users, q=q, role_options=list(ROLE_PERMISSIONS.keys()), role_labels=ROLE_LABELS, merge_targets=merge_targets)
 
 
 @app.route("/admin/usuarios/<int:user_id>/status", methods=["POST"])
@@ -5625,6 +5636,51 @@ def admin_user_delete(user_id):
     )
     save_data(data)
     flash("Usuário excluído com sucesso.", "success")
+    return redirect(url_for("admin_users"))
+
+
+@app.route("/admin/usuarios/<int:user_id>/mesclar", methods=["POST"])
+@login_required
+@admin_required
+def admin_user_merge(user_id):
+    data = load_data()
+    if not request_admin_two_step_approval(data, f"user_merge:{user_id}", "Mesclar usuario duplicado"):
+        return redirect(url_for("admin_users"))
+    source = next((u for u in data.get("users", []) if int(u.get("id", 0) or 0) == user_id), None)
+    if not source:
+        flash("Usuario de origem nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    target_id = int(request.form.get("target_user_id") or 0)
+    target = next((u for u in data.get("users", []) if int(u.get("id", 0) or 0) == target_id), None)
+    if not target:
+        flash("Usuario de destino nao encontrado.", "error")
+        return redirect(url_for("admin_users"))
+    if int(source.get("id", 0) or 0) == 1:
+        flash("Nao e permitido mesclar o usuario raiz.", "error")
+        return redirect(url_for("admin_users"))
+    if int(source.get("id", 0) or 0) == int(target.get("id", 0) or 0):
+        flash("Selecione um usuario de destino diferente.", "warning")
+        return redirect(url_for("admin_users"))
+    if str(source.get("email") or "").strip().lower() == str((session.get("user") or {}).get("email") or "").strip().lower():
+        flash("Nao e permitido mesclar o usuario da sessao atual como origem.", "error")
+        return redirect(url_for("admin_users"))
+    if (not str(target.get("email") or "").strip()) and str(source.get("email") or "").strip():
+        target["email"] = str(source.get("email") or "").strip().lower()
+    target.setdefault("aliases", [])
+    for alias in [str(source.get("name") or "").strip(), str(source.get("email") or "").strip().lower(), str(source.get("username") or "").strip().lower()]:
+        if alias and alias not in target["aliases"]:
+            target["aliases"].append(alias)
+    data["users"] = [u for u in data.get("users", []) if int(u.get("id", 0) or 0) != int(source.get("id", 0) or 0)]
+    append_auth_audit_log(
+        data,
+        "admin_user_merge",
+        "ok",
+        code="user_merged",
+        email=str(target.get("email") or "").strip().lower(),
+        details={"source_user_id": source.get("id"), "target_user_id": target.get("id"), "source_username": source.get("username"), "target_username": target.get("username")},
+    )
+    save_data(data)
+    flash("Usuarios mesclados com sucesso.", "success")
     return redirect(url_for("admin_users"))
 
 
