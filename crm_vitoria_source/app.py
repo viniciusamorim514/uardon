@@ -6921,47 +6921,51 @@ def projects():
 @login_required
 @permission_required("projects:manage")
 def create_project():
-    data = load_data()
-    project_name = (request.form.get("nome") or "").strip()
-    client_id_raw = request.form.get("cliente_id")
-    client_name_raw = (request.form.get("cliente") or "").strip()
-    if not project_name:
-        flash("Informe o nome do projeto.")
-        return redirect(url_for("projects"))
-    client = find_by_id(data["clientes"], client_id_raw)
-    if not client and client_name_raw:
-        client = next(
-            (
-                item
-                for item in data.get("clientes", [])
-                if str(item.get("nome") or "").strip().lower() == client_name_raw.lower()
-            ),
-            None,
-        )
     try:
-        value_num = money_to_float(request.form.get("valor"))
-    except Exception:
-        value_num = 0.0
-    project = {
-        "id": next_id(data["projetos"]),
-        "nome": project_name,
-        "cliente": client.get("nome") if client else client_name_raw,
-        "cliente_id": client.get("id") if client else "",
-        "valor": value_num,
-        "prazo": request.form.get("prazo") or "",
-        "tipo": request.form.get("tipo") or "",
-        "progresso": 0,
-        "status": (request.form.get("status") or "Planejamento").strip() or "Planejamento",
-        "obs": request.form.get("obs") or "",
-        "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
-        "arquivos": [],
-        "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": "", "clicksign_envelope_id": "", "clicksign_status": "", "clicksign_last_sync_at": ""},
-        "pagamentos": [],
-    }
-    data["projetos"].append(project)
-    save_data(data)
-    flash("Projeto criado com sucesso.")
-    return redirect(url_for("project_detail", project_id=project.get("id")))
+        data = load_data()
+        project_name = (request.form.get("nome") or "").strip()
+        client_id_raw = request.form.get("cliente_id")
+        client_name_raw = (request.form.get("cliente") or "").strip()
+        if not project_name:
+            flash("Informe o nome do projeto.")
+            return redirect(url_for("projects"))
+        client = find_by_id(data["clientes"], client_id_raw)
+        if not client and client_name_raw:
+            client = next(
+                (
+                    item
+                    for item in data.get("clientes", [])
+                    if str(item.get("nome") or "").strip().lower() == client_name_raw.lower()
+                ),
+                None,
+            )
+        try:
+            value_num = money_to_float(request.form.get("valor"))
+        except Exception:
+            value_num = 0.0
+        project = {
+            "id": next_id(data["projetos"]),
+            "nome": project_name,
+            "cliente": client.get("nome") if client else client_name_raw,
+            "cliente_id": client.get("id") if client else "",
+            "valor": value_num,
+            "prazo": request.form.get("prazo") or "",
+            "tipo": request.form.get("tipo") or "",
+            "progresso": 0,
+            "status": (request.form.get("status") or "Planejamento").strip() or "Planejamento",
+            "obs": request.form.get("obs") or "",
+            "etapas": [{"nome": name, "done": False, "data": ""} for name in PROJECT_STAGES],
+            "arquivos": [],
+            "contrato": {"status": "NÃ£o iniciado", "emitido_em": "", "assinado_em": "", "arquivo": None, "modelo": "Contrato padrÃ£o VitÃ³ria", "observacoes": "", "lembrete_assinatura_dias": 3, "ultimo_followup_em": "", "clicksign_envelope_id": "", "clicksign_status": "", "clicksign_last_sync_at": ""},
+            "pagamentos": [],
+        }
+        data["projetos"].append(project)
+        save_data(data)
+        flash("Projeto criado com sucesso.")
+        return redirect(url_for("project_detail", project_id=project.get("id")))
+    except Exception as exc:
+        flash(f"Falha ao criar projeto: {exc}")
+        return redirect(url_for("projects"))
 
 
 @app.route("/clientes/<int:client_id>/projetos/novo", methods=["POST"])
