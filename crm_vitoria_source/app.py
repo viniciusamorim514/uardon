@@ -7072,10 +7072,69 @@ def send_task_whatsapp(task_id):
         return redirect(request.referrer or url_for("tasks_page"))
     try:
         send_whatsapp_cloud_text(phone, text or (normalized.get("titulo") or "Olá!"))
+        client, project, lead = task_history_targets(data, task)
+        title = normalized.get("titulo") or normalized.get("text") or "Tarefa"
+        register_operation_history(
+            data,
+            "WhatsApp Cloud enviado",
+            f"Envio realizado via WhatsApp Cloud para a tarefa '{title}'.",
+            "tarefa",
+            f"task_whatsapp_cloud:{task_id}:{today_br()}",
+            client=client,
+            project=project,
+            lead=lead,
+            update_client=False,
+        )
+        append_system_audit_log(
+            data,
+            "task_whatsapp_cloud_sent",
+            "ok",
+            code="cloud_send_success",
+            details={"task_id": task_id},
+        )
+        save_data(data)
         flash("Mensagem enviada pelo WhatsApp Cloud.")
     except Exception as exc:
         flash(f"Não foi possível enviar no WhatsApp Cloud: {exc}")
     return redirect(request.referrer or url_for("tasks_page"))
+
+
+@app.route("/tarefas/<int:task_id>/whatsapp/abrir")
+@login_required
+@permission_required("tasks:manage")
+def open_task_whatsapp(task_id):
+    data = load_data()
+    task = find_by_id(data["tarefas"], task_id)
+    if not task:
+        flash("Tarefa não encontrada.")
+        return redirect(request.referrer or url_for("tasks_page"))
+    normalized = normalize_task(task, data)
+    whatsapp_url = normalized.get("whatsapp_url") or "#"
+    if whatsapp_url == "#":
+        flash("Tarefa sem número válido para WhatsApp.")
+        return redirect(request.referrer or url_for("tasks_page"))
+    client, project, lead = task_history_targets(data, task)
+    title = normalized.get("titulo") or normalized.get("text") or "Tarefa"
+    register_operation_history(
+        data,
+        "WhatsApp Web aberto",
+        f"Acesso manual ao WhatsApp Web pela tarefa '{title}'.",
+        "tarefa",
+        f"task_whatsapp_web:{task_id}:{datetime.now().isoformat(timespec='seconds')}",
+        client=client,
+        project=project,
+        lead=lead,
+        update_client=False,
+    )
+    append_system_audit_log(
+        data,
+        "task_whatsapp_web_opened",
+        "ok",
+        code="web_open",
+        details={"task_id": task_id},
+    )
+    save_data(data)
+    return redirect(whatsapp_url)
 
 
 @app.route("/tarefas/<int:task_id>/concluir", methods=["POST"])

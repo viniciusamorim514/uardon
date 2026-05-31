@@ -19,7 +19,7 @@
     </form>
     {% endif %}
     {% if task.whatsapp_url and task.whatsapp_url != '#' %}
-    <a class="mini-btn primary" href="{{ task.whatsapp_url }}" target="_blank">WhatsApp</a>
+    <a class="mini-btn primary" href="{{ url_for('open_task_whatsapp', task_id=task.id) }}" target="_blank">WhatsApp Web</a>
     {% endif %}
     <form method="post" action="{{ url_for('complete_task', task_id=task.id) }}">
       <button class="mini-btn {% if not task.whatsapp_url or task.whatsapp_url == '#' %}primary{% endif %}" type="submit">Concluir</button>
